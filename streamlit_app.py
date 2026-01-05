@@ -225,49 +225,100 @@ elif choice == "🔐 بوابة الموظفين":
                     st.success("تم الرصد!")
 
 elif choice == "🔍 بحث عن طالب":
-    st.header("خدمة الاستعلام لولي الأمر")
-    student_id_input = st.text_input("أدخل رقم هوية الطالب:")
+    st.header("خدمة الاستعلام والتواصل لولي الأمر 👨‍👦")
     
-    if st.button("بحث"):
-        try:
-            db = get_db_connection()
-            sheet_students = db.worksheet("Students")
-            df_st = pd.DataFrame(sheet_students.get_all_records())
-            
-            # البحث
-            student_info = df_st[df_st['Student_ID'].astype(str) == str(student_id_input)]
-            
-            if not student_info.empty:
-                st.subheader(f"الطالب: {student_info.iloc[0]['Full_Name']}")
-                st.table(student_info)
+    # تحسين شكل البحث
+    col_search1, col_search2 = st.columns([3, 1])
+    student_id_input = col_search1.text_input("أدخل رقم هوية الطالب / الرقم الأكاديمي:")
+    search_btn = col_search2.button("🔍 بحث واستخراج تقرير")
+    
+    if search_btn or student_id_input:
+        if student_id_input:
+            try:
+                db = get_db_connection()
                 
-                # تبويبات النتائج
-                res_tab1, res_tab2 = st.tabs(["📂 سجل السلوك", "📊 كشف الدرجات"])
+                # 1. جلب بيانات الطالب
+                sheet_students = db.worksheet("Students")
+                df_st = pd.DataFrame(sheet_students.get_all_records())
+                student_info = df_st[df_st['Student_ID'].astype(str) == str(student_id_input)]
                 
-                with res_tab1:
-                    sheet_log = db.worksheet("Behavior_Log")
-                    df_logs = pd.DataFrame(sheet_log.get_all_records())
-                    if not df_logs.empty:
-                        s_logs = df_logs[df_logs['Student_ID'].astype(str) == str(student_id_input)]
-                        if not s_logs.empty:
-                            st.table(s_logs[['Date', 'Type', 'Note', 'Teacher']])
-                        else:
-                            st.info("سجل السلوك نظيف.")
-                    else:
-                        st.info("لا توجد بيانات.")
+                if not student_info.empty:
+                    s_name = student_info.iloc[0]['Full_Name']
+                    s_class = student_info.iloc[0]['Class']
+                    
+                    st.success(f"تم التعرف على الطالب: {s_name} ({s_class})")
+                    
+                    # --- التبويبات التفاعلية ---
+                    tab1, tab2, tab3 = st.tabs(["📊 تقرير الأداء (للطباعة)", "📩 تواصل مع الإدارة", "📂 السجل التفصيلي"])
+                    
+                    # --- التبويب 1: التقرير المطبوع (الشهادة) ---
+                    with tab1:
+                        st.subheader("📑 بطاقة الأداء المدرسي")
+                        # جلب الدرجات
+                        try:
+                            sheet_grades = db.worksheet("Grades")
+                            df_grades = pd.DataFrame(sheet_grades.get_all_records())
+                            s_grades = df_grades[df_grades['Student_ID'].astype(str) == str(student_id_input)]
+                        except:
+                            s_grades = pd.DataFrame()
 
-                with res_tab2:
-                    sheet_grades = db.worksheet("Grades")
-                    df_grades = pd.DataFrame(sheet_grades.get_all_records())
-                    if not df_grades.empty:
-                        s_grades = df_grades[df_grades['Student_ID'].astype(str) == str(student_id_input)]
+                        # تصميم شكل الشهادة باستخدام HTML
                         if not s_grades.empty:
-                            st.dataframe(s_grades[['Subject', 'Exam_Type', 'Score', 'Date']])
+                            # حساب المعدل
+                            avg_score = s_grades['Score'].mean()
+                            
+                            st.markdown(f"""
+                            <div style="border: 2px solid #4CAF50; padding: 20px; border-radius: 10px; background-color: #f9f9f9;">
+                                <h2 style="text-align: center; color: #4CAF50;">تقرير متابعة طالب</h2>
+                                <hr>
+                                <p><strong>اسم الطالب:</strong> {s_name}</p>
+                                <p><strong>الصف:</strong> {s_class}</p>
+                                <p><strong>تاريخ التقرير:</strong> {datetime.now().strftime('%Y-%m-%d')}</p>
+                                <hr>
+                                <h3 style="text-align: center;">المعدل العام: {avg_score:.1f}%</h3>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            st.table(s_grades[['Subject', 'Exam_Type', 'Score', 'Notes']])
+                            st.info("💡 نصيحة: لطباعة هذا التقرير، اضغط (Ctrl + P) من لوحة المفاتيح.")
                         else:
-                            st.info("لم يتم رصد درجات بعد.")
-                    else:
-                        st.info("لا توجد درجات.")
-            else:
-                st.warning("رقم الطالب غير صحيح.")
-        except Exception as e:
-            st.error(f"حدث خطأ: {e}")
+                            st.warning("لا توجد درجات مرصودة حتى الآن لإصدار التقرير.")
+
+                    # --- التبويب 2: التفاعل (مراسلة المدرسة) ---
+                    with tab2:
+                        st.write("هل لديك استفسار أو ملاحظة حول أداء ابنك؟ راسلنا مباشرة.")
+                        with st.form("msg_form"):
+                            parent_phone = st.text_input("رقم جوال ولي الأمر (للتواصل):")
+                            msg_content = st.text_area("نص الرسالة / الملاحظة:")
+                            sent = st.form_submit_button("🚀 إرسال للإدارة")
+                            
+                            if sent and msg_content:
+                                try:
+                                    curr_date = datetime.now().strftime("%Y-%m-%d")
+                                    # الحفظ في صفحة Messages
+                                    # الترتيب: Date, Student_Name, Phone, Message, Status
+                                    db.worksheet("Messages").append_row([curr_date, s_name, parent_phone, msg_content, "جديد"])
+                                    st.success("تم إرسال رسالتك لمدير المدرسة بنجاح! سيتم التواصل معك قريباً.")
+                                except Exception as e:
+                                    st.error("تأكد من وجود صفحة Messages في ملف الإكسل.")
+
+                    # --- التبويب 3: السجل التفصيلي (الجداول الخام) ---
+                    with tab3:
+                        st.write("سجل الملاحظات السلوكية:")
+                        try:
+                            sheet_log = db.worksheet("Behavior_Log")
+                            df_logs = pd.DataFrame(sheet_log.get_all_records())
+                            if not df_logs.empty:
+                                s_logs = df_logs[df_logs['Student_ID'].astype(str) == str(student_id_input)]
+                                if not s_logs.empty:
+                                    st.table(s_logs[['Date', 'Type', 'Note']])
+                                else:
+                                    st.info("سجل السلوك ممتاز (خالٍ من الملاحظات).")
+                        except:
+                            st.error("لا يمكن الوصول للسجل.")
+
+                else:
+                    st.error("عذراً، لم نجد طالباً بهذا الرقم. يرجى مراجعة المدرسة.")
+            
+            except Exception as e:
+                st.error(f"حدث خطأ تقني: {e}")
