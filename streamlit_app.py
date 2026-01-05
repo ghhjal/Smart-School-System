@@ -20,7 +20,6 @@ hide_st_style = """
             </style>
             """
 st.markdown(hide_st_style, unsafe_allow_html=True)
-st.markdown(hide_st_style, unsafe_allow_html=True)
 # --- 2. تهيئة الذاكرة ---
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
@@ -240,5 +239,6 @@ elif choice == "🔍 بحث عن طالب":
                 st.warning("الرقم غير صحيح.")
         except Exception as e:
             st.error(f"خطأ: {e}")
+
 
 
