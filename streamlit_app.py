@@ -178,4 +178,52 @@ elif choice == "🔐 بوابة الموظفين":
                 g_note = st.text_input("ملاحظة:")
                 if st.form_submit_button("📤 رصد الدرجة"):
                     s_id, s_name = g_student.split(" - ", 1)
-                    curr_date = datetime.now().strftime("%Y-%m
+                    curr_date = datetime.now().strftime("%Y-%m-%d")
+                    row = [curr_date, s_id, s_name, g_subject, g_exam, g_score, user_name, g_note]
+                    db.worksheet("Grades").append_row(row)
+                    st.success("تم الرصد!")
+
+elif choice == "🔍 بحث عن طالب":
+    st.header("خدمة الاستعلام لولي الأمر")
+    student_id_input = st.text_input("أدخل رقم هوية الطالب:")
+    
+    if st.button("بحث"):
+        try:
+            db = get_db_connection()
+            sheet_students = db.worksheet("Students")
+            df_st = pd.DataFrame(sheet_students.get_all_records())
+            student_info = df_st[df_st['Student_ID'].astype(str) == str(student_id_input)]
+            
+            if not student_info.empty:
+                st.subheader(f"الطالب: {student_info.iloc[0]['Full_Name']}")
+                st.table(student_info)
+                
+                res_tab1, res_tab2 = st.tabs(["📂 السلوك", "📊 الدرجات"])
+                
+                with res_tab1:
+                    sheet_log = db.worksheet("Behavior_Log")
+                    df_logs = pd.DataFrame(sheet_log.get_all_records())
+                    if not df_logs.empty:
+                        s_logs = df_logs[df_logs['Student_ID'].astype(str) == str(student_id_input)]
+                        if not s_logs.empty:
+                            st.table(s_logs[['Date', 'Type', 'Note', 'Teacher']])
+                        else:
+                            st.info("لا توجد ملاحظات.")
+                    else:
+                        st.info("السجل فارغ.")
+
+                with res_tab2:
+                    sheet_grades = db.worksheet("Grades")
+                    df_grades = pd.DataFrame(sheet_grades.get_all_records())
+                    if not df_grades.empty:
+                        s_grades = df_grades[df_grades['Student_ID'].astype(str) == str(student_id_input)]
+                        if not s_grades.empty:
+                            st.dataframe(s_grades[['Subject', 'Exam_Type', 'Score']])
+                        else:
+                            st.info("لا توجد درجات.")
+                    else:
+                        st.info("لا توجد درجات.")
+            else:
+                st.warning("الرقم غير صحيح.")
+        except Exception as e:
+            st.error(f"خطأ: {e}")
