@@ -6,11 +6,11 @@ import hashlib
 from datetime import datetime
 
 # ---------------------------------------------------------
-# 1. إعداد الصفحة + كود الإخفاء (اللمسة السحرية) ✨
+# 1. إعداد الصفحة + التصميم الاحترافي
 # ---------------------------------------------------------
-st.set_page_config(page_title="نظام مدرستي الذكي", layout="wide", page_icon="🎓")
+st.set_page_config(page_title="بوابة المستقبل التعليمية", layout="wide", page_icon="🏫")
 
-# كود CSS لإخفاء القوائم، الفوتر، والشريط العلوي وزر Deploy
+# إخفاء عناصر Streamlit غير المرغوبة
 hide_st_style = """
 <style>
 #MainMenu {visibility: hidden;}
@@ -24,15 +24,12 @@ header {visibility: hidden;}
 st.markdown(hide_st_style, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. تهيئة الذاكرة (Session State)
+# 2. تهيئة الذاكرة والدوال
 # ---------------------------------------------------------
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_info = {}
 
-# ---------------------------------------------------------
-# 3. دوال مساعدة (تشفير + اتصال)
-# ---------------------------------------------------------
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
@@ -42,283 +39,249 @@ def check_hashes(password, hashed_text):
     return False
 
 def get_db_connection():
-    # تحديد الصلاحيات المطلوبة
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    # جلب المفاتيح من إعدادات Streamlit السرية
     creds_dict = dict(st.secrets["gcp_service_account"])
     credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(credentials)
     return client.open("Smart_School_DB")
 
 # ---------------------------------------------------------
-# 4. القائمة الجانبية
+# 3. القائمة الجانبية (Sidebar)
 # ---------------------------------------------------------
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/3413/3413535.png", width=100)
-    st.title("نظام الإدارة المدرسية")
+    st.image("https://cdn-icons-png.flaticon.com/512/3413/3413535.png", width=120)
+    st.markdown("### 🏫 بوابة المدرسة الذكية")
     
-    menu = ["🏠 الرئيسية", "🔐 بوابة الموظفين", "🔍 بحث عن طالب"]
+    menu = ["🏠 الرئيسية / الأخبار", "🔐 بوابة الموظفين", "👨‍👩‍👦 بوابة ولي الأمر"]
     choice = st.radio("القائمة:", menu)
     
     st.markdown("---")
-    # زر تسجيل الخروج
     if st.session_state.logged_in:
-        st.write(f"👤 مرحباً: {st.session_state.user_info.get('Username')}")
+        user_role = st.session_state.user_info.get('Role')
+        st.success(f"مرحباً: {st.session_state.user_info.get('Username')}\n({user_role})")
         if st.button("تسجيل الخروج"):
             st.session_state.logged_in = False
             st.session_state.user_info = {}
             st.rerun()
 
 # ---------------------------------------------------------
-# 5. المحتوى الرئيسي
+# 4. المحتوى الرئيسي
 # ---------------------------------------------------------
 
-if choice == "🏠 الرئيسية":
-    st.title("مرحباً بك في النظام المدرسي الذكي 🎓")
-    st.info("نظام سحابي متكامل لربط الإدارة بالمعلمين وأولياء الأمور.")
+# --- الصفحة الرئيسية (لوحة الأخبار العامة) ---
+if choice == "🏠 الرئيسية / الأخبار":
+    st.title("اللوحة الرئيسية للمدرسة 📢")
     
-    # محاولة عرض إحصائية سريعة لعدد الطلاب
+    # 1. عرض الأخبار
     try:
         db = get_db_connection()
-        sheet_students = db.worksheet("Students")
-        # حساب عدد الصفوف ناقص صف العناوين
-        count_students = len(sheet_students.get_all_values()) - 1 
-        st.metric("عدد الطلاب المسجلين", count_students)
+        sheet_news = db.worksheet("News")
+        news_data = sheet_news.get_all_records()
+        df_news = pd.DataFrame(news_data)
+        
+        if not df_news.empty:
+            # عرض آخر الأخبار أولاً
+            for index, row in df_news.tail(5).iloc[::-1].iterrows():
+                with st.container():
+                    st.markdown(f"""
+                    <div style="background-color:#f0f2f6;padding:15px;border-radius:10px;margin-bottom:10px;border-right: 5px solid #ff4b4b;">
+                        <h4>📌 {row['Title']}</h4>
+                        <p>{row['Content']}</p>
+                        <small style="color:grey">✍️ {row['Author']} | 📅 {row['Date']}</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+        else:
+            st.info("لا توجد أخبار جديدة اليوم.")
+            
+    except:
+        st.warning("جاري تحميل الأخبار...")
+
+    # 2. إحصائيات سريعة
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("الفصل الدراسي", "الثاني", "1445هـ")
+    col2.metric("حالة النظام", "مفعل ✅")
+    try:
+        st_count = len(db.worksheet("Students").get_all_values()) - 1
+        col3.metric("عدد الطلاب", st_count)
     except:
         pass
 
+# --- بوابة الموظفين (المعلم / المدير) ---
 elif choice == "🔐 بوابة الموظفين":
-    # --- أ) شاشة تسجيل الدخول ---
     if not st.session_state.logged_in:
-        st.header("تسجيل دخول الموظفين")
-        with st.form("login_form"):
-            username = st.text_input("اسم المستخدم")
-            password = st.text_input("كلمة المرور", type="password")
-            submit_login = st.form_submit_button("دخول")
-            
-            if submit_login:
+        # شاشة الدخول
+        st.markdown("### 🔐 تسجيل دخول الكادر التعليمي والإداري")
+        with st.form("login"):
+            u = st.text_input("اسم المستخدم")
+            p = st.text_input("كلمة المرور", type="password")
+            if st.form_submit_button("دخول"):
                 try:
                     db = get_db_connection()
-                    sheet = db.worksheet("Users")
-                    users = sheet.get_all_records()
-                    df_users = pd.DataFrame(users)
-                    
-                    # البحث عن المستخدم
-                    user_found = df_users[df_users['Username'].astype(str) == username]
-                    
-                    if not user_found.empty:
-                        stored_password = user_found.iloc[0]['Password']
-                        # التحقق من الهاش
-                        if check_hashes(password, stored_password):
-                            st.session_state.logged_in = True
-                            st.session_state.user_info = user_found.iloc[0].to_dict()
-                            st.success("تم الدخول بنجاح!")
-                            st.rerun()
-                        else:
-                            st.error("كلمة المرور غير صحيحة")
+                    users = db.worksheet("Users").get_all_records()
+                    df = pd.DataFrame(users)
+                    user = df[df['Username'].astype(str) == u]
+                    if not user.empty and check_hashes(p, user.iloc[0]['Password']):
+                        st.session_state.logged_in = True
+                        st.session_state.user_info = user.iloc[0].to_dict()
+                        st.rerun()
                     else:
-                        st.error("اسم المستخدم غير موجود")
+                        st.error("بيانات خاطئة")
                 except Exception as e:
-                    st.error(f"حدث خطأ في الاتصال: {e}")
-
-    # --- ب) لوحة التحكم (بعد الدخول) ---
+                    st.error(f"خطأ اتصال: {e}")
     else:
-        user_name = st.session_state.user_info.get('Username')
+        # لوحة التحكم
         role = st.session_state.user_info.get('Role')
+        user_name = st.session_state.user_info.get('Username')
         
-        # -------------------------------------------
-        #  🔥 ميزة المدير: إضافة موظفين
-        # -------------------------------------------
+        # --- أدوات المدير (إضافة موظف + نشر خبر) ---
         if role == "مدير":
-            with st.expander("👮‍♂️ لوحة تحكم المدير (إضافة موظفين)", expanded=False):
-                st.warning("هذه المنطقة خاصة بالمدير فقط.")
-                with st.form("add_user_form"):
-                    c1, c2 = st.columns(2)
-                    new_u = c1.text_input("اسم المستخدم الجديد:")
-                    new_p = c2.text_input("كلمة المرور:", type="password")
-                    c3, c4 = st.columns(2)
-                    new_r = c3.selectbox("الصلاحية:", ["معلم", "إداري", "مدير"])
-                    new_id = c4.text_input("الرقم الوظيفي (اختياري):")
-                    
-                    if st.form_submit_button("➕ إضافة"):
-                        if new_u and new_p:
-                            try:
+            with st.expander("👮‍♂️ أدوات المدير (الموظفين + الأخبار)"):
+                tab_admin1, tab_admin2 = st.tabs(["إضافة موظف", "نشر خبر عام"])
+                
+                with tab_admin1:
+                    with st.form("add_u"):
+                        nu = st.text_input("اسم المستخدم")
+                        np = st.text_input("كلمة المرور", type="password")
+                        nr = st.selectbox("الصلاحية", ["معلم", "إداري", "مدير"])
+                        if st.form_submit_button("إضافة"):
+                            if nu and np:
                                 db = get_db_connection()
-                                hashed = make_hashes(new_p)
-                                db.worksheet("Users").append_row([new_u, hashed, new_r, new_id])
-                                st.success(f"تمت إضافة {new_u} بنجاح!")
-                            except Exception as e:
-                                st.error(f"خطأ: {e}")
-            st.markdown("---")
+                                db.worksheet("Users").append_row([nu, make_hashes(np), nr, ""])
+                                st.success("تم!")
+                
+                with tab_admin2:
+                    with st.form("add_news"):
+                        t_title = st.text_input("عنوان الخبر")
+                        t_content = st.text_area("نص الخبر")
+                        if st.form_submit_button("نشر"):
+                            db = get_db_connection()
+                            cur_date = datetime.now().strftime("%Y-%m-%d")
+                            db.worksheet("News").append_row([cur_date, t_title, t_content, user_name])
+                            st.success("تم النشر في الصفحة الرئيسية!")
 
-        # -------------------------------------------
-        #  لوحة الإحصائيات
-        # -------------------------------------------
-        st.success(f"أهلاً بك: {user_name} ({role})")
+        # --- أدوات المعلم (حضور، سلوك، درجات) ---
+        st.markdown("### 🏫 لوحة الفصول الدراسية")
         
+        # جلب الطلاب
         try:
             db = get_db_connection()
-            sheet_log = db.worksheet("Behavior_Log")
-            all_records = sheet_log.get_all_records()
-            df_stats = pd.DataFrame(all_records)
-            
-            if not df_stats.empty:
-                col1, col2, col3 = st.columns(3)
-                col1.metric("إجمالي الملاحظات", len(df_stats))
-                with col2:
-                    st.bar_chart(df_stats['Type'].value_counts())
-                with col3:
-                    st.caption("آخر النشاطات")
-                    st.dataframe(df_stats[['Student_Name', 'Type']].tail(3), hide_index=True)
+            students = db.worksheet("Students").get_all_records()
+            student_list = [f"{s['Student_ID']} - {s['Full_Name']}" for s in students]
         except:
-            pass # تخطي الإحصائيات في حال عدم وجود بيانات
-
-        st.markdown("---")
-
-        # -------------------------------------------
-        #  نظام التبويبات (سلوك / درجات)
-        # -------------------------------------------
-        tab1, tab2 = st.tabs(["📝 رصد السلوك", "💯 رصد الدرجات"])
+            student_list = []
         
-        # جلب قائمة الطلاب
-        try:
-            sheet_students = db.worksheet("Students")
-            students_data = sheet_students.get_all_records()
-            student_options = [f"{s['Student_ID']} - {s['Full_Name']}" for s in students_data]
-        except:
-            student_options = []
-
-        # تبويب 1: السلوك
+        tab1, tab2, tab3 = st.tabs(["📅 الحضور والغياب", "📝 السلوك", "💯 الدرجات"])
+        
+        # 1. الحضور والغياب (جديد!)
         with tab1:
-            with st.form("behavior_form"):
-                b_student = st.selectbox("الطالب:", student_options)
-                b_type = st.selectbox("النوع:", ["مخالفة سلوكية", "تأخر صباحي", "غياب حصة", "إشادة وتميز"])
-                b_note = st.text_area("التفاصيل:")
+            st.warning("⚠️ يتم تحضير الطلاب لليوم الحالي.")
+            with st.form("attendance_form"):
+                # نستخدم Multiselect لاختيار الغائبين فقط (أسرع للمعلم)
+                absent_students = st.multiselect("اختر الطلاب الغائبين (اترك الباقي للحضور):", student_list)
+                att_note = st.text_input("ملاحظات عامة:")
                 
-                if st.form_submit_button("💾 حفظ السلوك"):
-                    s_id, s_name = b_student.split(" - ", 1)
+                if st.form_submit_button("💾 حفظ الحضور"):
                     curr_date = datetime.now().strftime("%Y-%m-%d")
-                    curr_time = datetime.now().strftime("%H:%M:%S")
-                    # Date, Time, ID, Name, Type, Note, Teacher, Status
-                    row = [curr_date, curr_time, s_id, s_name, b_type, b_note, user_name, "جديد"]
+                    att_rows = []
                     
-                    db.worksheet("Behavior_Log").append_row(row)
-                    st.success("تم الحفظ!")
-                    st.rerun()
+                    # نفصل أرقام الهويات ونجهز البيانات
+                    absent_ids = [s.split(" - ")[0] for s in absent_students]
+                    
+                    for s_str in student_list:
+                        sid, sname = s_str.split(" - ", 1)
+                        status = "غائب" if sid in absent_ids else "حاضر"
+                        # Date | ID | Name | Status | Teacher
+                        att_rows.append([curr_date, sid, sname, status, user_name])
+                    
+                    # الحفظ دفعة واحدة
+                    db.worksheet("Attendance").append_rows(att_rows)
+                    st.success(f"تم رصد الحضور لـ {len(student_list)} طالب.")
 
-        # تبويب 2: الدرجات
+        # 2. السلوك
         with tab2:
-            with st.form("grades_form"):
-                g_student = st.selectbox("الطالب (درجات):", student_options)
-                g_subject = st.selectbox("المادة:", ["رياضيات", "لغة عربية", "علوم", "إنجليزي", "فقه"])
-                g_exam = st.selectbox("نوع التقييم:", ["اختبار شهري", "اختبار نهائي", "مشاركة", "واجبات"])
-                g_score = st.number_input("الدرجة:", 0, 100)
-                g_note = st.text_input("ملاحظة:")
-                
-                if st.form_submit_button("📤 رصد الدرجة"):
-                    s_id, s_name = g_student.split(" - ", 1)
-                    curr_date = datetime.now().strftime("%Y-%m-%d")
-                    # Date, ID, Name, Subject, Exam, Score, Teacher, Notes
-                    row = [curr_date, s_id, s_name, g_subject, g_exam, g_score, user_name, g_note]
-                    
-                    db.worksheet("Grades").append_row(row)
-                    st.success("تم الرصد!")
+            with st.form("beh_form"):
+                bs = st.selectbox("الطالب:", student_list, key="b_s")
+                bt = st.selectbox("النوع:", ["مخالفة سلوكية", "تأخر صباحي", "غياب حصة", "إشادة وتميز"])
+                bn = st.text_area("التفاصيل:")
+                if st.form_submit_button("حفظ"):
+                    sid, sname = bs.split(" - ", 1)
+                    dt = datetime.now().strftime("%Y-%m-%d")
+                    tm = datetime.now().strftime("%H:%M:%S")
+                    db.worksheet("Behavior_Log").append_row([dt, tm, sid, sname, bt, bn, user_name, "جديد"])
+                    st.success("تم!")
 
-elif choice == "🔍 بحث عن طالب":
-    st.header("خدمة الاستعلام والتواصل لولي الأمر 👨‍👦")
+        # 3. الدرجات
+        with tab3:
+            with st.form("grd_form"):
+                gs = st.selectbox("الطالب:", student_list, key="g_s")
+                gsub = st.selectbox("المادة:", ["رياضيات", "لغة عربية", "علوم", "إنجليزي"])
+                gex = st.selectbox("التقييم:", ["اختبار 1", "اختبار 2", "مشاركة", "نهائي"])
+                gsc = st.number_input("الدرجة:", 0, 100)
+                if st.form_submit_button("رصد"):
+                    sid, sname = gs.split(" - ", 1)
+                    dt = datetime.now().strftime("%Y-%m-%d")
+                    db.worksheet("Grades").append_row([dt, sid, sname, gsub, gex, gsc, user_name, ""])
+                    st.success("تم!")
+
+# --- بوابة ولي الأمر ---
+elif choice == "👨‍👩‍👦 بوابة ولي الأمر":
+    st.markdown("### 👨‍👩‍👦 متابعة ولي الأمر")
     
-    # تحسين شكل البحث
-    col_search1, col_search2 = st.columns([3, 1])
-    student_id_input = col_search1.text_input("أدخل رقم هوية الطالب / الرقم الأكاديمي:")
-    search_btn = col_search2.button("🔍 بحث واستخراج تقرير")
+    col_p1, col_p2 = st.columns([3,1])
+    p_id = col_p1.text_input("رقم هوية الطالب:")
+    p_btn = col_p2.button("عرض الملف")
     
-    if search_btn or student_id_input:
-        if student_id_input:
-            try:
-                db = get_db_connection()
-                
-                # 1. جلب بيانات الطالب
-                sheet_students = db.worksheet("Students")
-                df_st = pd.DataFrame(sheet_students.get_all_records())
-                student_info = df_st[df_st['Student_ID'].astype(str) == str(student_id_input)]
-                
-                if not student_info.empty:
-                    s_name = student_info.iloc[0]['Full_Name']
-                    s_class = student_info.iloc[0]['Class']
-                    
-                    st.success(f"تم التعرف على الطالب: {s_name} ({s_class})")
-                    
-                    # --- التبويبات التفاعلية ---
-                    tab1, tab2, tab3 = st.tabs(["📊 تقرير الأداء (للطباعة)", "📩 تواصل مع الإدارة", "📂 السجل التفصيلي"])
-                    
-                    # --- التبويب 1: التقرير المطبوع (الشهادة) ---
-                    with tab1:
-                        st.subheader("📑 بطاقة الأداء المدرسي")
-                        # جلب الدرجات
-                        try:
-                            sheet_grades = db.worksheet("Grades")
-                            df_grades = pd.DataFrame(sheet_grades.get_all_records())
-                            s_grades = df_grades[df_grades['Student_ID'].astype(str) == str(student_id_input)]
-                        except:
-                            s_grades = pd.DataFrame()
-
-                        # تصميم شكل الشهادة باستخدام HTML
-                        if not s_grades.empty:
-                            # حساب المعدل
-                            avg_score = s_grades['Score'].mean()
-                            
-                            st.markdown(f"""
-                            <div style="border: 2px solid #4CAF50; padding: 20px; border-radius: 10px; background-color: #f9f9f9;">
-                                <h2 style="text-align: center; color: #4CAF50;">تقرير متابعة طالب</h2>
-                                <hr>
-                                <p><strong>اسم الطالب:</strong> {s_name}</p>
-                                <p><strong>الصف:</strong> {s_class}</p>
-                                <p><strong>تاريخ التقرير:</strong> {datetime.now().strftime('%Y-%m-%d')}</p>
-                                <hr>
-                                <h3 style="text-align: center;">المعدل العام: {avg_score:.1f}%</h3>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            st.table(s_grades[['Subject', 'Exam_Type', 'Score', 'Notes']])
-                            st.info("💡 نصيحة: لطباعة هذا التقرير، اضغط (Ctrl + P) من لوحة المفاتيح.")
-                        else:
-                            st.warning("لا توجد درجات مرصودة حتى الآن لإصدار التقرير.")
-
-                    # --- التبويب 2: التفاعل (مراسلة المدرسة) ---
-                    with tab2:
-                        st.write("هل لديك استفسار أو ملاحظة حول أداء ابنك؟ راسلنا مباشرة.")
-                        with st.form("msg_form"):
-                            parent_phone = st.text_input("رقم جوال ولي الأمر (للتواصل):")
-                            msg_content = st.text_area("نص الرسالة / الملاحظة:")
-                            sent = st.form_submit_button("🚀 إرسال للإدارة")
-                            
-                            if sent and msg_content:
-                                try:
-                                    curr_date = datetime.now().strftime("%Y-%m-%d")
-                                    # الحفظ في صفحة Messages
-                                    # الترتيب: Date, Student_Name, Phone, Message, Status
-                                    db.worksheet("Messages").append_row([curr_date, s_name, parent_phone, msg_content, "جديد"])
-                                    st.success("تم إرسال رسالتك لمدير المدرسة بنجاح! سيتم التواصل معك قريباً.")
-                                except Exception as e:
-                                    st.error("تأكد من وجود صفحة Messages في ملف الإكسل.")
-
-                    # --- التبويب 3: السجل التفصيلي (الجداول الخام) ---
-                    with tab3:
-                        st.write("سجل الملاحظات السلوكية:")
-                        try:
-                            sheet_log = db.worksheet("Behavior_Log")
-                            df_logs = pd.DataFrame(sheet_log.get_all_records())
-                            if not df_logs.empty:
-                                s_logs = df_logs[df_logs['Student_ID'].astype(str) == str(student_id_input)]
-                                if not s_logs.empty:
-                                    st.table(s_logs[['Date', 'Type', 'Note']])
-                                else:
-                                    st.info("سجل السلوك ممتاز (خالٍ من الملاحظات).")
-                        except:
-                            st.error("لا يمكن الوصول للسجل.")
-
-                else:
-                    st.error("عذراً، لم نجد طالباً بهذا الرقم. يرجى مراجعة المدرسة.")
+    if p_btn and p_id:
+        try:
+            db = get_db_connection()
+            # 1. بحث الطالب
+            df_s = pd.DataFrame(db.worksheet("Students").get_all_records())
+            student = df_s[df_s['Student_ID'].astype(str) == p_id]
             
-            except Exception as e:
-                st.error(f"حدث خطأ تقني: {e}")
+            if not student.empty:
+                s_name = student.iloc[0]['Full_Name']
+                st.success(f"ملف الطالب: {s_name}")
+                
+                tab_p1, tab_p2, tab_p3 = st.tabs(["📊 التقرير الأكاديمي", "📅 سجل الحضور", "📩 التواصل"])
+                
+                # تقرير الدرجات
+                with tab_p1:
+                    df_g = pd.DataFrame(db.worksheet("Grades").get_all_records())
+                    if not df_g.empty:
+                        my_g = df_g[df_g['Student_ID'].astype(str) == p_id]
+                        if not my_g.empty:
+                            st.table(my_g[['Subject', 'Exam_Type', 'Score', 'Date']])
+                        else:
+                            st.info("لا توجد درجات.")
+                
+                # سجل الحضور (جديد!)
+                with tab_p2:
+                    df_a = pd.DataFrame(db.worksheet("Attendance").get_all_records())
+                    if not df_a.empty:
+                        my_a = df_a[df_a['Student_ID'].astype(str) == p_id]
+                        # نحسب نسبة الغياب
+                        total_days = len(my_a)
+                        absent_days = len(my_a[my_a['Status'] == 'غائب'])
+                        
+                        col_a1, col_a2 = st.columns(2)
+                        col_a1.metric("إجمالي الأيام", total_days)
+                        col_a2.metric("أيام الغياب", absent_days, delta_color="inverse")
+                        
+                        st.dataframe(my_a[['Date', 'Status', 'Teacher']], hide_index=True)
+                    else:
+                        st.info("لم يتم رصد حضور بعد.")
+
+                # التواصل
+                with tab_p3:
+                    with st.form("msg_p"):
+                        ph = st.text_input("رقم جوالك:")
+                        txt = st.text_area("رسالتك:")
+                        if st.form_submit_button("إرسال"):
+                            dt = datetime.now().strftime("%Y-%m-%d")
+                            db.worksheet("Messages").append_row([dt, s_name, ph, txt, "جديد"])
+                            st.success("وصلت رسالتك للإدارة!")
+            else:
+                st.error("رقم الطالب غير صحيح")
+        except Exception as e:
+            st.error(f"حدث خطأ: {e}")
