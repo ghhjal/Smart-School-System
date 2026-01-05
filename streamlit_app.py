@@ -7,14 +7,19 @@ from datetime import datetime
 
 # --- 1. إعداد الصفحة ---
 st.set_page_config(page_title="نظام مدرستي الذكي", layout="wide", page_icon="🎓")
-# --- إخفاء العلامات المائية والقوائم الافتراضية ---
+# --- إخفاء العلامات المائية، القوائم، وزر النشر (Deploy) ---
 hide_st_style = """
             <style>
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             header {visibility: hidden;}
+            .stAppDeployButton {display: none;}
+            [data-testid="stToolbar"] {visibility: hidden !important;}
+            [data-testid="stDecoration"] {visibility: hidden !important;}
+            [data-testid="stHeader"] {visibility: hidden !important;}
             </style>
             """
+st.markdown(hide_st_style, unsafe_allow_html=True)
 st.markdown(hide_st_style, unsafe_allow_html=True)
 # --- 2. تهيئة الذاكرة ---
 if 'logged_in' not in st.session_state:
@@ -235,4 +240,5 @@ elif choice == "🔍 بحث عن طالب":
                 st.warning("الرقم غير صحيح.")
         except Exception as e:
             st.error(f"خطأ: {e}")
+
 
