@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+
 # --- إعداد الصفحة ---
 st.set_page_config(page_title="نظام مدرستي الذكي", layout="wide", page_icon="🎓")
 
@@ -66,5 +67,3 @@ elif choice == "🔍 بحث عن طالب (لولي الأمر)":
                 
         except Exception as e:
             st.error(f"حدث خطأ: {e}")
-
-
