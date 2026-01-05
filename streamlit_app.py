@@ -92,27 +92,20 @@ if choice == "🏠 الرئيسية":
     with col_main2:
         st.subheader("🏆 لوحة الشرف (TOP 5)")
         try:
-            # حساب الأوائل تلقائياً من الدرجات
             sheet_grades = db.worksheet("Grades")
             df_grades = pd.DataFrame(sheet_grades.get_all_records())
             
             if not df_grades.empty:
-                # تجميع الدرجات لكل طالب
-                # نحول Score لرقم لضمان الجمع الصحيح
                 df_grades['Score'] = pd.to_numeric(df_grades['Score'], errors='coerce')
                 leaderboard = df_grades.groupby('Student_Name')['Score'].sum().reset_index()
                 leaderboard = leaderboard.sort_values(by='Score', ascending=False).head(5)
-                
-                # عرض جدول بسيط وأنيق
                 st.dataframe(leaderboard, hide_index=True, use_container_width=True)
-                st.caption("يتم التحديث تلقائياً بناءً على مجموع الدرجات المرصودة.")
             else:
                 st.write("بانتظار رصد الدرجات...")
         except:
             st.write("لا توجد بيانات كافية.")
 
     st.markdown("---")
-    # إحصائيات سريعة
     c1, c2, c3 = st.columns(3)
     c1.metric("الفصل الدراسي", "الثاني")
     try:
@@ -148,10 +141,12 @@ elif choice == "🔐 بوابة الموظفين":
         role = st.session_state.user_info.get('Role')
         user_name = st.session_state.user_info.get('Username')
         
-        # --- أدوات المدير ---
+        # --- أدوات المدير (إضافة خاصية الرفع الجماعي) ---
         if role == "مدير":
-            with st.expander("👮‍♂️ أدوات المدير"):
-                tab_a1, tab_a2 = st.tabs(["إضافة موظف", "نشر خبر"])
+            with st.expander("👮‍♂️ أدوات المدير المتقدمة", expanded=True):
+                # تبويبات المدير
+                tab_a1, tab_a2, tab_a3 = st.tabs(["إضافة موظف", "نشر خبر", "📤 استيراد طلاب (Excel)"])
+                
                 with tab_a1:
                     with st.form("add_u"):
                         nu = st.text_input("اسم المستخدم")
@@ -161,6 +156,7 @@ elif choice == "🔐 بوابة الموظفين":
                             db = get_db_connection()
                             db.worksheet("Users").append_row([nu, make_hashes(np), nr, ""])
                             st.success("تم!")
+                
                 with tab_a2:
                     with st.form("add_n"):
                         nt = st.text_input("العنوان")
@@ -170,25 +166,48 @@ elif choice == "🔐 بوابة الموظفين":
                             db = get_db_connection()
                             db.worksheet("News").append_row([dt, nt, nc, user_name])
                             st.success("تم النشر!")
+                
+                # --- (ميزة جديدة) استيراد ملف إكسل ---
+                with tab_a3:
+                    st.info("💡 لرفع الطلاب دفعة واحدة، استخدم ملف Excel أو CSV يحتوي على الأعمدة التالية بالترتيب:\n\n`Student_ID`, `Full_Name`, `Grade_Level`, `Class`, `Phone`")
+                    uploaded_file = st.file_uploader("اختر ملف الطلاب", type=['csv', 'xlsx'])
+                    
+                    if uploaded_file is not None:
+                        if st.button("🚀 رفع البيانات للقاعدة"):
+                            try:
+                                # قراءة الملف
+                                if uploaded_file.name.endswith('.csv'):
+                                    df_upload = pd.read_csv(uploaded_file)
+                                else:
+                                    df_upload = pd.read_excel(uploaded_file)
+                                
+                                # تحويل كل البيانات لنصوص لتجنب المشاكل
+                                df_upload = df_upload.astype(str)
+                                
+                                # التحقق من الأعمدة (اختياري لكن مفضل)
+                                # إرسال البيانات
+                                db = get_db_connection()
+                                # نستخدم append_rows للإضافة السريعة دفعة واحدة
+                                db.worksheet("Students").append_rows(df_upload.values.tolist())
+                                st.success(f"تمت إضافة {len(df_upload)} طالب بنجاح! 🎉")
+                            except Exception as e:
+                                st.error(f"حدث خطأ أثناء الرفع: {e}")
 
-        # --- أدوات المعلم (الكل في واحد) ---
+        # --- أدوات المعلم ---
         st.markdown("### 🏫 المهام اليومية")
         
         try:
             db = get_db_connection()
             students = db.worksheet("Students").get_all_records()
             student_list = [f"{s['Student_ID']} - {s['Full_Name']}" for s in students]
-            # استخراج قائمة الفصول الموجودة لتسهيل اختيار الفصل للواجبات
             df_st = pd.DataFrame(students)
-            class_list = df_st['Class'].unique().tolist() if 'Class' in df_st.columns else ["أول/1", "أول/2", "أول/3"]
+            class_list = df_st['Class'].unique().tolist() if 'Class' in df_st.columns else []
         except:
             student_list = []
             class_list = []
 
-        # التبويبات الشاملة
-        tab1, tab2, tab3, tab4 = st.tabs(["📝 الواجبات (جديد)", "📅 الحضور", "⚠️ السلوك", "💯 الدرجات"])
+        tab1, tab2, tab3, tab4 = st.tabs(["📝 الواجبات", "📅 الحضور", "⚠️ السلوك", "💯 الدرجات"])
 
-        # 1. الواجبات المنزلية
         with tab1:
             st.subheader("إرسال واجب يومي للفصل")
             with st.form("hw_form"):
@@ -198,11 +217,9 @@ elif choice == "🔐 بوابة الموظفين":
                 
                 if st.form_submit_button("🚀 إرسال الواجب"):
                     curr_date = datetime.now().strftime("%Y-%m-%d")
-                    # Date | Class | Subject | Content | Teacher
                     db.worksheet("Homework").append_row([curr_date, hw_class, hw_subject, hw_content, user_name])
                     st.success(f"تم إرسال الواجب لطلاب فصل {hw_class}")
 
-        # 2. الحضور
         with tab2:
             st.subheader("رصد الغياب اليومي")
             with st.form("att_form"):
@@ -218,7 +235,6 @@ elif choice == "🔐 بوابة الموظفين":
                     db.worksheet("Attendance").append_rows(rows)
                     st.success("تم الحفظ.")
 
-        # 3. السلوك
         with tab3:
             with st.form("beh_form"):
                 bs = st.selectbox("الطالب:", student_list)
@@ -230,7 +246,6 @@ elif choice == "🔐 بوابة الموظفين":
                     db.worksheet("Behavior_Log").append_row([dt.split()[0], dt.split()[1], sid, sname, bt, bn, user_name, "جديد"])
                     st.success("تم.")
 
-        # 4. الدرجات
         with tab4:
             with st.form("grd_form"):
                 gs = st.selectbox("الطالب:", student_list, key="gs")
@@ -255,24 +270,20 @@ elif choice == "👨‍👩‍👦 بوابة ولي الأمر":
     if pbtn and pid:
         try:
             db = get_db_connection()
-            # جلب بيانات الطالب
             df_s = pd.DataFrame(db.worksheet("Students").get_all_records())
             student = df_s[df_s['Student_ID'].astype(str) == pid]
             
             if not student.empty:
                 s_name = student.iloc[0]['Full_Name']
-                s_class = student.iloc[0]['Class'] # جلب الفصل لعرض الواجبات والجدول
+                s_class = student.iloc[0]['Class']
                 
                 st.success(f"الطالب: {s_name} | الفصل: {s_class}")
                 
-                # التبويبات الشاملة لولي الأمر
                 t1, t2, t3, t4, t5 = st.tabs(["🗓️ الجدول الدراسي", "📝 الواجبات", "📊 التقرير", "📅 الحضور", "📩 التواصل"])
                 
-                # 1. الجدول الدراسي
                 with t1:
                     try:
                         df_sch = pd.DataFrame(db.worksheet("Schedule").get_all_records())
-                        # البحث عن جدول فصل الطالب
                         my_sch = df_sch[df_sch['Class'] == s_class]
                         if not my_sch.empty:
                             st.table(my_sch)
@@ -281,34 +292,28 @@ elif choice == "👨‍👩‍👦 بوابة ولي الأمر":
                     except:
                         st.warning("صفحة Schedule غير موجودة أو فارغة.")
 
-                # 2. الواجبات المنزلية
                 with t2:
                     try:
                         df_hw = pd.DataFrame(db.worksheet("Homework").get_all_records())
-                        # تصفية الواجبات لفصل الطالب
                         my_hw = df_hw[df_hw['Class'] == s_class]
                         if not my_hw.empty:
-                            # عرض أحدث 5 واجبات
                             st.table(my_hw[['Date', 'Subject', 'Content']].tail(5))
                         else:
                             st.info("لا توجد واجبات مسجلة لهذا الفصل.")
                     except:
                         st.warning("صفحة Homework غير موجودة.")
 
-                # 3. التقرير والدرجات
                 with t3:
                     df_g = pd.DataFrame(db.worksheet("Grades").get_all_records())
                     if not df_g.empty:
                         my_g = df_g[df_g['Student_ID'].astype(str) == pid]
                         if not my_g.empty:
-                            # حساب المعدل
                             avg = pd.to_numeric(my_g['Score'], errors='coerce').mean()
                             st.metric("المعدل العام", f"{avg:.1f}%")
                             st.dataframe(my_g[['Subject', 'Exam_Type', 'Score', 'Date']], hide_index=True)
                         else:
                             st.info("لا توجد درجات.")
                 
-                # 4. سجل الحضور
                 with t4:
                     df_a = pd.DataFrame(db.worksheet("Attendance").get_all_records())
                     if not df_a.empty:
@@ -317,7 +322,6 @@ elif choice == "👨‍👩‍👦 بوابة ولي الأمر":
                         st.metric("أيام الغياب", absent_days)
                         st.dataframe(my_a[['Date', 'Status']], hide_index=True)
                 
-                # 5. التواصل
                 with t5:
                     with st.form("msg_p"):
                         ph = st.text_input("رقم الجوال:")
