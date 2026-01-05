@@ -3,11 +3,18 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 import hashlib
+from datetime import datetime
 
 # --- إعداد الصفحة ---
 st.set_page_config(page_title="نظام مدرستي الذكي", layout="wide", page_icon="🎓")
 
-# --- دوال التشفير والحماية ---
+# --- تهيئة "ذاكرة" التطبيق (Session State) ---
+# هذا الكود يمنع النظام من نسيان تسجيل الدخول عند ضغط أي زر
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.user_info = {}
+
+# --- دوال التشفير ---
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
@@ -29,80 +36,144 @@ with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3413/3413535.png", width=100)
     st.title("نظام الإدارة المدرسية")
     
-    # القائمة الرئيسية
-    menu = ["🏠 الرئيسية", "🔐 تسجيل الدخول", "🔍 بحث عن طالب"]
+    menu = ["🏠 الرئيسية", "🔐 بوابة الموظفين", "🔍 بحث عن طالب"]
     choice = st.radio("القائمة:", menu)
     
     st.markdown("---")
-    # أداة مساعدة لتوليد كلمات المرور (احذفها لاحقاً عند الانتهاء)
-    with st.expander("🛠️ أداة توليد كلمات المرور"):
-        raw_pass = st.text_input("اكتب كلمة المرور لتشفيرها:")
+    # زر تسجيل الخروج
+    if st.session_state.logged_in:
+        if st.button("تسجيل الخروج"):
+            st.session_state.logged_in = False
+            st.session_state.user_info = {}
+            st.rerun() # إعادة تحميل الصفحة
+
+    # أداة المطورين (يمكنك حذفها لاحقاً)
+    with st.expander("🛠️ أداة تشفير كلمات المرور"):
+        raw_pass = st.text_input("اكتب كلمة المرور:")
         if raw_pass:
-            hashed_pass = make_hashes(raw_pass)
-            st.code(hashed_pass)
-            st.info("انسخ الكود وضعه في عمود Password في جوجل شيت")
+            st.code(make_hashes(raw_pass))
 
 # --- المحتوى ---
 
 if choice == "🏠 الرئيسية":
     st.title("مرحباً بك في النظام المدرسي الذكي 🎓")
-    st.info("يرجى تسجيل الدخول للوصول للخدمات.")
+    st.info("نظام متكامل لربط الإدارة بالمعلمين وأولياء الأمور.")
 
-elif choice == "🔐 تسجيل الدخول":
-    st.header("تسجيل دخول الموظفين")
-    
-    username = st.text_input("اسم المستخدم")
-    password = st.text_input("كلمة المرور", type="password")
-    
-    if st.button("دخول"):
+elif choice == "🔐 بوابة الموظفين":
+    # 1. إذا لم يكن مسجلاً للدخول -> اظهر شاشة الدخول
+    if not st.session_state.logged_in:
+        st.header("تسجيل الدخول")
+        username = st.text_input("اسم المستخدم")
+        password = st.text_input("كلمة المرور", type="password")
+        
+        if st.button("دخول"):
+            try:
+                db = get_db_connection()
+                sheet = db.worksheet("Users")
+                users = sheet.get_all_records()
+                df_users = pd.DataFrame(users)
+                
+                user_found = df_users[df_users['Username'].astype(str) == username]
+                
+                if not user_found.empty:
+                    stored_password = user_found.iloc[0]['Password']
+                    if check_hashes(password, stored_password):
+                        # نجاح الدخول: حفظ البيانات في الذاكرة
+                        st.session_state.logged_in = True
+                        st.session_state.user_info = user_found.iloc[0].to_dict()
+                        st.success("تم الدخول بنجاح!")
+                        st.rerun() # إعادة تحميل لتظهر اللوحة فوراً
+                    else:
+                        st.error("كلمة المرور غير صحيحة")
+                else:
+                    st.error("المستخدم غير موجود")
+            except Exception as e:
+                st.error(f"حدث خطأ في الاتصال: {e}")
+
+    # 2. إذا كان مسجلاً للدخول -> اظهر لوحة التحكم (Form)
+    else:
+        user_name = st.session_state.user_info.get('Username')
+        role = st.session_state.user_info.get('Role')
+        
+        st.success(f"مرحباً: {user_name} | الصلاحية: {role}")
+        
+        # --- نموذج رصد السلوك (للمعلمين والمدراء) ---
+        st.header("📝 رصد سلوك / مخالفة طالب")
+        
+        # جلب قائمة الطلاب لوضعها في القائمة المنسدلة
         try:
             db = get_db_connection()
-            sheet = db.worksheet("Users") # تأكد أن اسم الصفحة في جوجل شيت هو Users
-            data = sheet.get_all_records()
-            df = pd.DataFrame(data)
+            sheet_students = db.worksheet("Students")
+            students_data = sheet_students.get_all_records()
             
-            # البحث عن المستخدم (تحويل العمود لنص لضمان المطابقة)
-            user_found = df[df['Username'].astype(str) == username]
+            # تجهيز القائمة: (الرقم - الاسم) لسهولة البحث
+            student_options = [f"{s['Student_ID']} - {s['Full_Name']}" for s in students_data]
             
-            if not user_found.empty:
-                stored_password = user_found.iloc[0]['Password']
-                user_role = user_found.iloc[0]['Role']
-                # user_related_id = user_found.iloc[0]['Related_ID'] # موجود للاستخدام المستقبلي
+            with st.form("behavior_form"):
+                selected_student = st.selectbox("اختر الطالب:", student_options)
+                behavior_type = st.selectbox("نوع الملاحظة:", ["مخالفة سلوكية", "تأخر صباحي", "غياب حصة", "إشادة وتميز", "أخرى"])
+                note_text = st.text_area("تفاصيل الملاحظة:")
                 
-                # مطابقة كلمة المرور المشفرة
-                if check_hashes(password, stored_password):
-                    st.success(f"مرحباً بك: {username}")
-                    st.info(f"الصلاحية: {user_role}")
-                    st.balloons()
+                submitted = st.form_submit_button("💾 حفظ وإرسال")
+                
+                if submitted:
+                    # تقسيم النص المختار لاستخراج رقم الطالب واسمه
+                    s_id, s_name = selected_student.split(" - ", 1)
                     
-                    # منطقة خاصة بالمدير
-                    if user_role == "مدير":
-                        st.write("---")
-                        st.warning("⚠️ لوحة تحكم المدير (قيد الإنشاء)")
-                else:
-                    st.error("كلمة المرور غير صحيحة")
-            else:
-                st.error("اسم المستخدم غير موجود")
-                
+                    # تجهيز البيانات
+                    current_time = datetime.now().strftime("%H:%M:%S")
+                    current_date = datetime.now().strftime("%Y-%m-%d")
+                    teacher_name = user_name # الشخص الذي قام بالرصد
+                    
+                    # البيانات التي ستذهب لصفحة Behavior_Log
+                    # الترتيب: Date, Time, Student_ID, Student_Name, Type, Note, Teacher, Status
+                    new_row = [current_date, current_time, s_id, s_name, behavior_type, note_text, teacher_name, "جديد"]
+                    
+                    # الإرسال لجوجل شيت
+                    sheet_log = db.worksheet("Behavior_Log")
+                    sheet_log.append_row(new_row)
+                    
+                    st.success(f"تم رصد الملاحظة للطالب {s_name} بنجاح! ✅")
+        
         except Exception as e:
-            st.error(f"حدث خطأ: {e}")
+            st.error(f"خطأ أثناء جلب البيانات أو الحفظ: {e}")
 
 elif choice == "🔍 بحث عن طالب":
     st.header("خدمة الاستعلام لولي الأمر")
-    student_id = st.text_input("أدخل الهوية / الرقم الأكاديمي:")
-    
+    student_id_input = st.text_input("أدخل رقم هوية الطالب:")
     if st.button("بحث"):
         try:
             db = get_db_connection()
-            sheet = db.worksheet("Students")
-            data = sheet.get_all_records()
-            df = pd.DataFrame(data)
-            student = df[df['Student_ID'].astype(str) == str(student_id)]
+            # 1. جلب بيانات الطالب
+            sheet_students = db.worksheet("Students")
+            df_st = pd.DataFrame(sheet_students.get_all_records())
+            student_info = df_st[df_st['Student_ID'].astype(str) == str(student_id_input)]
             
-            if not student.empty:
-                st.success("تم العثور على الطالب:")
-                st.table(student)
+            if not student_info.empty:
+                st.subheader(f"الطالب: {student_info.iloc[0]['Full_Name']}")
+                st.table(student_info)
+                
+                # 2. جلب سجل السلوك الخاص به
+                st.markdown("---")
+                st.write("📂 **سجل الملاحظات والسلوك:**")
+                sheet_log = db.worksheet("Behavior_Log")
+                all_logs = sheet_log.get_all_records()
+                df_logs = pd.DataFrame(all_logs)
+                
+                if not df_logs.empty:
+                    # تصفية السجلات لهذا الطالب فقط
+                    student_logs = df_logs[df_logs['Student_ID'].astype(str) == str(student_id_input)]
+                    
+                    if not student_logs.empty:
+                        # عرض أعمدة محددة فقط لولي الأمر
+                        display_cols = ['Date', 'Type', 'Note', 'Teacher', 'Status']
+                        st.dataframe(student_logs[display_cols])
+                    else:
+                        st.info("سجل الطالب نظيف، لا توجد ملاحظات. 🌟")
+                else:
+                    st.info("لا توجد أي سجلات في النظام.")
             else:
-                st.warning("لم يتم العثور على طالب بهذا الرقم")
+                st.warning("رقم الطالب غير صحيح.")
+                
         except Exception as e:
-            st.error("حدث خطأ، تأكد من اسم الصفحة Students في ملف الإكسل")
+            st.error(f"حدث خطأ: {e}")
