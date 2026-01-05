@@ -2,3 +2,4 @@ streamlit
 gspread==5.10.0
 google-auth
 pandas
+streamlit-option-menu
