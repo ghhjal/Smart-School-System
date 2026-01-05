@@ -8,12 +8,12 @@ from datetime import datetime
 # --- 1. إعداد الصفحة ---
 st.set_page_config(page_title="نظام مدرستي الذكي", layout="wide", page_icon="🎓")
 
-# --- 2. تهيئة الذاكرة (Session State) ---
+# --- 2. تهيئة الذاكرة ---
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_info = {}
 
-# --- 3. دوال مساعدة (تشفير واتصال) ---
+# --- 3. دوال مساعدة ---
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
@@ -38,8 +38,6 @@ with st.sidebar:
     choice = st.radio("القائمة:", menu)
     
     st.markdown("---")
-    
-    # زر الخروج
     if st.session_state.logged_in:
         if st.button("تسجيل الخروج"):
             st.session_state.logged_in = False
@@ -57,11 +55,10 @@ with st.sidebar:
 if choice == "🏠 الرئيسية":
     st.title("مرحباً بك في النظام المدرسي الذكي 🎓")
     st.info("نظام متكامل لربط الإدارة بالمعلمين وأولياء الأمور.")
-    st.write("استخدم القائمة الجانبية للتنقل.")
 
 elif choice == "🔐 بوابة الموظفين":
-    # أ) إذا لم يسجل الدخول
     if not st.session_state.logged_in:
+        # --- شاشة تسجيل الدخول ---
         st.header("تسجيل دخول الموظفين")
         with st.form("login_form"):
             username = st.text_input("اسم المستخدم")
@@ -74,7 +71,6 @@ elif choice == "🔐 بوابة الموظفين":
                     sheet = db.worksheet("Users")
                     users = sheet.get_all_records()
                     df_users = pd.DataFrame(users)
-                    
                     user_found = df_users[df_users['Username'].astype(str) == username]
                     
                     if not user_found.empty:
@@ -90,17 +86,13 @@ elif choice == "🔐 بوابة الموظفين":
                         st.error("المستخدم غير موجود")
                 except Exception as e:
                     st.error(f"حدث خطأ: {e}")
-
-    # ب) إذا كان مسجلاً للدخول (هنا نضع لوحة التحكم)
     else:
+        # --- لوحة التحكم (بعد الدخول) ---
         user_name = st.session_state.user_info.get('Username')
         role = st.session_state.user_info.get('Role')
         st.success(f"👤 المستخدم: {user_name} | الصلاحية: {role}")
         
-        # ---------------------------------------------------------
-        #  بداية لوحة الإحصائيات (Dashboard)
-        # ---------------------------------------------------------
-        st.markdown("### 📊 نظرة عامة على المدرسة")
+        # 1. قسم الإحصائيات (يبقى ثابتاً في الأعلى)
         try:
             db = get_db_connection()
             sheet_log = db.worksheet("Behavior_Log")
@@ -109,64 +101,72 @@ elif choice == "🔐 بوابة الموظفين":
             
             if not df_stats.empty:
                 col1, col2, col3 = st.columns(3)
-                
-                # بطاقة 1: العدد الكلي
                 col1.metric("إجمالي الملاحظات", len(df_stats))
-                
-                # بطاقة 2: الرسم البياني
                 with col2:
                     st.caption("توزيع الحالات")
-                    # نعد القيم في عمود Type
-                    type_counts = df_stats['Type'].value_counts()
-                    st.bar_chart(type_counts)
-                
-                # بطاقة 3: آخر 3 أنشطة
+                    st.bar_chart(df_stats['Type'].value_counts())
                 with col3:
                     st.caption("آخر النشاطات")
-                    if 'Student_Name' in df_stats.columns and 'Type' in df_stats.columns:
-                        latest = df_stats[['Student_Name', 'Type']].tail(3)
-                        st.dataframe(latest, hide_index=True)
-            else:
-                st.info("لا توجد بيانات إحصائية حتى الآن.")
-                
-        except Exception as e:
-            st.warning(f"جاري تحميل الإحصائيات... (أو حدث خطأ بسيط: {e})")
-        
+                    st.dataframe(df_stats[['Student_Name', 'Type']].tail(3), hide_index=True)
+        except:
+            pass # تجاهل الأخطاء في الإحصائيات لعدم توقف النظام
+            
         st.markdown("---")
         
-        # ---------------------------------------------------------
-        #  نهاية لوحة الإحصائيات وبداية نموذج الرصد
-        # ---------------------------------------------------------
-
-        st.header("📝 رصد سلوك جديد")
+        # 2. نظام التبويبات (Tabs) - هنا الإضافة الجديدة
+        tab1, tab2 = st.tabs(["📝 رصد السلوك", "💯 رصد الدرجات"])
         
+        # جلب قائمة الطلاب مرة واحدة لاستخدامها في التبويبين
         try:
-            # جلب قائمة الطلاب
             sheet_students = db.worksheet("Students")
             students_data = sheet_students.get_all_records()
             student_options = [f"{s['Student_ID']} - {s['Full_Name']}" for s in students_data]
-            
+        except:
+            student_options = []
+            st.error("خطأ في جلب قائمة الطلاب")
+
+        # --- تبويب 1: رصد السلوك ---
+        with tab1:
+            st.subheader("تسجيل مخالفة أو تميز")
             with st.form("behavior_form"):
-                selected_student = st.selectbox("اختر الطالب:", student_options)
-                behavior_type = st.selectbox("نوع الملاحظة:", ["مخالفة سلوكية", "تأخر صباحي", "غياب حصة", "إشادة وتميز", "أخرى"])
-                note_text = st.text_area("تفاصيل الملاحظة:")
+                b_student = st.selectbox("اختر الطالب (سلوك):", student_options)
+                b_type = st.selectbox("نوع الملاحظة:", ["مخالفة سلوكية", "تأخر صباحي", "غياب حصة", "إشادة وتميز", "أخرى"])
+                b_note = st.text_area("التفاصيل:")
+                b_submit = st.form_submit_button("💾 حفظ السلوك")
                 
-                submitted = st.form_submit_button("💾 حفظ وإرسال")
+                if b_submit:
+                    s_id, s_name = b_student.split(" - ", 1)
+                    curr_date = datetime.now().strftime("%Y-%m-%d")
+                    curr_time = datetime.now().strftime("%H:%M:%S")
+                    
+                    row = [curr_date, curr_time, s_id, s_name, b_type, b_note, user_name, "جديد"]
+                    db.worksheet("Behavior_Log").append_row(row)
+                    st.success("تم حفظ السلوك بنجاح!")
+                    st.rerun()
+
+        # --- تبويب 2: رصد الدرجات (جديد!) ---
+        with tab2:
+            st.subheader("إدخال درجات الطلاب")
+            with st.form("grades_form"):
+                g_student = st.selectbox("اختر الطالب (درجات):", student_options)
+                g_subject = st.selectbox("المادة:", ["رياضيات", "لغة عربية", "علوم", "إنجليزي", "فقه"])
+                g_exam = st.selectbox("نوع التقييم:", ["اختبار شهري", "اختبار نهائي", "مشاركة", "واجبات"])
+                g_score = st.number_input("الدرجة:", min_value=0, max_value=100, step=1)
+                g_note = st.text_input("ملاحظة على الدرجة (اختياري):")
                 
-                if submitted:
-                    s_id, s_name = selected_student.split(" - ", 1)
-                    current_time = datetime.now().strftime("%H:%M:%S")
-                    current_date = datetime.now().strftime("%Y-%m-%d")
+                g_submit = st.form_submit_button("📤 حفظ الدرجة")
+                
+                if g_submit:
+                    s_id, s_name = g_student.split(" - ", 1)
+                    curr_date = datetime.now().strftime("%Y-%m-%d")
                     
-                    new_row = [current_date, current_time, s_id, s_name, behavior_type, note_text, user_name, "جديد"]
+                    # الترتيب: Date, ID, Name, Subject, Exam, Score, Teacher, Notes
+                    grade_row = [curr_date, s_id, s_name, g_subject, g_exam, g_score, user_name, g_note]
                     
-                    sheet_log.append_row(new_row)
-                    st.success(f"تم الرصد للطالب {s_name} بنجاح!")
-                    # تحديث الصفحة لرؤية الإحصائيات الجديدة
-                    st.rerun() 
-                    
-        except Exception as e:
-            st.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
+                    # الحفظ في صفحة Grades
+                    db.worksheet("Grades").append_row(grade_row)
+                    st.success(f"تم رصد درجة {g_subject} للطالب {s_name} بنجاح!")
+
 
 elif choice == "🔍 بحث عن طالب":
     st.header("خدمة الاستعلام لولي الأمر")
@@ -175,39 +175,42 @@ elif choice == "🔍 بحث عن طالب":
     if st.button("بحث"):
         try:
             db = get_db_connection()
-            
-            # 1. بيانات الطالب
+            # 1. البيانات الأساسية
             sheet_students = db.worksheet("Students")
             df_st = pd.DataFrame(sheet_students.get_all_records())
-            # البحث كنص
             student_info = df_st[df_st['Student_ID'].astype(str) == str(student_id_input)]
             
             if not student_info.empty:
-                st.subheader(f"بيانات الطالب: {student_info.iloc[0]['Full_Name']}")
+                st.subheader(f"الطالب: {student_info.iloc[0]['Full_Name']}")
                 st.table(student_info)
                 
-                # 2. سجل السلوك
-                st.write("📂 **سجل الملاحظات:**")
-                sheet_log = db.worksheet("Behavior_Log")
-                all_logs = sheet_log.get_all_records()
-                df_logs = pd.DataFrame(all_logs)
+                # استخدام التبويبات لعرض النتائج لولي الأمر أيضاً
+                res_tab1, res_tab2 = st.tabs(["📂 سجل السلوك", "📊 كشف الدرجات"])
                 
-                if not df_logs.empty:
-                    # تصفية حسب رقم الطالب
-                    student_logs = df_logs[df_logs['Student_ID'].astype(str) == str(student_id_input)]
-                    
-                    if not student_logs.empty:
-                        # عرض الأعمدة المهمة فقط
-                        view_cols = ['Date', 'Type', 'Note', 'Teacher']
-                        # نتأكد أن الأعمدة موجودة قبل عرضها لتجنب الأخطاء
-                        existing_cols = [c for c in view_cols if c in student_logs.columns]
-                        st.table(student_logs[existing_cols])
+                with res_tab1:
+                    sheet_log = db.worksheet("Behavior_Log")
+                    df_logs = pd.DataFrame(sheet_log.get_all_records())
+                    if not df_logs.empty:
+                        s_logs = df_logs[df_logs['Student_ID'].astype(str) == str(student_id_input)]
+                        if not s_logs.empty:
+                            st.table(s_logs[['Date', 'Type', 'Note', 'Teacher']])
+                        else:
+                            st.info("لا توجد ملاحظات سلوكية.")
                     else:
-                        st.info("سجل الطالب نظيف! 🌟")
-                else:
-                    st.info("لا توجد سجلات في النظام.")
+                        st.info("السجل فارغ.")
+
+                with res_tab2:
+                    sheet_grades = db.worksheet("Grades")
+                    df_grades = pd.DataFrame(sheet_grades.get_all_records())
+                    if not df_grades.empty:
+                        s_grades = df_grades[df_grades['Student_ID'].astype(str) == str(student_id_input)]
+                        if not s_grades.empty:
+                            st.dataframe(s_grades[['Subject', 'Exam_Type', 'Score', 'Date']])
+                        else:
+                            st.info("لم يتم رصد درجات بعد.")
+                    else:
+                        st.info("لا توجد درجات في النظام.")
             else:
-                st.warning("رقم الطالب غير موجود.")
-                
+                st.warning("رقم الطالب غير صحيح.")
         except Exception as e:
             st.error(f"حدث خطأ: {e}")
