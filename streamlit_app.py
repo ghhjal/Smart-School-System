@@ -217,6 +217,52 @@ elif selected == "الموظفين":
                         db.worksheet("News").append_row([dt, tt, tc, name])
                         st.success("تم!")
 
+            with t3:
+                st.write("رفع ملف Excel للطلاب:")
+                up = st.file_uploader("الملف", type=['xlsx', 'csv'])
+                if up and st.button("رفع"):
+                    try:
+                        df = pd.read_csv(up) if up.name.endswith('csv') else pd.read_excel(up)
+                        df = df.astype(str)
+                        db = get_db_connection()
+                        db.worksheet("Students").append_rows(df.values.tolist())
+                        st.success(f"تم رفع {len(df)} طالب")
+                    except Exception as e: st.error(str(e))
+
+        # 🅱️ لوحة المعلم
+        else:
+            st.markdown("### 🏫 خدمات المعلم")
+            try:
+                db = get_db_connection()
+                students = db.worksheet("Students").get_all_records()
+                s_list = [f"{s['Student_ID']} - {s['Full_Name']}" for s in students]
+                df_st = pd.DataFrame(students)
+                c_list = df_st['Class'].unique().tolist() if 'Class' in df_st.columns else []
+            except: s_list, c_list = [], []
+
+            # 🛠️ تم تعديل التبويبات هنا: حذف "درجة"
+            t1, t2, t3 = st.tabs(["واجب", "غياب", "سلوك"])
+            
+            with t1: # واجب
+                with st.form("hw"):
+                    cl = st.selectbox("الفصل", c_list)
+                    sb = st.selectbox("المادة", ["رياضيات", "علوم", "لغتي"])
+                    tx = st.text_area("الواجب")
+                    if st.form_submit_button("إرسال"):
+                        dt = datetime.now().strftime("%Y-%m-%d")
+                        db.worksheet("Homework").append_row([dt, cl, sb, tx, name])
+                        st.success("تم")
+            
+            with t2: # غياب
+                with st.form("att"):
+                    ab = st.multiselect("الغائبون:", s_list)
+                    if st.form_submit_button("حفظ"):
+                        dt = datetime.now().strftime("%Y-%m-%d")
+                        ab_ids = [x.split(" - ")[0] for x in ab]
+                        rows = [[dt, s.split(" - ")[0], s.split(" - ")[1], "غائب" if s.split(" - ")[0] in ab_ids else "حاضر", name] for s in s_list]
+                        db.worksheet("Attendance").append_rows(rows)
+                        st.success("تم")
+
             with t3: # سلوك (نظام النقاط المطور)
                 # 1. إعداد قائمة السلوكيات والنقاط
                 behavior_config = {
@@ -338,98 +384,6 @@ elif selected == "الموظفين":
                     except Exception as e:
                         st.warning(f"جاري تحديث قاعدة البيانات... ({e})")
 
-        # 🅱️ لوحة المعلم
-        else:
-            st.markdown("### 🏫 خدمات المعلم")
-            try:
-                db = get_db_connection()
-                students = db.worksheet("Students").get_all_records()
-                s_list = [f"{s['Student_ID']} - {s['Full_Name']}" for s in students]
-                df_st = pd.DataFrame(students)
-                c_list = df_st['Class'].unique().tolist() if 'Class' in df_st.columns else []
-            except: s_list, c_list = [], []
-
-            # 🛠️ تم تعديل التبويبات هنا: حذف "درجة"
-            t1, t2, t3 = st.tabs(["واجب", "غياب", "سلوك"])
-            
-            with t1: # واجب
-                with st.form("hw"):
-                    cl = st.selectbox("الفصل", c_list)
-                    sb = st.selectbox("المادة", ["رياضيات", "علوم", "لغتي"])
-                    tx = st.text_area("الواجب")
-                    if st.form_submit_button("إرسال"):
-                        dt = datetime.now().strftime("%Y-%m-%d")
-                        db.worksheet("Homework").append_row([dt, cl, sb, tx, name])
-                        st.success("تم")
-            
-            with t2: # غياب
-                with st.form("att"):
-                    ab = st.multiselect("الغائبون:", s_list)
-                    if st.form_submit_button("حفظ"):
-                        dt = datetime.now().strftime("%Y-%m-%d")
-                        ab_ids = [x.split(" - ")[0] for x in ab]
-                        rows = [[dt, s.split(" - ")[0], s.split(" - ")[1], "غائب" if s.split(" - ")[0] in ab_ids else "حاضر", name] for s in s_list]
-                        db.worksheet("Attendance").append_rows(rows)
-                        st.success("تم")
-
-            with t3: # سلوك (تم التعديل)
-                st.markdown("##### 📝 تسجيل ملاحظة جديدة")
-                with st.form("beh"):
-                    stt = st.selectbox("الطالب", s_list)
-                    ty = st.selectbox("النوع", ["مخالفة", "تأخر", "إشادة"])
-                    nt = st.text_input("ملاحظة")
-                    
-                    if st.form_submit_button("حفظ الملاحظة"):
-                        sid, sn = stt.split(" - ", 1)
-                        dt = datetime.now().strftime("%Y-%m-%d")
-                        # التأكد من صحة الترتيب حسب أعمدة شيت جوجل لديك
-                        db.worksheet("Behavior_Log").append_row([dt, "", sid, sn, ty, nt, name, "جديد"])
-                        st.success("تم الحفظ")
-                        st.rerun() # تحديث الصفحة لظهور الملاحظة فوراً
-
-                # 🛠️ عرض الجدول والملاحظات السابقة مع زر الواتساب
-                if stt:
-                    current_sid = stt.split(" - ")[0]
-                    st.markdown("---")
-                    st.markdown(f"##### 📜 سجل ملاحظات: {stt.split(' - ')[1]}")
-                    
-                    try:
-                        # جلب سجل السلوك
-                        beh_data = db.worksheet("Behavior_Log").get_all_records()
-                        df_beh = pd.DataFrame(beh_data)
-                        
-                        # تصفية البيانات للطالب المحدد فقط (تأكد أن اسم العمود في شيت جوجل هو Student_ID)
-                        # إذا كان اسم العمود مختلف في الشيت (مثلاً "رقم الطالب") يرجى تعديل 'Student_ID' أدناه
-                        if not df_beh.empty and 'Student_ID' in df_beh.columns:
-                            student_history = df_beh[df_beh['Student_ID'].astype(str) == current_sid]
-                            
-                            if not student_history.empty:
-                                # عرض الملاحظات كجدول مخصص
-                                for idx, row in student_history.iterrows():
-                                    with st.container():
-                                        c1, c2, c3, c4 = st.columns([2, 2, 4, 2])
-                                        c1.caption(f"📅 {row.get('Date', '-')}")
-                                        
-                                        # تلوين نوع الملاحظة
-                                        type_color = "red" if row.get('Type') == "مخالفة" else "green" if row.get('Type') == "إشادة" else "orange"
-                                        c2.markdown(f":{type_color}[{row.get('Type', '-')}]")
-                                        
-                                        c3.write(row.get('Note', '-'))
-                                        
-                                        # تجهيز رابط الواتساب
-                                        msg_text = f"السلام عليكم، بخصوص الطالب {row.get('Student_Name')}: \nنوع الملاحظة: {row.get('Type')}\nالتفاصيل: {row.get('Note')}"
-                                        encoded_msg = urllib.parse.quote(msg_text)
-                                        wa_link = f"https://wa.me/?text={encoded_msg}"
-                                        
-                                        c4.markdown(f"<a href='{wa_link}' target='_blank' class='wa-btn'>📲 إرسال واتساب</a>", unsafe_allow_html=True)
-                                        st.divider()
-                            else:
-                                st.info("لا توجد ملاحظات سابقة لهذا الطالب.")
-                        else:
-                            st.warning("لم يتم العثور على سجلات أو هناك خطأ في تسمية الأعمدة.")
-                    except Exception as e:
-                        st.error(f"حدث خطأ أثناء جلب السجل: {e}")
-
 # === بوابة ولي الأمر ===
 elif selected == "ولي الأمر":
     st.markdown("### 👨‍👩‍👦 خدمة ولي الأمر")
@@ -468,4 +422,3 @@ elif selected == "ولي الأمر":
             else:
                 st.error("غير موجود")
         except Exception as e: st.error("خطأ في الاتصال")
-
