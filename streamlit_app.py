@@ -263,20 +263,20 @@ elif selected == "الموظفين":
                         db.worksheet("Attendance").append_rows(rows)
                         st.success("تم")
 
-            with t3: # سلوك (نظام النقاط المطور)
-                # 1. إعداد قائمة السلوكيات والنقاط
+            with t3: # سلوك (تفاعلي ومطور)
+                # 1. إعداد قائمة السلوكيات
                 behavior_config = {
                     "🌟 إيجابي": {
                         "points": 10,
-                        "reasons": ["مشاركة فعالة في الدرس", "حل الواجب المنزلي بتميز", "نظافة وترتيب", "مساعدة الزملاء", "الالتزام بالزي المدرسي"]
+                        "reasons": ["مشاركة فعالة", "حل الواجب بتميز", "نظافة وترتيب", "مساعدة الزملاء", "التزام بالزي"]
                     },
                     "⚠️ نسيان أدوات": {
                         "points": -2,
-                        "reasons": ["نسيان كتاب الطالب", "نسيان دفتر", "عدم إحضار قلم", "نسيان الأدوات الهندسية"]
+                        "reasons": ["كتاب الطالب", "دفتر", "قلم", "أدوات هندسية", "كتاب النشاط"]
                     },
                     "⛔ سلبي": {
                         "points": -5,
-                        "reasons": ["كثرة الحديث الجانبي", "مخالفة تعليمات المعلم", "النوم داخل الفصل", "تخريب ممتلكات", "تأخر عن الحصة"]
+                        "reasons": ["حديث جانبي", "مخالفة تعليمات", "نوم بالفصل", "تخريب ممتلكات", "تأخر عن الحصة"]
                     },
                     "📢 تنبيه": {
                         "points": 0,
@@ -286,67 +286,73 @@ elif selected == "الموظفين":
 
                 st.markdown("##### 🏆 رصد نقاط السلوك")
                 
-                # اختيار الطالب وعرض رصيده الحالي
+                # اختيار الطالب
                 col_sel, col_score = st.columns([3, 1])
                 with col_sel:
-                    stt = st.selectbox("اختر الطالب", s_list)
+                    # نستخدم key لضمان عدم تعارض البيانات
+                    stt_beh = st.selectbox("اختر الطالب", s_list, key="beh_student_select")
                 
-                # حساب وعرض مجموع نقاط الطالب الحالي
+                # حساب الرصيد
                 current_score = 0
-                if stt:
+                if stt_beh:
                     try:
-                        sid_score = stt.split(" - ")[0]
+                        sid_score = stt_beh.split(" - ")[0]
                         all_beh = db.worksheet("Behavior_Log").get_all_records()
                         df_score = pd.DataFrame(all_beh)
                         if not df_score.empty and 'Points' in df_score.columns and 'Student_ID' in df_score.columns:
-                            # تحويل العمود لأرقام لضمان الجمع الصحيح
                             df_score['Points'] = pd.to_numeric(df_score['Points'], errors='coerce').fillna(0)
                             student_logs = df_score[df_score['Student_ID'].astype(str) == sid_score]
                             current_score = student_logs['Points'].sum()
                     except: pass
                 
                 with col_score:
-                    st.metric("رصيد النقاط", f"{int(current_score)}", delta_color="normal")
+                    st.metric("الرصيد", f"{int(current_score)}", delta_color="normal")
 
                 st.markdown("---")
 
-                # نموذج الإدخال الجديد
-                with st.form("beh_points"):
+                # === منطقة الإدخال التفاعلية (بدون st.form) ===
+                # وضعنا إطار حولها لتبدو كنموذج
+                with st.container(border=True):
                     c1, c2 = st.columns(2)
                     with c1:
-                        # اختيار النوع الرئيسي
-                        b_type = st.selectbox("نوع السلوك", list(behavior_config.keys()))
+                        # هذا الاختيار سيحدث الصفحة فوراً لتحديث القائمة المجاورة
+                        b_type = st.selectbox("نوع السلوك", list(behavior_config.keys()), key="beh_type_sel")
                     
                     with c2:
-                        # اختيار الملاحظة الجاهزة بناءً على النوع
-                        b_reason = st.selectbox("الملاحظة", behavior_config[b_type]["reasons"])
+                        # القائمة هنا تتحدث تلقائياً بناءً على b_type
+                        b_reason = st.selectbox("الملاحظة", behavior_config[b_type]["reasons"], key="beh_reason_sel")
                     
-                    # عرض النقاط التي سيتم رصدها
-                    points_to_add = behavior_config[b_type]["points"]
-                    st.info(f"سيتم رصد: **{points_to_add}** نقاط للطالب.")
-
-                    # ملاحظة إضافية اختيارية
-                    extra_note = st.text_input("تفاصيل إضافية (اختياري)")
+                    # عرض النقاط المتوقعة
+                    pts_val = behavior_config[b_type]["points"]
+                    st.caption(f"النقاط المحتسبة: {pts_val}")
                     
-                    if st.form_submit_button("💾 حفظ ورصد النقاط"):
-                        sid, sn = stt.split(" - ", 1)
-                        dt = datetime.now().strftime("%Y-%m-%d")
-                        final_note = f"{b_reason}" + (f" - {extra_note}" if extra_note else "")
-                        
-                        # الحفظ في شيت Google (تأكد من ترتيب الأعمدة)
-                        # الترتيب: Date, ID(auto), Student_ID, Name, Type, Note, Teacher, Status, Points
-                        db.worksheet("Behavior_Log").append_row([
-                            dt, "", sid, sn, b_type, final_note, name, "جديد", points_to_add
-                        ])
-                        st.success(f"تم رصد {points_to_add} نقطة للطالب {sn}")
-                        st.rerun()
+                    extra_note = st.text_input("ملاحظة إضافية (اختياري)", key="beh_extra")
+                    
+                    # زر الحفظ المباشر
+                    if st.button("💾 حفظ السلوك", type="primary", use_container_width=True):
+                        if stt_beh:
+                            try:
+                                sid, sn = stt_beh.split(" - ", 1)
+                                dt = datetime.now().strftime("%Y-%m-%d")
+                                final_note = f"{b_reason}" + (f" - {extra_note}" if extra_note else "")
+                                
+                                db.worksheet("Behavior_Log").append_row([
+                                    dt, "", sid, sn, b_type, final_note, name, "جديد", pts_val
+                                ])
+                                st.toast("✅ تم الحفظ بنجاح!", icon="🎉")
+                                st.rerun() # تحديث الصفحة لتفريغ الحقول وتحديث الجدول
+                            except Exception as e:
+                                st.error(f"حدث خطأ: {e}")
+                        else:
+                            st.warning("الرجاء اختيار طالب أولاً")
 
-                # عرض الجدول والسجل السابق (محدث مع النقاط)
-                if stt:
-                    current_sid = stt.split(" - ")[0]
-                    st.markdown(f"##### 📜 سجل الملاحظات: {stt.split(' - ')[1]}")
+                # === عرض السجل أسفل النموذج ===
+                if stt_beh:
+                    current_sid = stt_beh.split(" - ")[0]
+                    st.markdown(f"##### 📜 سجل الملاحظات: {stt_beh.split(' - ')[1]}")
                     
                     try:
+                        # نعيد جلب البيانات لأننا قمنا بتحديثها للتو
                         beh_data = db.worksheet("Behavior_Log").get_all_records()
                         df_beh = pd.DataFrame(beh_data)
                         
@@ -354,35 +360,30 @@ elif selected == "الموظفين":
                             student_history = df_beh[df_beh['Student_ID'].astype(str) == current_sid]
                             
                             if not student_history.empty:
-                                # عرض الجدول الحديث
-                                for idx, row in student_history.iterrows():
+                                # عرض آخر 5 ملاحظات فقط لتخفيف الضغط، ويمكن عكس الترتيب (الأحدث فوق)
+                                for idx, row in student_history.tail(10).iloc[::-1].iterrows():
                                     with st.container():
-                                        # تخطيط البطاقة: التاريخ | النوع | النقاط | التفاصيل | زر واتساب
                                         c1, c2, c3, c4, c5 = st.columns([2, 2, 1, 4, 2])
-                                        c1.caption(f"📅 {row.get('Date', '-')}")
+                                        c1.caption(f"{row.get('Date', '-')}")
                                         
-                                        # الألوان حسب النوع
                                         t_val = row.get('Type', '-')
                                         color = "green" if "إيجابي" in t_val else "red" if "سلبي" in t_val or "نسيان" in t_val else "orange"
                                         c2.markdown(f":{color}[{t_val}]")
                                         
-                                        # عرض النقاط
                                         pts = row.get('Points', 0)
                                         c3.write(f"**{pts}**")
                                         
                                         c4.write(row.get('Note', '-'))
                                         
-                                        # زر الواتساب
-                                        msg_text = f"السلام عليكم، ولي أمر الطالب {row.get('Student_Name')}.\nتم رصد سلوك: {t_val}\nالملاحظة: {row.get('Note')}\nالنقاط: {pts}"
+                                        msg_text = f"ولي أمر الطالب {row.get('Student_Name')}:\nسلوك: {t_val}\nالتفاصيل: {row.get('Note')}\nالنقاط: {pts}"
                                         encoded_msg = urllib.parse.quote(msg_text)
                                         wa_link = f"https://wa.me/?text={encoded_msg}"
                                         c5.markdown(f"<a href='{wa_link}' target='_blank' class='wa-btn'>واتساب</a>", unsafe_allow_html=True)
                                         
                                         st.divider()
                             else:
-                                st.info("لا توجد ملاحظات سابقة.")
-                    except Exception as e:
-                        st.warning(f"جاري تحديث قاعدة البيانات... ({e})")
+                                st.info("سجل الطالب نظيف.")
+                    except: pass
 
 # === بوابة ولي الأمر ===
 elif selected == "ولي الأمر":
@@ -422,3 +423,4 @@ elif selected == "ولي الأمر":
             else:
                 st.error("غير موجود")
         except Exception as e: st.error("خطأ في الاتصال")
+
