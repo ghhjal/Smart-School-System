@@ -217,17 +217,126 @@ elif selected == "الموظفين":
                         db.worksheet("News").append_row([dt, tt, tc, name])
                         st.success("تم!")
 
-            with t3:
-                st.write("رفع ملف Excel للطلاب:")
-                up = st.file_uploader("الملف", type=['xlsx', 'csv'])
-                if up and st.button("رفع"):
+            with t3: # سلوك (نظام النقاط المطور)
+                # 1. إعداد قائمة السلوكيات والنقاط
+                behavior_config = {
+                    "🌟 إيجابي": {
+                        "points": 10,
+                        "reasons": ["مشاركة فعالة في الدرس", "حل الواجب المنزلي بتميز", "نظافة وترتيب", "مساعدة الزملاء", "الالتزام بالزي المدرسي"]
+                    },
+                    "⚠️ نسيان أدوات": {
+                        "points": -2,
+                        "reasons": ["نسيان كتاب الطالب", "نسيان دفتر", "عدم إحضار قلم", "نسيان الأدوات الهندسية"]
+                    },
+                    "⛔ سلبي": {
+                        "points": -5,
+                        "reasons": ["كثرة الحديث الجانبي", "مخالفة تعليمات المعلم", "النوم داخل الفصل", "تخريب ممتلكات", "تأخر عن الحصة"]
+                    },
+                    "📢 تنبيه": {
+                        "points": 0,
+                        "reasons": ["تنبيه شفوي", "استدعاء ولي أمر", "تعهد خطي", "ملاحظة عامة"]
+                    }
+                }
+
+                st.markdown("##### 🏆 رصد نقاط السلوك")
+                
+                # اختيار الطالب وعرض رصيده الحالي
+                col_sel, col_score = st.columns([3, 1])
+                with col_sel:
+                    stt = st.selectbox("اختر الطالب", s_list)
+                
+                # حساب وعرض مجموع نقاط الطالب الحالي
+                current_score = 0
+                if stt:
                     try:
-                        df = pd.read_csv(up) if up.name.endswith('csv') else pd.read_excel(up)
-                        df = df.astype(str)
-                        db = get_db_connection()
-                        db.worksheet("Students").append_rows(df.values.tolist())
-                        st.success(f"تم رفع {len(df)} طالب")
-                    except Exception as e: st.error(str(e))
+                        sid_score = stt.split(" - ")[0]
+                        all_beh = db.worksheet("Behavior_Log").get_all_records()
+                        df_score = pd.DataFrame(all_beh)
+                        if not df_score.empty and 'Points' in df_score.columns and 'Student_ID' in df_score.columns:
+                            # تحويل العمود لأرقام لضمان الجمع الصحيح
+                            df_score['Points'] = pd.to_numeric(df_score['Points'], errors='coerce').fillna(0)
+                            student_logs = df_score[df_score['Student_ID'].astype(str) == sid_score]
+                            current_score = student_logs['Points'].sum()
+                    except: pass
+                
+                with col_score:
+                    st.metric("رصيد النقاط", f"{int(current_score)}", delta_color="normal")
+
+                st.markdown("---")
+
+                # نموذج الإدخال الجديد
+                with st.form("beh_points"):
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        # اختيار النوع الرئيسي
+                        b_type = st.selectbox("نوع السلوك", list(behavior_config.keys()))
+                    
+                    with c2:
+                        # اختيار الملاحظة الجاهزة بناءً على النوع
+                        b_reason = st.selectbox("الملاحظة", behavior_config[b_type]["reasons"])
+                    
+                    # عرض النقاط التي سيتم رصدها
+                    points_to_add = behavior_config[b_type]["points"]
+                    st.info(f"سيتم رصد: **{points_to_add}** نقاط للطالب.")
+
+                    # ملاحظة إضافية اختيارية
+                    extra_note = st.text_input("تفاصيل إضافية (اختياري)")
+                    
+                    if st.form_submit_button("💾 حفظ ورصد النقاط"):
+                        sid, sn = stt.split(" - ", 1)
+                        dt = datetime.now().strftime("%Y-%m-%d")
+                        final_note = f"{b_reason}" + (f" - {extra_note}" if extra_note else "")
+                        
+                        # الحفظ في شيت Google (تأكد من ترتيب الأعمدة)
+                        # الترتيب: Date, ID(auto), Student_ID, Name, Type, Note, Teacher, Status, Points
+                        db.worksheet("Behavior_Log").append_row([
+                            dt, "", sid, sn, b_type, final_note, name, "جديد", points_to_add
+                        ])
+                        st.success(f"تم رصد {points_to_add} نقطة للطالب {sn}")
+                        st.rerun()
+
+                # عرض الجدول والسجل السابق (محدث مع النقاط)
+                if stt:
+                    current_sid = stt.split(" - ")[0]
+                    st.markdown(f"##### 📜 سجل الملاحظات: {stt.split(' - ')[1]}")
+                    
+                    try:
+                        beh_data = db.worksheet("Behavior_Log").get_all_records()
+                        df_beh = pd.DataFrame(beh_data)
+                        
+                        if not df_beh.empty and 'Student_ID' in df_beh.columns:
+                            student_history = df_beh[df_beh['Student_ID'].astype(str) == current_sid]
+                            
+                            if not student_history.empty:
+                                # عرض الجدول الحديث
+                                for idx, row in student_history.iterrows():
+                                    with st.container():
+                                        # تخطيط البطاقة: التاريخ | النوع | النقاط | التفاصيل | زر واتساب
+                                        c1, c2, c3, c4, c5 = st.columns([2, 2, 1, 4, 2])
+                                        c1.caption(f"📅 {row.get('Date', '-')}")
+                                        
+                                        # الألوان حسب النوع
+                                        t_val = row.get('Type', '-')
+                                        color = "green" if "إيجابي" in t_val else "red" if "سلبي" in t_val or "نسيان" in t_val else "orange"
+                                        c2.markdown(f":{color}[{t_val}]")
+                                        
+                                        # عرض النقاط
+                                        pts = row.get('Points', 0)
+                                        c3.write(f"**{pts}**")
+                                        
+                                        c4.write(row.get('Note', '-'))
+                                        
+                                        # زر الواتساب
+                                        msg_text = f"السلام عليكم، ولي أمر الطالب {row.get('Student_Name')}.\nتم رصد سلوك: {t_val}\nالملاحظة: {row.get('Note')}\nالنقاط: {pts}"
+                                        encoded_msg = urllib.parse.quote(msg_text)
+                                        wa_link = f"https://wa.me/?text={encoded_msg}"
+                                        c5.markdown(f"<a href='{wa_link}' target='_blank' class='wa-btn'>واتساب</a>", unsafe_allow_html=True)
+                                        
+                                        st.divider()
+                            else:
+                                st.info("لا توجد ملاحظات سابقة.")
+                    except Exception as e:
+                        st.warning(f"جاري تحديث قاعدة البيانات... ({e})")
 
         # 🅱️ لوحة المعلم
         else:
@@ -359,3 +468,4 @@ elif selected == "ولي الأمر":
             else:
                 st.error("غير موجود")
         except Exception as e: st.error("خطأ في الاتصال")
+
