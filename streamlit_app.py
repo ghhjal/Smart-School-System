@@ -5,6 +5,7 @@ from google.oauth2.service_account import Credentials
 import hashlib
 from datetime import datetime
 from streamlit_option_menu import option_menu
+import urllib.parse  # مكتبة لترميز نص الواتساب
 
 # ---------------------------------------------------------
 # 1. إعداد الصفحة (بدون قائمة جانبية)
@@ -13,11 +14,11 @@ st.set_page_config(
     page_title="مدرستي الذكية",
     layout="wide",
     page_icon="🎓",
-    initial_sidebar_state="collapsed" # إغلاق القائمة الجانبية تماماً
+    initial_sidebar_state="collapsed"
 )
 
 # ---------------------------------------------------------
-# 2. تصميم CSS (تحسينات الجوال + إخفاء الزوائد)
+# 2. تصميم CSS
 # ---------------------------------------------------------
 st.markdown("""
 <style>
@@ -28,22 +29,17 @@ st.markdown("""
         direction: rtl;
     }
     
-    /* خلفية مريحة للعين */
-    .stApp {
-        background-color: #f8f9fa;
-    }
+    .stApp { background-color: #f8f9fa; }
     
-    /* إخفاء القائمة الجانبية وعناصر ستريم ليت */
-    section[data-testid="stSidebar"][aria-expanded="true"]{
-        display: none;
-    }
+    /* إخفاء القائمة الجانبية والعناصر الافتراضية */
+    section[data-testid="stSidebar"][aria-expanded="true"]{ display: none; }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     [data-testid="stToolbar"] {visibility: hidden !important;}
     .stAppDeployButton {display: none;}
     
-    /* تحسين شريط التنقل العلوي */
+    /* تحسين القائمة العلوية */
     .nav-link {
         font-size: 14px !important;
         text-align: center !important;
@@ -51,7 +47,7 @@ st.markdown("""
         padding: 10px !important;
     }
     
-    /* تصميم البطاقات */
+    /* البطاقات */
     div.css-1r6slb0, div.stForm {
         background-color: white;
         padding: 20px;
@@ -71,6 +67,20 @@ st.markdown("""
         border: none;
         font-weight: bold;
     }
+    
+    /* زر الواتساب */
+    .wa-btn {
+        text-decoration: none;
+        background-color: #25D366;
+        color: white !important;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        display: block;
+        text-align: center;
+        width: 100%;
+    }
+    .wa-btn:hover { background-color: #128C7E; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -88,6 +98,7 @@ def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
 def get_db_connection():
+    # تأكد من تطابق اسم ملف الاعتماد والمفتاح هنا مع ما لديك
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds_dict = dict(st.secrets["gcp_service_account"])
     credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
@@ -95,16 +106,14 @@ def get_db_connection():
     return client.open("Smart_School_DB")
 
 # ---------------------------------------------------------
-# 4. شريط التنقل العلوي (بديل القائمة الجانبية)
+# 4. شريط التنقل العلوي
 # ---------------------------------------------------------
-
-# هنا السحر: القائمة أصبحت أفقية (horizontal) في الأعلى
 selected = option_menu(
     menu_title=None,
     options=["الرئيسية", "الموظفين", "ولي الأمر"],
     icons=["house-door-fill", "briefcase-fill", "people-fill"],
     default_index=0,
-    orientation="horizontal",  # جعل القائمة أفقية
+    orientation="horizontal",
     styles={
         "container": {"padding": "0!important", "background-color": "#ffffff", "border-radius": "0"},
         "icon": {"color": "#4b6cb7", "font-size": "18px"}, 
@@ -113,7 +122,6 @@ selected = option_menu(
     }
 )
 
-# زر خروج صغير يظهر فقط عند تسجيل الدخول (تحت القائمة مباشرة)
 if st.session_state.logged_in:
     c1, c2 = st.columns([6, 1])
     with c2:
@@ -131,7 +139,6 @@ if st.session_state.logged_in:
 if selected == "الرئيسية":
     st.markdown("<h3 style='text-align: center; color: #182848;'>🏫 بوابة مدرستي</h3>", unsafe_allow_html=True)
     
-    # بطاقات المعلومات
     col1, col2, col3 = st.columns(3)
     try:
         db = get_db_connection()
@@ -153,7 +160,7 @@ if selected == "الرئيسية":
             st.write("لا توجد أخبار.")
     except: st.warning("جاري التحميل...")
 
-# === بوابة الموظفين (معلم / مدير) ===
+# === بوابة الموظفين ===
 elif selected == "الموظفين":
     if not st.session_state.logged_in:
         c1, c2, c3 = st.columns([1,4,1])
@@ -176,7 +183,6 @@ elif selected == "الموظفين":
                             st.error("خطأ في البيانات")
                     except Exception as e: st.error(f"خطأ: {e}")
     else:
-        # هنا المنطقة الآمنة
         role = st.session_state.user_info.get('Role')
         name = st.session_state.user_info.get('Username')
         
@@ -234,7 +240,8 @@ elif selected == "الموظفين":
                 c_list = df_st['Class'].unique().tolist() if 'Class' in df_st.columns else []
             except: s_list, c_list = [], []
 
-            t1, t2, t3, t4 = st.tabs(["واجب", "غياب", "سلوك", "درجة"])
+            # 🛠️ تم تعديل التبويبات هنا: حذف "درجة"
+            t1, t2, t3 = st.tabs(["واجب", "غياب", "سلوك"])
             
             with t1: # واجب
                 with st.form("hw"):
@@ -256,27 +263,63 @@ elif selected == "الموظفين":
                         db.worksheet("Attendance").append_rows(rows)
                         st.success("تم")
 
-            with t3: # سلوك
+            with t3: # سلوك (تم التعديل)
+                st.markdown("##### 📝 تسجيل ملاحظة جديدة")
                 with st.form("beh"):
                     stt = st.selectbox("الطالب", s_list)
                     ty = st.selectbox("النوع", ["مخالفة", "تأخر", "إشادة"])
                     nt = st.text_input("ملاحظة")
-                    if st.form_submit_button("حفظ"):
+                    
+                    if st.form_submit_button("حفظ الملاحظة"):
                         sid, sn = stt.split(" - ", 1)
                         dt = datetime.now().strftime("%Y-%m-%d")
+                        # التأكد من صحة الترتيب حسب أعمدة شيت جوجل لديك
                         db.worksheet("Behavior_Log").append_row([dt, "", sid, sn, ty, nt, name, "جديد"])
-                        st.success("تم")
-            
-            with t4: # درجات
-                with st.form("grd"):
-                    sg = st.selectbox("الطالب", s_list, key="sg")
-                    bg = st.selectbox("المادة", ["رياضيات", "علوم"])
-                    dg = st.number_input("الدرجة", 0, 100)
-                    if st.form_submit_button("رصد"):
-                        sid, sn = sg.split(" - ", 1)
-                        dt = datetime.now().strftime("%Y-%m-%d")
-                        db.worksheet("Grades").append_row([dt, sid, sn, bg, "اختبار", dg, name, ""])
-                        st.success("تم")
+                        st.success("تم الحفظ")
+                        st.rerun() # تحديث الصفحة لظهور الملاحظة فوراً
+
+                # 🛠️ عرض الجدول والملاحظات السابقة مع زر الواتساب
+                if stt:
+                    current_sid = stt.split(" - ")[0]
+                    st.markdown("---")
+                    st.markdown(f"##### 📜 سجل ملاحظات: {stt.split(' - ')[1]}")
+                    
+                    try:
+                        # جلب سجل السلوك
+                        beh_data = db.worksheet("Behavior_Log").get_all_records()
+                        df_beh = pd.DataFrame(beh_data)
+                        
+                        # تصفية البيانات للطالب المحدد فقط (تأكد أن اسم العمود في شيت جوجل هو Student_ID)
+                        # إذا كان اسم العمود مختلف في الشيت (مثلاً "رقم الطالب") يرجى تعديل 'Student_ID' أدناه
+                        if not df_beh.empty and 'Student_ID' in df_beh.columns:
+                            student_history = df_beh[df_beh['Student_ID'].astype(str) == current_sid]
+                            
+                            if not student_history.empty:
+                                # عرض الملاحظات كجدول مخصص
+                                for idx, row in student_history.iterrows():
+                                    with st.container():
+                                        c1, c2, c3, c4 = st.columns([2, 2, 4, 2])
+                                        c1.caption(f"📅 {row.get('Date', '-')}")
+                                        
+                                        # تلوين نوع الملاحظة
+                                        type_color = "red" if row.get('Type') == "مخالفة" else "green" if row.get('Type') == "إشادة" else "orange"
+                                        c2.markdown(f":{type_color}[{row.get('Type', '-')}]")
+                                        
+                                        c3.write(row.get('Note', '-'))
+                                        
+                                        # تجهيز رابط الواتساب
+                                        msg_text = f"السلام عليكم، بخصوص الطالب {row.get('Student_Name')}: \nنوع الملاحظة: {row.get('Type')}\nالتفاصيل: {row.get('Note')}"
+                                        encoded_msg = urllib.parse.quote(msg_text)
+                                        wa_link = f"https://wa.me/?text={encoded_msg}"
+                                        
+                                        c4.markdown(f"<a href='{wa_link}' target='_blank' class='wa-btn'>📲 إرسال واتساب</a>", unsafe_allow_html=True)
+                                        st.divider()
+                            else:
+                                st.info("لا توجد ملاحظات سابقة لهذا الطالب.")
+                        else:
+                            st.warning("لم يتم العثور على سجلات أو هناك خطأ في تسمية الأعمدة.")
+                    except Exception as e:
+                        st.error(f"حدث خطأ أثناء جلب السجل: {e}")
 
 # === بوابة ولي الأمر ===
 elif selected == "ولي الأمر":
@@ -295,13 +338,8 @@ elif selected == "ولي الأمر":
             if not res.empty:
                 st.success(f"الطالب: {res.iloc[0]['Full_Name']}")
                 
-                t1, t2, t3 = st.tabs(["درجات", "غياب", "تواصل"])
-                
-                with t1:
-                    g = pd.DataFrame(db.worksheet("Grades").get_all_records())
-                    mg = g[g['Student_ID'].astype(str) == pid] if not g.empty else pd.DataFrame()
-                    if not mg.empty: st.dataframe(mg[['Subject', 'Score']], use_container_width=True)
-                    else: st.info("لا يوجد")
+                # تم حذف تبويب الدرجات من العرض لولي الأمر أيضاً ليتوافق مع الطلب
+                t2, t3 = st.tabs(["غياب", "تواصل"])
                 
                 with t2:
                     a = pd.DataFrame(db.worksheet("Attendance").get_all_records())
