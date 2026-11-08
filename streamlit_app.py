@@ -2,11 +2,14 @@ import streamlit as st
 from supabase import create_client
 import time
 import uuid
+import requests
+from io import BytesIO
+import fitz  # مكتبة PyMuPDF لدمج ملفات الـ PDF والصور
 
 # ==========================================
-# 1. إعدادات الصفحة والتصميم (CSS)
+# 1. إعدادات الصفحة والتصميم
 # ==========================================
-st.set_page_config(page_title="ملف الإنجاز المهني", page_icon="💼", layout="wide")
+st.set_page_config(page_title="ملف الإنجاز المهني", page_icon="💼", layout="centered")
 
 st.markdown("""
     <style>
@@ -16,37 +19,31 @@ st.markdown("""
         text-align: right; 
         font-family: 'Tajawal', sans-serif;
     }
-    
-    /* تصميم بطاقة التعريف العلوية */
     .profile-header {
         background-color: #1a365d;
         color: white;
-        padding: 30px;
+        padding: 20px;
         border-radius: 15px;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
     }
-    .profile-title { font-size: 24px; font-weight: 700; margin-bottom: 5px; }
-    .profile-subtitle { font-size: 14px; color: #cbd5e1; margin-bottom: 15px; }
-    .profile-name { font-size: 20px; font-weight: 700; color: #fff; }
+    .profile-title { font-size: 20px; font-weight: 700; margin-bottom: 5px; }
+    .profile-name { font-size: 18px; font-weight: 700; color: #fff; }
     .profile-major { font-size: 14px; color: #cbd5e1; }
     
-    /* تصميم الإحصائيات */
-    .stat-box {
-        text-align: center;
-        padding: 15px;
-        background-color: white;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
+    /* تكبير أزرار القائمة لتناسب الجوال */
+    div[data-testid="stButton"] button {
+        height: 80px;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 12px;
     }
-    .stat-icon { font-size: 24px; color: #475569; margin-bottom: 10px; }
-    .stat-number { font-size: 28px; font-weight: 700; color: #0f172a; }
-    .stat-label { font-size: 14px; color: #64748b; }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. الاتصال بقاعدة البيانات وإدارة الجلسة
+# 2. الاتصال بقاعدة البيانات وإدارة الجلسة والتنقل
 # ==========================================
 @st.cache_resource
 def init_connection():
@@ -56,200 +53,226 @@ def init_connection():
 
 supabase = init_connection()
 
+# تهيئة المتغيرات في الجلسة
 if 'user' not in st.session_state:
     st.session_state.user = None
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 'home'
+
+def navigate_to(page_name):
+    st.session_state.current_page = page_name
+    st.rerun()
 
 # ==========================================
 # 3. صفحة تسجيل الدخول
 # ==========================================
 def login_page():
     st.title("🔒 تسجيل الدخول")
-    st.write("ملف الإنجاز المهني محمي، يرجى تسجيل الدخول للوصول إلى لوحة التحكم.")
-    
     with st.form("login_form"):
         email = st.text_input("البريد الإلكتروني")
         password = st.text_input("كلمة المرور", type="password")
-        submit = st.form_submit_button("دخول", type="primary")
-        
-        if submit:
+        if st.form_submit_button("دخول", type="primary"):
             if email and password:
                 try:
                     response = supabase.auth.sign_in_with_password({"email": email, "password": password})
                     st.session_state.user = response.user
-                    st.success("تم تسجيل الدخول بنجاح! جاري التوجيه...")
+                    st.success("تم تسجيل الدخول!")
                     time.sleep(1)
                     st.rerun()
-                except Exception as e:
-                    st.error("البريد الإلكتروني أو كلمة المرور غير صحيحة.")
+                except Exception:
+                    st.error("بيانات الدخول غير صحيحة.")
             else:
-                st.warning("الرجاء إدخال البريد الإلكتروني وكلمة المرور.")
+                st.warning("أدخل البيانات.")
 
 # ==========================================
-# 4. التطبيق الرئيسي (بعد تسجيل الدخول)
+# 4. التطبيق الرئيسي (الصفحات)
 # ==========================================
 def main_app():
-    # القائمة الجانبية
-    with st.sidebar:
-        st.markdown("### قائمة التنقل")
-        menu_selection = st.radio("اختر الصفحة:", [
-            "🏠 لوحة التحكم",
-            "📋 معايير الأداء المهني",
-            "📅 الأرشيف السنوي",
-            "📄 التقارير والطباعة",
-            "🔍 البحث في الشواهد",
-            "⚙️ الإعدادات والنسخ الاحتياطي"
-        ])
-        
-        st.write("---")
-        if st.button("🚪 تسجيل الخروج", use_container_width=True):
-            supabase.auth.sign_out()
-            st.session_state.user = None
-            st.rerun()
-
     # جلب السنة الدراسية النشطة
     year_res = supabase.table("academic_years").select("*").eq("is_active", True).execute()
     active_year = year_res.data[0] if year_res.data else None
 
+    # زر الرجوع للرئيسية (يظهر في كل الصفحات عدا الرئيسية)
+    if st.session_state.current_page != 'home':
+        if st.button("🏠 عودة للرئيسية"):
+            navigate_to('home')
+        st.write("---")
+
     # ----------------------------------------
-    # 🏠 لوحة التحكم
+    # 🏠 الصفحة الرئيسية (نظام الشبكة 2x2 للموبايل)
     # ----------------------------------------
-    if menu_selection == "🏠 لوحة التحكم":
+    if st.session_state.current_page == 'home':
         st.markdown("""
             <div class="profile-header">
-                <div class="profile-title">ملف الإنجاز المهني</div>
-                <div class="profile-subtitle">ملف الإنجاز الإلكتروني للمعلم</div>
+                <div class="profile-title">ملف الإنجاز الإلكتروني</div>
                 <div class="profile-name">زياد المعمري</div>
                 <div class="profile-major">التخصص: لغة إنجليزية / تربية خاصة</div>
             </div>
         """, unsafe_allow_html=True)
         
-        year_name = active_year['year_name'] if active_year else "غير محدد"
-        evidences_count = 0
-        if active_year:
-            count_res = supabase.table("evidences").select("id", count="exact").eq("year_id", active_year['id']).execute()
-            evidences_count = count_res.count if count_res.count else 0
-            
-        col1, col2, col3, col4 = st.columns(4)
+        # شبكة الأزرار 2x2
+        st.write("### القائمة الرئيسية")
+        col1, col2 = st.columns(2)
         with col1:
-            st.markdown('<div class="stat-box"><div class="stat-icon">📁</div><div class="stat-number">11</div><div class="stat-label">المعايير</div></div>', unsafe_allow_html=True)
+            if st.button("📋 معايير الأداء", use_container_width=True): navigate_to('standards')
+            if st.button("📄 التقارير", use_container_width=True): navigate_to('reports')
         with col2:
-            st.markdown(f'<div class="stat-box"><div class="stat-icon">📄</div><div class="stat-number">{evidences_count}</div><div class="stat-label">الشواهد</div></div>', unsafe_allow_html=True)
-        with col3:
-            st.markdown('<div class="stat-box"><div class="stat-icon">📊</div><div class="stat-number">--%</div><div class="stat-label">اكتمال الملف</div></div>', unsafe_allow_html=True)
-        with col4:
-            st.markdown(f'<div class="stat-box"><div class="stat-icon">📅</div><div class="stat-number">{year_name}</div><div class="stat-label">السنة الدراسية</div></div>', unsafe_allow_html=True)
+            if st.button("📅 الأرشيف", use_container_width=True): navigate_to('archive')
+            if st.button("🚪 خروج", use_container_width=True):
+                supabase.auth.sign_out()
+                st.session_state.user = None
+                st.session_state.current_page = 'home'
+                st.rerun()
 
     # ----------------------------------------
-    # 📋 معايير الأداء المهني وإدارة الشواهد
+    # 📋 صفحة معايير الأداء المهني (تم تحسينها برمجياً)
     # ----------------------------------------
-    elif menu_selection == "📋 معايير الأداء المهني":
-        st.title("معايير الأداء المهني والشواهد")
-        
+    elif st.session_state.current_page == 'standards':
+        st.title("معايير الأداء المهني")
         if not active_year:
-            st.error("⚠️ لا توجد سنة دراسية نشطة! يرجى إعداد السنة الدراسية أولاً.")
+            st.error("لا توجد سنة دراسية نشطة.")
             return
 
         standards_res = supabase.table("standards").select("*").order("id").execute()
         standards_list = standards_res.data
         standards_dict = {f"{s['id']}. {s['title']}": s['id'] for s in standards_list}
 
-        tab1, tab2 = st.tabs(["📤 إضافة شاهد جديد", "📂 سجل الشواهد للعام الحالي"])
+        tab1, tab2 = st.tabs(["📂 سجل الشواهد", "📤 إضافة شاهد"])
 
-        # --- تبويب الإضافة ---
         with tab1:
-            st.markdown("### إرفاق شاهد جديد")
-            with st.form("add_evidence_form", clear_on_submit=True):
-                col1, col2 = st.columns([2, 1])
-                with col1:
-                    selected_standard = st.selectbox("اختر بند التقييم:", list(standards_dict.keys()))
-                    evidence_title = st.text_input("عنوان الشاهد (مثال: شهادة دورة كذا...):")
-                    evidence_description = st.text_area("وصف الشاهد والتفاصيل:", height=100)
-                with col2:
-                    uploaded_files = st.file_uploader("المرفقات (صور، PDF) - يمكنك تحديد عدة ملفات", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True)
+            evidences_res = supabase.table("evidences").select("*, standards(title), evidence_files(*)").eq("year_id", active_year['id']).order("created_at").execute()
+            
+            evidences_by_standard = {}
+            for rec in evidences_res.data:
+                std_id = rec['standard_id']
+                if std_id not in evidences_by_standard: evidences_by_standard[std_id] = []
+                evidences_by_standard[std_id].append(rec)
+            
+            for std in standards_list:
+                std_id = std['id']
+                target = std['target_evidences']
+                std_evidences = evidences_by_standard.get(std_id, [])
+                count = len(std_evidences)
                 
-                submit_evidence = st.form_submit_button("حفظ الشاهد ورفع الملفات 💾", type="primary")
-
-                if submit_evidence:
-                    if evidence_title and uploaded_files:
-                        try:
-                            with st.spinner('جاري تشفير ورفع الملفات وحفظ الشاهد...'):
-                                standard_id = standards_dict[selected_standard]
-                                
-                                # إدخال الشاهد
-                                evidence_data = supabase.table("evidences").insert({
-                                    "standard_id": standard_id,
-                                    "year_id": active_year['id'],
-                                    "title": evidence_title,
-                                    "description": evidence_description
-                                }).execute()
-                                
-                                new_evidence_id = evidence_data.data[0]['id']
-                                
-                                # رفع الملفات المتعددة
-                                for up_file in uploaded_files:
-                                    file_ext = up_file.name.split('.')[-1]
-                                    file_path = f"{new_evidence_id}/{uuid.uuid4()}.{file_ext}"
-                                    
-                                    supabase.storage.from_("private-achievements").upload(
-                                        path=file_path,
-                                        file=up_file.getvalue(),
-                                        file_options={"content-type": up_file.type}
-                                    )
-                                    
-                                    supabase.table("evidence_files").insert({
-                                        "evidence_id": new_evidence_id,
-                                        "file_url": file_path,
-                                        "file_type": up_file.type
-                                    }).execute()
-                                
-                                st.success("تم رفع الشاهد ومرفقاته بنجاح وتأمينها! 🎉")
-                        except Exception as e:
-                            st.error(f"حدث خطأ أثناء الحفظ: {str(e)}")
+                status_icon = "✅" if count >= target else ("⏳" if count > 0 else "❌")
+                
+                with st.expander(f"{status_icon} {std['title']} ({count}/{target})"):
+                    if count == 0:
+                        st.info("لا توجد شواهد.")
                     else:
-                        st.warning("الرجاء إدخال عنوان الشاهد وإرفاق ملف واحد على الأقل.")
+                        for idx, rec in enumerate(std_evidences):
+                            st.write(f"**{idx+1}. {rec['title']}** - {rec['description']}")
+                            files = rec.get("evidence_files", [])
+                            if files:
+                                cols = st.columns(len(files) if len(files) < 3 else 3)
+                                for i, f_rec in enumerate(files):
+                                    url_res = supabase.storage.from_("private-achievements").create_signed_url(f_rec['file_url'], 60)
+                                    with cols[i % 3]: st.link_button(f"👁️ ملف {i+1}", url_res['signedURL'], use_container_width=True)
+                            st.write("---")
 
-        # --- تبويب العرض (الروابط المؤقتة الآمنة) ---
         with tab2:
-            st.markdown(f"### الشواهد المرفوعة لعام ({active_year['year_name']})")
-            
-            evidences_res = supabase.table("evidences").select(
-                "*, standards(title), evidence_files(*)"
-            ).eq("year_id", active_year['id']).order("created_at", desc=True).execute()
-            
-            records = evidences_res.data
-            
-            if not records:
-                st.info("لا توجد شواهد مضافة حتى الآن في هذه السنة الدراسية.")
-            else:
-                for rec in records:
-                    with st.expander(f"📁 {rec['title']} - (المعيار: {rec['standards']['title']})"):
-                        st.write(f"**الوصف:** {rec['description']}")
-                        st.write(f"**تاريخ الإضافة:** {rec['created_at'][:10]}")
-                        
-                        files = rec.get("evidence_files", [])
-                        if files:
-                            st.write("**المرفقات:**")
-                            cols = st.columns(len(files) if len(files) < 4 else 4)
-                            for i, file_record in enumerate(files):
-                                # توليد الرابط الآمن
-                                signed_url_res = supabase.storage.from_("private-achievements").create_signed_url(file_record['file_url'], 60)
-                                secure_url = signed_url_res['signedURL']
-                                
-                                with cols[i % 4]:
-                                    st.link_button(f"👁️ عرض المرفق {i+1}", secure_url, use_container_width=True)
-                        else:
-                            st.caption("لا توجد مرفقات.")
+            with st.form("add_form", clear_on_submit=True):
+                selected_std = st.selectbox("المعيار:", list(standards_dict.keys()))
+                title = st.text_input("عنوان الشاهد:")
+                desc = st.text_area("الوصف:")
+                uploaded_files = st.file_uploader("المرفقات", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True)
+                
+                if st.form_submit_button("حفظ الشاهد 💾", type="primary"):
+                    if title and uploaded_files:
+                        with st.spinner('جاري الحفظ...'):
+                            std_id = standards_dict[selected_std]
+                            ev_data = supabase.table("evidences").insert({"standard_id": std_id, "year_id": active_year['id'], "title": title, "description": desc}).execute()
+                            new_id = ev_data.data[0]['id']
                             
-                        if st.button("🗑️ حذف هذا الشاهد", key=f"del_{rec['id']}"):
-                            st.warning("سيتم برمجة الحذف الآمن للملفات وقاعدة البيانات في الخطوة التالية.")
+                            for up_file in uploaded_files:
+                                ext = up_file.name.split('.')[-1]
+                                path = f"{new_id}/{uuid.uuid4()}.{ext}"
+                                supabase.storage.from_("private-achievements").upload(path=path, file=up_file.getvalue(), file_options={"content-type": up_file.type})
+                                supabase.table("evidence_files").insert({"evidence_id": new_id, "file_url": path, "file_type": up_file.type}).execute()
+                        st.success("تم الحفظ!")
+                        time.sleep(1)
+                        st.rerun()
 
-    # باقي الصفحات (قيد التطوير)
+    # ----------------------------------------
+    # 📄 صفحة التقارير والطباعة (محرك الدمج)
+    # ----------------------------------------
+    elif st.session_state.current_page == 'reports':
+        st.title("التقارير والطباعة")
+        st.write("يمكنك هنا سحب كافة شواهد ومرفقات السنة الدراسية الحالية ودمجها في ملف PDF واحد جاهز للطباعة والمشاركة.")
+        
+        if st.button("📥 توليد ملف الإنجاز الشامل (PDF)", type="primary", use_container_width=True):
+            if not active_year:
+                st.error("لا توجد سنة دراسية نشطة.")
+            else:
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                try:
+                    # 1. جلب كافة الملفات
+                    status_text.text("جاري جلب البيانات من قاعدة البيانات...")
+                    res = supabase.table("evidence_files").select("*, evidences(year_id)").execute()
+                    
+                    # تصفية ملفات السنة الحالية فقط
+                    current_year_files = [f for f in res.data if f['evidences']['year_id'] == active_year['id']]
+                    
+                    if not current_year_files:
+                        st.warning("لا توجد مرفقات في السنة الحالية لدمجها.")
+                    else:
+                        # 2. إنشاء مستند PDF رئيسي فارغ
+                        merged_pdf = fitz.open()
+                        total_files = len(current_year_files)
+                        
+                        # 3. تحميل ودمج الملفات
+                        for i, file_record in enumerate(current_year_files):
+                            status_text.text(f"جاري معالجة ودمج الملف ({i+1}/{total_files})...")
+                            
+                            # استخراج رابط مؤقت للتحميل
+                            url_res = supabase.storage.from_("private-achievements").create_signed_url(file_record['file_url'], 60)
+                            download_url = url_res['signedURL']
+                            
+                            # تحميل الملف كـ Bytes
+                            response = requests.get(download_url)
+                            file_bytes = response.content
+                            
+                            if file_record['file_type'].startswith('image/'):
+                                # تحويل الصورة إلى PDF ثم إضافتها
+                                img_doc = fitz.open(stream=file_bytes, filetype="image")
+                                pdf_bytes = img_doc.convert_to_pdf()
+                                img_pdf = fitz.open("pdf", pdf_bytes)
+                                merged_pdf.insert_pdf(img_pdf)
+                            elif file_record['file_type'] == 'application/pdf':
+                                # إضافة الـ PDF مباشرة
+                                doc = fitz.open(stream=file_bytes, filetype="pdf")
+                                merged_pdf.insert_pdf(doc)
+                                
+                            progress_bar.progress((i + 1) / total_files)
+                            
+                        # 4. حفظ المستند المدمج في الذاكرة
+                        status_text.text("جاري تجهيز الملف النهائي...")
+                        pdf_out = BytesIO()
+                        merged_pdf.save(pdf_out)
+                        merged_pdf.close()
+                        
+                        status_text.text("✅ تم تجهيز الملف الشامل بنجاح!")
+                        
+                        # زر تحميل الملف النهائي
+                        st.download_button(
+                            label="⬇️ تحميل ملف الإنجاز الشامل (PDF)",
+                            data=pdf_out.getvalue(),
+                            file_name=f"ملف_إنجاز_زياد_المعمري_{active_year['year_name']}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+                except Exception as e:
+                    st.error(f"حدث خطأ أثناء توليد التقرير: {e}")
+
+    # ----------------------------------------
+    # مساحات باقي الصفحات
+    # ----------------------------------------
     else:
-        st.info("سيتم بناء هذه الصفحة لاحقاً بناءً على الخطة المعتمدة.")
+        st.info("سيتم برمجة هذه الصفحة لاحقاً.")
 
-# ==========================================
-# 5. مشغل التطبيق
-# ==========================================
+# تشغيل التطبيق
 if st.session_state.user is None:
     login_page()
 else:
