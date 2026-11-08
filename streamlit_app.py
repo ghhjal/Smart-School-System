@@ -489,3 +489,8 @@ def main_app():
                     import streamlit.components.v1 as components
                     st.success("✅ تم تجهيز التقرير! اضغط Ctrl+P (أو Cmd+P) لطباعته وحفظه كـ PDF.")
                     components.html(html_content, height=800, scrolling=True)
+# تشغيل التطبيق
+if st.session_state.user is None:
+    login_page()
+else:
+    main_app()                    
