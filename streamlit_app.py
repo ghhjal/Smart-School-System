@@ -308,7 +308,8 @@ def main_app():
                     standards_res = supabase.table("standards").select("*").order("id").execute()
                     stds = standards_res.data
                     
-                    evidences_res = supabase.table("evidences").select("*, standards(title, weight, target_evidences), sub_items(title), evidence_files(*)").eq("year_id", active_year['id']).order("created_at").execute()
+                    # التصحيح هنا: تمت إزالة sub_items(title) من الاستعلام لمنع الخطأ
+                    evidences_res = supabase.table("evidences").select("*, standards(title, weight, target_evidences), evidence_files(*)").eq("year_id", active_year['id']).order("created_at").execute()
                     all_evidences = evidences_res.data
                     
                     # إحصائيات الغلاف والفهرس
@@ -428,13 +429,10 @@ def main_app():
                     # 5. صفحات الشواهد والتفاصيل
                     for ev in all_evidences:
                         std = ev['standards']
-                        sub_item_title = ev['sub_items']['title'] if ev.get('sub_items') else ev['title']
-                        created_date = ev['created_at'][:10]
                         
-                        # معالجة الملفات المرفقة وتوليد روابط آمنة لها
-                        files = ev.get('evidence_files', [])
-                        img_html = ""
-                        pdf_count = 0
+                        # التصحيح هنا: استخدام عنوان الشاهد مباشرة لتجنب الخطأ
+                        sub_item_title = ev['title'] 
+                        created_date = ev['created_at'][:10]
                         
                         for f in files:
                             if f['file_type'].startswith('image/'):
