@@ -429,10 +429,14 @@ def main_app():
                     # 5. صفحات الشواهد والتفاصيل
                     for ev in all_evidences:
                         std = ev['standards']
-                        
-                        # التصحيح هنا: استخدام عنوان الشاهد مباشرة لتجنب الخطأ
                         sub_item_title = ev['title'] 
                         created_date = ev['created_at'][:10]
+                        
+                        # السطر الذي كان مفقوداً وتسبب في الخطأ
+                        files = ev.get('evidence_files', [])
+                        
+                        img_html = ""
+                        pdf_count = 0
                         
                         for f in files:
                             if f['file_type'].startswith('image/'):
