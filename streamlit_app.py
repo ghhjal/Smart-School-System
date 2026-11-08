@@ -290,69 +290,202 @@ def main_app():
                     else:
                         st.warning("يرجى إدخال اسم البند الفرعي.")
 
-    # ----------------------------------------
-    # 📄 صفحة التقارير والطباعة
+   # ----------------------------------------
+    # 📄 صفحة التقارير (محرك توليد تقرير HTML/PDF الاحترافي)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
-        st.title("التقارير والطباعة")
-        st.write("يمكنك هنا سحب كافة شواهد ومرفقات السنة الدراسية الحالية ودمجها في ملف PDF واحد جاهز للطباعة والمشاركة.")
+        st.title("تصدير ملف الإنجاز (PDF)")
         
-        if st.button("📥 توليد ملف الإنجاز الشامل (PDF)", type="primary", use_container_width=True):
-            if not active_year:
-                st.error("لا توجد سنة دراسية نشطة.")
-            else:
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                try:
-                    status_text.text("جاري جلب البيانات من قاعدة البيانات...")
-                    res = supabase.table("evidence_files").select("*, evidences(year_id)").execute()
-                    current_year_files = [f for f in res.data if f['evidences']['year_id'] == active_year['id']]
+        if not active_year:
+            st.error("لا توجد سنة دراسية نشطة.")
+        else:
+            st.info("💡 انقر على زر 'توليد التقرير'، ثم استخدم اختصار الطباعة (Ctrl+P أو Cmd+P) في متصفحك واختر 'حفظ بتنسيق PDF'.")
+            
+            if st.button("توليد التقرير الاحترافي للطباعة 🖨️", type="primary", use_container_width=True):
+                with st.spinner("جاري جمع البيانات وتجهيز التقرير..."):
                     
-                    if not current_year_files:
-                        st.warning("لا توجد مرفقات في السنة الحالية لدمجها.")
-                    else:
-                        merged_pdf = fitz.open()
-                        total_files = len(current_year_files)
+                    # 1. جلب البيانات الأساسية
+                    standards_res = supabase.table("standards").select("*").order("id").execute()
+                    stds = standards_res.data
+                    
+                    evidences_res = supabase.table("evidences").select("*, standards(title, weight, target_evidences), sub_items(title), evidence_files(*)").eq("year_id", active_year['id']).order("created_at").execute()
+                    all_evidences = evidences_res.data
+                    
+                    # إحصائيات الغلاف والفهرس
+                    total_evidences = len(all_evidences)
+                    covered_stds = len(set([e['standard_id'] for e in all_evidences]))
+                    
+                    # 2. بناء هيكل الـ CSS والتصميم
+                    html_content = f"""
+                    <!DOCTYPE html>
+                    <html dir="rtl" lang="ar">
+                    <head>
+                        <meta charset="UTF-8">
+                        <style>
+                            @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+                            body {{ font-family: 'Tajawal', sans-serif; background: white; color: #333; }}
+                            .page {{ page-break-after: always; min-height: 297mm; padding: 20mm; margin: 0 auto; box-sizing: border-box; position: relative; }}
+                            
+                            /* الغلاف */
+                            .cover-page {{ border: 3px solid #146c59; border-radius: 15px; padding: 40px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 250mm; }}
+                            .cover-title {{ color: #146c59; font-size: 36px; font-weight: bold; margin-bottom: 10px; }}
+                            .cover-subtitle {{ font-size: 20px; margin-bottom: 40px; font-weight: bold; }}
+                            .info-table {{ width: 80%; border-collapse: collapse; margin: 0 auto; font-size: 16px; }}
+                            .info-table th, .info-table td {{ border: 1px solid #ddd; padding: 12px; text-align: center; }}
+                            .info-table th {{ background-color: #f9f9f9; width: 30%; font-weight: bold; }}
+                            
+                            /* الترويسة */
+                            .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid #146c59; padding-bottom: 10px; margin-bottom: 20px; font-size: 14px; font-weight: bold; }}
+                            .header-right {{ color: #146c59; }}
+                            .header-left {{ text-align: left; }}
+                            
+                            /* الفهرس */
+                            .index-title {{ color: #146c59; font-size: 24px; font-weight: bold; margin-bottom: 20px; }}
+                            .index-table {{ width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }}
+                            .index-table th {{ background-color: #e6f2ef; color: #146c59; padding: 10px; text-align: center; border-bottom: 2px solid #146c59; }}
+                            .index-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #ddd; }}
+                            
+                            /* صفحات الشواهد */
+                            .std-header {{ background-color: #146c59; color: white; padding: 10px 15px; font-size: 18px; font-weight: bold; border-radius: 8px 8px 0 0; margin-bottom: 0; }}
+                            .ev-header {{ background-color: #0f5243; color: white; padding: 8px 15px; font-size: 14px; margin-bottom: 15px; border-radius: 0 0 8px 8px; display: flex; justify-content: space-between; }}
+                            .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }}
+                            .meta-box {{ border: 1px solid #ddd; padding: 10px; text-align: center; border-radius: 5px; }}
+                            .meta-title {{ font-size: 12px; color: #666; font-weight: bold; margin-bottom: 5px; }}
+                            .meta-value {{ font-size: 14px; font-weight: bold; }}
+                            
+                            .desc-section {{ margin-bottom: 20px; line-height: 1.6; font-size: 14px; text-align: justify; }}
+                            .desc-title {{ border-right: 4px solid #146c59; padding-right: 10px; color: #146c59; font-weight: bold; margin-bottom: 10px; }}
+                            
+                            .images-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }}
+                            .images-grid img {{ width: 100%; border: 1px solid #ddd; border-radius: 8px; }}
+                            .pdf-notice {{ background: #f0f0f0; padding: 10px; text-align: center; border-radius: 5px; font-size: 13px; color: #555; margin-bottom: 15px; border: 1px dashed #ccc; }}
+                            
+                            /* التواقيع */
+                            .signatures {{ display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px; text-align: center; }}
+                            .sig-box {{ width: 45%; }}
+                            
+                            /* إعدادات الطباعة */
+                            @media print {{
+                                body {{ margin: 0; padding: 0; }}
+                                /* إخفاء واجهة Streamlit أثناء الطباعة */
+                                header, footer, .stSidebar, .st-emotion-cache-1104gpd, [data-testid="stToolbar"] {{ display: none !important; }}
+                                .page {{ box-shadow: none; margin: 0; padding: 10mm; }}
+                                @page {{ size: A4; margin: 0; }}
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                    """
+                    
+                    # 3. صفحة الغلاف
+                    html_content += f"""
+                    <div class="page">
+                        <div class="cover-page">
+                            <div class="cover-title">ملف الإنجاز</div>
+                            <div class="cover-subtitle">شواهد الأداء الوظيفي</div>
+                            <table class="info-table">
+                                <tr><th>الاسم</th><td>زياد المعمري</td></tr>
+                                <tr><th>التخصص</th><td>لغة إنجليزية / تربية خاصة</td></tr>
+                                <tr><th>المدرسة</th><td>ابتدائية عبادة بن قيس الأنصاري</td></tr>
+                                <tr><th>المرحلة</th><td>ابتدائي / متوسط</td></tr>
+                                <tr><th>المدينة</th><td>المدينة المنورة</td></tr>
+                                <tr><th>دورة الأداء</th><td>{active_year['year_name']}</td></tr>
+                                <tr><th>عدد الشواهد</th><td>{total_evidences}</td></tr>
+                                <tr><th>البنود المغطاة</th><td>{covered_stds} من {len(stds)}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    """
+                    
+                    # الترويسة المشتركة للصفحات
+                    shared_header = f"""
+                    <div class="header-container">
+                        <div class="header-right">
+                            زياد المعمري<br>
+                            <span style="font-size:11px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي<br>دورة {active_year['year_name']}</span>
+                        </div>
+                        <div class="header-left">
+                            المملكة العربية السعودية<br>
+                            <span style="font-size:11px; font-weight:normal; color:#666;">وزارة التعليم<br>ابتدائية عبادة بن قيس الأنصاري</span>
+                        </div>
+                    </div>
+                    """
+                    
+                    # 4. صفحة الفهرس
+                    html_content += f"""
+                    <div class="page">
+                        {shared_header}
+                        <div class="index-title">فهرس البنود</div>
+                        <table class="index-table">
+                            <tr><th>م</th><th>البند</th><th>الوزن</th><th>الشواهد المرفوعة</th><th>المعتمد</th></tr>
+                    """
+                    for std in stds:
+                        count = len([e for e in all_evidences if e['standard_id'] == std['id']])
+                        target = std['target_evidences']
+                        html_content += f"<tr><td>{std['id']}</td><td style='text-align:right;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:{'green' if count >= target else ('orange' if count>0 else 'red')}'>{count}</td><td>{target}</td></tr>"
+                    html_content += "</table></div>"
+                    
+                    # 5. صفحات الشواهد والتفاصيل
+                    for ev in all_evidences:
+                        std = ev['standards']
+                        sub_item_title = ev['sub_items']['title'] if ev.get('sub_items') else ev['title']
+                        created_date = ev['created_at'][:10]
                         
-                        for i, file_record in enumerate(current_year_files):
-                            status_text.text(f"جاري معالجة ودمج الملف ({i+1}/{total_files})...")
-                            url_res = supabase.storage.from_("private-achievements").create_signed_url(file_record['file_url'], 60)
-                            download_url = url_res['signedURL']
-                            
-                            response = requests.get(download_url)
-                            file_bytes = response.content
-                            
-                            if file_record['file_type'].startswith('image/'):
-                                img_doc = fitz.open(stream=file_bytes, filetype="image")
-                                pdf_bytes = img_doc.convert_to_pdf()
-                                img_pdf = fitz.open("pdf", pdf_bytes)
-                                merged_pdf.insert_pdf(img_pdf)
-                            elif file_record['file_type'] == 'application/pdf':
-                                doc = fitz.open(stream=file_bytes, filetype="pdf")
-                                merged_pdf.insert_pdf(doc)
+                        # معالجة الملفات المرفقة وتوليد روابط آمنة لها
+                        files = ev.get('evidence_files', [])
+                        img_html = ""
+                        pdf_count = 0
+                        
+                        for f in files:
+                            if f['file_type'].startswith('image/'):
+                                url_res = supabase.storage.from_("private-achievements").create_signed_url(f['file_url'], 3600)
+                                img_html += f"<img src='{url_res['signedURL']}'>"
+                            elif f['file_type'] == 'application/pdf':
+                                pdf_count += 1
                                 
-                            progress_bar.progress((i + 1) / total_files)
-                            
-                        status_text.text("جاري تجهيز الملف النهائي...")
-                        pdf_out = BytesIO()
-                        merged_pdf.save(pdf_out)
-                        merged_pdf.close()
-                        status_text.text("✅ تم تجهيز الملف الشامل بنجاح!")
+                        pdf_notice = f"<div class='pdf-notice'>📌 مرفق PDF عدد {pdf_count} (محفوظ في قاعدة بيانات التطبيق)</div>" if pdf_count > 0 else ""
+                        images_section = f"<div class='images-grid'>{img_html}</div>" if img_html else ""
                         
-                        st.download_button(
-                            label="⬇️ تحميل ملف الإنجاز الشامل (PDF)",
-                            data=pdf_out.getvalue(),
-                            file_name=f"ملف_إنجاز_زياد_المعمري_{active_year['year_name']}.pdf",
-                            mime="application/pdf",
-                            use_container_width=True
-                        )
-                except Exception as e:
-                    st.error(f"حدث خطأ أثناء توليد التقرير: {e}")
-    else:
-        st.info("قيد التطوير.")
-
-# تشغيل التطبيق
-if st.session_state.user is None:
-    login_page()
-else:
-    main_app()
+                        html_content += f"""
+                        <div class="page">
+                            {shared_header}
+                            
+                            <div class="std-header">{ev['standard_id']}. {std['title']} · <span style="font-size:14px; font-weight:normal;">الوزن {std['weight']}%</span></div>
+                            <div class="ev-header">
+                                <span>البند الفرعي: {sub_item_title}</span>
+                                <span>عنوان الشاهد: {ev['title']}</span>
+                            </div>
+                            
+                            <div class="meta-grid">
+                                <div class="meta-box"><div class="meta-title">تاريخ الرفع / التنفيذ</div><div class="meta-value">{created_date}</div></div>
+                                <div class="meta-box"><div class="meta-title">نوع الشاهد</div><div class="meta-value">شاهد تنفيذي / إلكتروني</div></div>
+                            </div>
+                            
+                            <div class="desc-section">
+                                <div class="desc-title">الوصف والإيضاح</div>
+                                {ev['description'] or 'لا يوجد وصف مضاف.'}
+                            </div>
+                            
+                            {pdf_notice}
+                            {images_section}
+                            
+                            <div class="signatures">
+                                <div class="sig-box">
+                                    <div style="color:#666; font-size:12px; margin-bottom:30px;">المعلم:</div>
+                                    <div style="border-bottom:1px solid #333; margin-bottom:5px;">زياد المعمري</div>
+                                </div>
+                                <div class="sig-box">
+                                    <div style="color:#666; font-size:12px; margin-bottom:30px;">مدير المدرسة:</div>
+                                    <div style="font-weight:bold; margin-bottom:5px;">عبدالمجيد الحربي</div>
+                                    <div style="font-size:12px; color:#666;">التاريخ: {created_date}</div>
+                                </div>
+                            </div>
+                        </div>
+                        """
+                    
+                    html_content += "</body></html>"
+                    
+                    # 6. عرض التقرير في الواجهة كـ HTML ليقوم المستخدم بطباعته
+                    import streamlit.components.v1 as components
+                    st.success("✅ تم تجهيز التقرير! اضغط Ctrl+P (أو Cmd+P) لطباعته وحفظه كـ PDF.")
+                    components.html(html_content, height=800, scrolling=True)
