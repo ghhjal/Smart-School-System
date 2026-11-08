@@ -310,9 +310,12 @@ def main_app():
                     all_evidences = evidences_res.data
                     
                     total_evidences = len(all_evidences)
-                    covered_stds = len(set([e['standard_id'] for e in all_evidences]))
                     
-                    # 2. بناء هيكل CSS صارم لمقاس A4
+                    # حساب البنود التي تحتوي على شواهد فقط
+                    active_stds = [std for std in stds if len([e for e in all_evidences if e['standard_id'] == std['id']]) > 0]
+                    covered_stds = len(active_stds)
+                    
+                    # 2. بناء هيكل CSS صارم لمقاس A4 (يمنع خروج التواقيع لصفحة أخرى)
                     html_content = f"""
                     <!DOCTYPE html>
                     <html dir="rtl" lang="ar">
@@ -322,75 +325,67 @@ def main_app():
                         <style>
                             @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
                             
-                            /* تنسيق الخلفية للشاشة (خارج الطباعة) */
                             body {{ font-family: 'Tajawal', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; }}
                             
-                            /* ورقة A4 */
+                            /* إعدادات ورقة A4 الصارمة */
                             .page {{ 
                                 background-color: white;
                                 width: 210mm; 
-                                min-height: 297mm; 
-                                padding: 15mm 20mm; 
+                                height: 296mm; /* ارتفاع ثابت يمنع الصفحات الفارغة */
+                                padding: 10mm 15mm; 
                                 margin: 0 auto 20mm auto; 
                                 box-shadow: 0 10px 20px rgba(0,0,0,0.15); 
                                 box-sizing: border-box; 
                                 page-break-after: always;
-                                position: relative;
+                                page-break-inside: avoid;
+                                display: flex; 
+                                flex-direction: column; /* تحويل الصفحة لعمود مرن */
+                                overflow: hidden;
                             }}
                             
-                            /* الغلاف */
-                            .cover-page {{ border: 4px solid #146c59; border-radius: 15px; padding: 40px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 240mm; box-sizing: border-box; }}
+                            /* الغلاف والفهرس */
+                            .cover-page {{ border: 4px solid #146c59; border-radius: 15px; padding: 40px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; box-sizing: border-box; }}
                             .cover-title {{ color: #146c59; font-size: 40px; font-weight: bold; margin-bottom: 15px; }}
                             .cover-subtitle {{ font-size: 22px; margin-bottom: 50px; font-weight: bold; }}
                             .info-table {{ width: 85%; border-collapse: collapse; margin: 0 auto; font-size: 18px; }}
                             .info-table th, .info-table td {{ border: 1px solid #ccc; padding: 15px; text-align: center; }}
                             .info-table th {{ background-color: #f8fafc; width: 30%; font-weight: bold; color: #146c59; }}
                             
-                            /* الترويسة المشتركة */
-                            .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid #146c59; padding-bottom: 15px; margin-bottom: 25px; font-size: 14px; font-weight: bold; }}
+                            .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid #146c59; padding-bottom: 10px; margin-bottom: 15px; font-size: 14px; font-weight: bold; flex-shrink: 0; }}
                             .header-right {{ color: #146c59; }}
                             .header-left {{ text-align: left; }}
                             
-                            /* الفهرس */
                             .index-title {{ color: #146c59; font-size: 26px; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom:10px; }}
                             .index-table {{ width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 15px; }}
                             .index-table th {{ background-color: #e6f2ef; color: #146c59; padding: 12px; text-align: center; border-bottom: 2px solid #146c59; }}
                             .index-table td {{ padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0; }}
                             
                             /* تفاصيل الشواهد */
-                            .std-header {{ background-color: #146c59; color: white; padding: 12px 20px; font-size: 18px; font-weight: bold; border-radius: 8px 8px 0 0; margin-bottom: 0; }}
-                            .ev-header {{ background-color: #0f5243; color: white; padding: 10px 20px; font-size: 15px; margin-bottom: 20px; border-radius: 0 0 8px 8px; display: flex; justify-content: space-between; }}
+                            .content-wrapper {{ flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }}
                             
-                            .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
-                            .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; text-align: center; border-radius: 8px; }}
-                            .meta-title {{ font-size: 13px; color: #64748b; font-weight: bold; margin-bottom: 5px; }}
-                            .meta-value {{ font-size: 15px; font-weight: bold; color: #0f172a; }}
+                            .std-header {{ background-color: #146c59; color: white; padding: 10px 15px; font-size: 16px; font-weight: bold; border-radius: 8px 8px 0 0; margin-bottom: 0; flex-shrink: 0; }}
+                            .ev-header {{ background-color: #0f5243; color: white; padding: 8px 15px; font-size: 14px; margin-bottom: 15px; border-radius: 0 0 8px 8px; display: flex; justify-content: space-between; flex-shrink: 0; }}
                             
-                            .desc-section {{ margin-bottom: 25px; line-height: 1.8; font-size: 15px; text-align: justify; padding: 15px; background: #fafafa; border-right: 4px solid #146c59; border-radius: 5px; }}
+                            .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; flex-shrink: 0; }}
+                            .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; text-align: center; border-radius: 8px; }}
+                            .meta-title {{ font-size: 12px; color: #64748b; font-weight: bold; margin-bottom: 5px; }}
+                            .meta-value {{ font-size: 14px; font-weight: bold; color: #0f172a; }}
                             
-                            .images-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; text-align: center; }}
-                            .images-grid img {{ max-width: 100%; max-height: 450px; border: 1px solid #cbd5e1; border-radius: 8px; object-fit: contain; }}
-                            .pdf-notice {{ background: #f1f5f9; padding: 15px; text-align: center; border-radius: 8px; font-size: 14px; color: #334155; margin-bottom: 20px; border: 1px dashed #94a3b8; }}
+                            .desc-section {{ margin-bottom: 15px; line-height: 1.6; font-size: 14px; text-align: justify; padding: 10px; background: #fafafa; border-right: 4px solid #146c59; border-radius: 5px; flex-shrink: 0; }}
                             
-                            /* التواقيع */
-                            .signatures {{ display: flex; justify-content: space-between; margin-top: 50px; border-top: 2px solid #e2e8f0; padding-top: 30px; text-align: center; }}
+                            /* قسم الصور المرن (يتقلص تلقائياً ليناسب الصفحة) */
+                            .images-grid {{ flex-grow: 1; display: flex; justify-content: center; align-items: center; gap: 15px; min-height: 0; padding: 5px 0; overflow: hidden; }}
+                            .images-grid img {{ max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #cbd5e1; border-radius: 8px; }}
+                            .pdf-notice {{ background: #f1f5f9; padding: 10px; text-align: center; border-radius: 8px; font-size: 13px; color: #334155; margin-bottom: 10px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
+                            
+                            /* التواقيع (تلتصق بالأسفل دائماً) */
+                            .signatures {{ display: flex; justify-content: space-between; margin-top: auto; border-top: 2px solid #e2e8f0; padding-top: 15px; text-align: center; flex-shrink: 0; }}
                             .sig-box {{ width: 40%; }}
                             
-                            /* ========================================= */
-                            /* قواعد الطباعة الصارمة (A4) - لا يتم تجاوزها */
-                            /* ========================================= */
+                            /* قواعد الطباعة الصارمة */
                             @media print {{
                                 body {{ background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                                .page {{ 
-                                    width: 210mm; 
-                                    min-height: 297mm; 
-                                    margin: 0; 
-                                    padding: 10mm 15mm; 
-                                    box-shadow: none; 
-                                    border: none; 
-                                    page-break-after: always;
-                                    page-break-inside: avoid;
-                                }}
+                                .page {{ width: 210mm; height: 296mm; margin: 0; padding: 10mm 15mm; box-shadow: none; border: none; }}
                                 @page {{ size: A4 portrait; margin: 0; }}
                             }}
                         </style>
@@ -432,18 +427,22 @@ def main_app():
                     </div>
                     """
                     
-                    # 4. صفحة الفهرس
+                    # 4. صفحة الفهرس (تستبعد البنود الفارغة)
                     html_content += f"""
                     <div class="page">
                         {shared_header}
-                        <div class="index-title">فهرس البنود</div>
+                        <div class="index-title">فهرس البنود المنجزة</div>
                         <table class="index-table">
                             <tr><th>م</th><th>البند</th><th>الوزن</th><th>الشواهد المرفوعة</th><th>المعتمد</th></tr>
                     """
                     for std in stds:
                         count = len([e for e in all_evidences if e['standard_id'] == std['id']])
+                        # الشرط المطلوب: استبعاد البند الذي لا يحتوي على شواهد
+                        if count == 0:
+                            continue
+                            
                         target = std['target_evidences']
-                        html_content += f"<tr><td>{std['id']}</td><td style='text-align:right;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:{'green' if count >= target else ('orange' if count>0 else 'red')}'>{count}</td><td>{target}</td></tr>"
+                        html_content += f"<tr><td>{std['id']}</td><td style='text-align:right;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:green; font-weight:bold;'>{count}</td><td>{target}</td></tr>"
                     html_content += "</table></div>"
                     
                     # 5. صفحات الشواهد
@@ -469,31 +468,34 @@ def main_app():
                         html_content += f"""
                         <div class="page">
                             {shared_header}
-                            <div class="std-header">{ev['standard_id']}. {std['title']} · <span style="font-size:14px; font-weight:normal;">الوزن {std['weight']}%</span></div>
-                            <div class="ev-header">
-                                <span>البند الفرعي / عنوان الشاهد: {sub_item_title}</span>
-                            </div>
                             
-                            <div class="meta-grid">
-                                <div class="meta-box"><div class="meta-title">تاريخ الرفع / التنفيذ</div><div class="meta-value">{created_date}</div></div>
-                                <div class="meta-box"><div class="meta-title">نوع الشاهد</div><div class="meta-value">شاهد تنفيذي / إلكتروني</div></div>
+                            <div class="content-wrapper">
+                                <div class="std-header">{ev['standard_id']}. {std['title']} · <span style="font-size:14px; font-weight:normal;">الوزن {std['weight']}%</span></div>
+                                <div class="ev-header">
+                                    <span>البند الفرعي / عنوان الشاهد: {sub_item_title}</span>
+                                </div>
+                                
+                                <div class="meta-grid">
+                                    <div class="meta-box"><div class="meta-title">تاريخ الرفع / التنفيذ</div><div class="meta-value">{created_date}</div></div>
+                                    <div class="meta-box"><div class="meta-title">نوع الشاهد</div><div class="meta-value">شاهد تنفيذي / إلكتروني</div></div>
+                                </div>
+                                
+                                <div class="desc-section">
+                                    <div class="desc-title">الوصف والإيضاح</div>
+                                    {ev['description'] or 'لا يوجد وصف مضاف.'}
+                                </div>
+                                
+                                {pdf_notice}
+                                {images_section}
                             </div>
-                            
-                            <div class="desc-section">
-                                <div class="desc-title">الوصف والإيضاح</div>
-                                {ev['description'] or 'لا يوجد وصف مضاف.'}
-                            </div>
-                            
-                            {pdf_notice}
-                            {images_section}
                             
                             <div class="signatures">
                                 <div class="sig-box">
-                                    <div style="color:#666; font-size:12px; margin-bottom:30px;">المعلم:</div>
+                                    <div style="color:#666; font-size:12px; margin-bottom:20px;">المعلم:</div>
                                     <div style="border-bottom:1px solid #333; margin-bottom:5px;">زياد المعمري</div>
                                 </div>
                                 <div class="sig-box">
-                                    <div style="color:#666; font-size:12px; margin-bottom:30px;">مدير المدرسة:</div>
+                                    <div style="color:#666; font-size:12px; margin-bottom:20px;">مدير المدرسة:</div>
                                     <div style="font-weight:bold; margin-bottom:5px;">عبدالمجيد الحربي</div>
                                     <div style="font-size:12px; color:#666;">التاريخ: {created_date}</div>
                                 </div>
@@ -503,12 +505,10 @@ def main_app():
                     
                     html_content += "</body></html>"
                     
-                    # 6. زر جافا سكريبت السحري لفتح نافذة طباعة A4 نظيفة تماماً
+                    # 6. زر الطباعة
                     import streamlit.components.v1 as components
+                    st.success("✅ تم تجهيز التقرير! انقر على الزر أدناه لفتحه في نافذة مستقلة وطباعته.")
                     
-                    st.success("✅ تم تجهيز التقرير! انقر على الزر أدناه لفتحه في نافذة مستقلة وخالية من القوائم لتتمكن من طباعته بمقاس A4.")
-                    
-                    # تنظيف النص لتجنب تعارض جافا سكريبت
                     safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
                     
                     print_button_html = f"""
@@ -519,16 +519,10 @@ def main_app():
                     </div>
                     <script>
                         function openPrintWindow() {{
-                            // فتح نافذة جديدة فارغة تماماً
                             var win = window.open('', '_blank');
-                            // حقن كود الـ HTML الخاص بالتقرير داخلها
                             win.document.write(`{safe_html}`);
                             win.document.close();
-                            
-                            // الانتظار 1.5 ثانية لتحميل الصور من السحابة، ثم تشغيل أمر الطباعة تلقائياً
-                            setTimeout(function() {{
-                                win.print();
-                            }}, 1500);
+                            setTimeout(function() {{ win.print(); }}, 1500);
                         }}
                     </script>
                     """
