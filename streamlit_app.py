@@ -8,119 +8,55 @@ from hijri_converter import Gregorian
 import streamlit.components.v1 as components
 
 # ==========================================
-# 1. إعدادات الصفحة والتصميم العام (CSS)
+# 1. إعدادات الصفحة الأساسية
 # ==========================================
 st.set_page_config(
     page_title="ملف الإنجاز المهني",
-    page_icon="🟢",
+    page_icon="💼",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
-    
-    header {visibility: hidden;}
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    .stSidebar {display: none !important;}
-    
-    body, [class*="css"] {
-        direction: rtl; 
-        text-align: right; 
-        font-family: 'Tajawal', sans-serif;
-        background-color: #f7f6f2;
+# ==========================================
+# 2. منظومة المظاهر (Themes) المتعددة
+# ==========================================
+THEMES = {
+    "emerald": {
+        "name": "🟢 الأخضر الوزاري (الافتراضي)",
+        "primary": "#146c59",
+        "primary_dark": "#0f5243",
+        "bg": "#f7f6f2",
+        "accent": "#c57b30",
+        "tint": "#e6f2ef"
+    },
+    "royal": {
+        "name": "🔵 الأزرق الملكي الاحترافي",
+        "primary": "#1e3a8a",
+        "primary_dark": "#172554",
+        "bg": "#f0f4f8",
+        "accent": "#0284c7",
+        "tint": "#dbeafe"
+    },
+    "bronze": {
+        "name": "🟤 الذهبي الكلاسيكي الفاخر",
+        "primary": "#7c4d25",
+        "primary_dark": "#5c3719",
+        "bg": "#faf6f0",
+        "accent": "#b45309",
+        "tint": "#fef3c7"
+    },
+    "slate": {
+        "name": "⚫ الرمادي العصري الداكن",
+        "primary": "#1e293b",
+        "primary_dark": "#0f172a",
+        "bg": "#f1f5f9",
+        "accent": "#475569",
+        "tint": "#e2e8f0"
     }
-    
-    .stApp {
-        background-color: #f7f6f2;
-    }
-    
-    /* الهيدر الترحيبي */
-    .greeting-header {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 10px 0 15px 0; border-bottom: 1px solid #e5e5e0; margin-bottom: 15px;
-    }
-    .greeting-title { font-size: 24px; font-weight: 700; color: #143d34; margin: 0;}
-    .greeting-date { font-size: 13px; color: #7f8c8d; margin-top: 4px;}
-    .icon-btn { 
-        background: #146c59; color: white; width: 38px; height: 38px; 
-        border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; 
-        font-weight: bold; margin-right: 6px; font-size: 16px;
-    }
-
-    /* بانر المدرسة */
-    .school-banner {
-        background: linear-gradient(135deg, #146c59, #0f5243);
-        color: white; padding: 18px 20px; border-radius: 16px;
-        margin-bottom: 18px; box-shadow: 0 4px 12px rgba(20, 108, 89, 0.15);
-    }
-    .school-name { font-size: 13px; opacity: 0.9; margin-bottom: 4px; }
-    .holiday-text { font-size: 18px; font-weight: 700; margin: 0; }
-    
-    /* بطاقة نسبة الإنجاز */
-    .progress-card {
-        background: white; padding: 18px 20px; border-radius: 16px; 
-        margin-bottom: 18px; border: 1px solid #eceae4;
-        display: flex; align-items: center; justify-content: space-between; gap: 20px;
-    }
-    .progress-bar-bg {
-        background: #eceae4; height: 8px; border-radius: 4px; width: 100%; overflow: hidden; margin-top: 8px;
-    }
-    .progress-bar-fill {
-        background: #146c59; height: 100%; border-radius: 4px;
-    }
-    .stat-mini {
-        text-align: center; min-width: 65px; border-right: 1px solid #eee; padding-right: 15px;
-    }
-    
-    /* بطاقة المعيار */
-    .std-card {
-        background: white; border: 1px solid #eceae4; border-radius: 16px;
-        padding: 16px 20px; margin-bottom: 10px;
-        display: flex; justify-content: space-between; align-items: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    }
-    .std-num {
-        width: 42px; height: 42px; border-radius: 12px;
-        background: #f5efe6; color: #b56c27;
-        display: flex; align-items: center; justify-content: center;
-        font-weight: 700; font-size: 18px; margin-left: 14px; flex-shrink: 0;
-    }
-    .std-num-empty {
-        background: #f9ebea; color: #c0392b;
-    }
-    .std-title { font-size: 16px; font-weight: 700; color: #222; margin-bottom: 6px; }
-    .weight-badge {
-        background: #f0efeb; color: #555; font-size: 12px; padding: 3px 10px;
-        border-radius: 10px; display: inline-block; margin-left: 6px;
-    }
-    .dots-row { display: flex; gap: 5px; margin-bottom: 6px; }
-    .dot { width: 14px; height: 6px; border-radius: 3px; }
-    .dot-on { background: #c57b30; }
-    .dot-off { background: #e0ded8; }
-    
-    /* البنود الفرعية (أفكار تبدأ منها) */
-    .idea-card {
-        background: white; border: 1px solid #eceae4; padding: 12px 16px;
-        border-radius: 12px; margin-bottom: 8px; font-size: 14px; color: #333;
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    
-    /* بطاقة الشاهد المرفوع */
-    .ev-box {
-        background: white; border: 1px solid #d1e8e2; border-radius: 14px;
-        padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-    }
-    
-    /* مساحة سفلية */
-    .spacer { height: 40px; }
-    </style>
-""", unsafe_allow_html=True)
+}
 
 # ==========================================
-# 2. القيم الافتراضية للبنود الفرعية الـ 11
+# 3. البنود الفرعية الافتراضية للمعايير الـ 11
 # ==========================================
 DEFAULT_SUB_ITEMS = {
     1: [
@@ -195,7 +131,7 @@ DEFAULT_SUB_ITEMS = {
 }
 
 # ==========================================
-# 3. الاتصال بقاعدة البيانات وإدارة الجلسة
+# 4. الاتصال بقاعدة البيانات وإدارة الجلسة
 # ==========================================
 @st.cache_resource
 def init_connection():
@@ -207,6 +143,8 @@ supabase = init_connection()
 
 if 'user' not in st.session_state:
     st.session_state.user = None
+if 'is_visitor' not in st.session_state:
+    st.session_state.is_visitor = False
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'home'
 if 'view_standard_id' not in st.session_state:
@@ -220,14 +158,182 @@ def navigate_to(page_name, std_id=None):
         st.session_state.view_standard_id = std_id
     st.rerun()
 
+def get_user_profile():
+    default_profile = {
+        "full_name": "زياد المعمري",
+        "specialization": "لغة إنجليزية / تربية خاصة",
+        "school_name": "ابتدائية عبادة بن قيس الأنصاري",
+        "education_stage": "ابتدائي / متوسط",
+        "city": "المدينة المنورة",
+        "principal_name": "عبدالمجيد الحربي",
+        "theme": "emerald",
+        "visitor_code": "1448",
+        "allow_visitor": True
+    }
+    try:
+        res = supabase.table("user_profile").select("*").eq("id", 1).execute()
+        if res.data:
+            return {**default_profile, **res.data[0]}
+    except Exception:
+        pass
+    return default_profile
+
+# تطبيق التصميم (CSS) بناءً على المظهر المختار
+user_info = get_user_profile()
+active_theme_key = user_info.get("theme", "emerald")
+if active_theme_key not in THEMES:
+    active_theme_key = "emerald"
+th = THEMES[active_theme_key]
+
+st.markdown(f"""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+    
+    header {{visibility: hidden;}}
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
+    .stSidebar {{display: none !important;}}
+    
+    body, [class*="css"] {{
+        direction: rtl; 
+        text-align: right; 
+        font-family: 'Tajawal', sans-serif;
+        background-color: {th['bg']};
+    }}
+    .stApp {{ background-color: {th['bg']}; }}
+    
+    /* الهيدر الترحيبي */
+    .greeting-header {{
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 0 14px 0; border-bottom: 1px solid rgba(0,0,0,0.08); margin-bottom: 16px;
+    }}
+    .greeting-title {{ font-size: 23px; font-weight: 700; color: {th['primary_dark']}; margin: 0;}}
+    .greeting-date {{ font-size: 13px; color: #64748b; margin-top: 4px;}}
+    .icon-btn {{ 
+        background: {th['primary']}; color: white; width: 40px; height: 40px; 
+        border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; 
+        font-weight: bold; font-size: 17px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }}
+
+    /* بانر المدرسة المطور (بدون إجازة ثابتة) */
+    .school-banner {{
+        background: linear-gradient(135deg, {th['primary']}, {th['primary_dark']});
+        color: white; padding: 20px 22px; border-radius: 18px;
+        margin-bottom: 18px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    }}
+    .banner-main {{ font-size: 19px; font-weight: 700; margin: 4px 0; }}
+    .banner-sub {{ font-size: 13px; opacity: 0.9; }}
+    .banner-badge {{
+        background: rgba(255,255,255,0.18); padding: 6px 14px; border-radius: 12px;
+        font-size: 13px; font-weight: 700; backdrop-filter: blur(4px);
+    }}
+    
+    /* بطاقات الإحصائيات السريعة */
+    .kpi-grid {{
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;
+    }}
+    .kpi-card {{
+        background: white; border-radius: 14px; padding: 12px 8px; text-align: center;
+        border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }}
+    .kpi-val {{ font-size: 21px; font-weight: 700; color: {th['primary']}; }}
+    .kpi-lbl {{ font-size: 11px; color: #64748b; margin-top: 2px; }}
+
+    /* شريط الإنجاز */
+    .progress-card {{
+        background: white; padding: 16px 20px; border-radius: 16px; 
+        margin-bottom: 18px; border: 1px solid rgba(0,0,0,0.06);
+    }}
+    .progress-bar-bg {{
+        background: #e2e8f0; height: 9px; border-radius: 5px; width: 100%; overflow: hidden; margin-top: 8px;
+    }}
+    .progress-bar-fill {{
+        background: {th['primary']}; height: 100%; border-radius: 5px;
+    }}
+    
+    /* بطاقة المعيار */
+    .std-card {{
+        background: white; border: 1px solid rgba(0,0,0,0.07); border-radius: 16px;
+        padding: 15px 18px; margin-bottom: 8px;
+        display: flex; justify-content: space-between; align-items: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    }}
+    .std-num {{
+        width: 42px; height: 42px; border-radius: 12px;
+        background: {th['tint']}; color: {th['primary']};
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 18px; margin-left: 14px; flex-shrink: 0;
+    }}
+    .std-num-empty {{ background: #fee2e2; color: #dc2626; }}
+    .std-title {{ font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }}
+    .weight-badge {{
+        background: #f1f5f9; color: #475569; font-size: 12px; padding: 2px 10px;
+        border-radius: 8px; display: inline-block;
+    }}
+    .dots-row {{ display: flex; gap: 5px; margin-bottom: 5px; justify-content: flex-end; }}
+    .dot {{ width: 14px; height: 6px; border-radius: 3px; }}
+    .dot-on {{ background: {th['primary']}; }}
+    .dot-off {{ background: #e2e8f0; }}
+    
+    /* تصغير صور الشواهد تلقائياً وتكبيرها عند الضغط */
+    .thumbs-container {{
+        display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 14px 0;
+    }}
+    .thumb-link {{
+        position: relative; display: inline-block; width: 105px; height: 105px;
+        border-radius: 12px; overflow: hidden; border: 2px solid {th['tint']};
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: transform 0.2s ease;
+    }}
+    .thumb-link:hover {{ transform: scale(1.05); border-color: {th['primary']}; }}
+    .thumb-link img {{
+        width: 100%; height: 100%; object-fit: cover;
+    }}
+    .thumb-overlay {{
+        position: absolute; bottom: 0; left: 0; right: 0;
+        background: rgba(0,0,0,0.6); color: white; font-size: 10px;
+        text-align: center; padding: 3px 0;
+    }}
+    .pdf-badge {{
+        display: inline-flex; align-items: center; justify-content: center;
+        height: 105px; padding: 0 16px; border-radius: 12px;
+        background: #f8fafc; border: 1px dashed {th['primary']};
+        color: {th['primary']}; font-weight: 700; font-size: 13px; text-decoration: none;
+    }}
+    
+    /* بطاقة الشاهد */
+    .ev-box {{
+        background: white; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px;
+        padding: 16px; margin-bottom: 12px; border-right: 4px solid {th['primary']};
+    }}
+    .idea-card {{
+        background: white; border: 1px solid rgba(0,0,0,0.06); padding: 11px 15px;
+        border-radius: 11px; margin-bottom: 7px; font-size: 14px; color: #334155;
+        display: flex; justify-content: space-between; align-items: center;
+    }}
+    .visitor-banner {{
+        background: #fef3c7; color: #92400e; border: 1px solid #f59e0b;
+        padding: 10px 16px; border-radius: 12px; margin-bottom: 14px;
+        font-weight: 700; font-size: 14px; text-align: center;
+    }}
+    </style>
+""", unsafe_allow_html=True)
+
+# التحقق التلقائي من رابط الزائر (?visitor=CODE)
+query_params = st.query_params
+if "visitor" in query_params and st.session_state.user is None:
+    entered_code = str(query_params["visitor"]).strip()
+    saved_code = str(user_info.get("visitor_code", "1448")).strip()
+    if user_info.get("allow_visitor", True) and entered_code == saved_code:
+        st.session_state.is_visitor = True
+
 # ==========================================
-# 4. دوال التاريخ والترحيب
+# 5. دوال التاريخ والترحيب
 # ==========================================
 def get_greeting_and_dates():
     tz = datetime.timezone(datetime.timedelta(hours=3))
     now = datetime.datetime.now(tz)
     today = now.date()
-    
     greeting = "صباح الخير" if now.hour < 12 else "مساء الخير"
     
     days_ar = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
@@ -243,74 +349,95 @@ def get_greeting_and_dates():
     return greeting, f"{day_name} • {h_date} • {g_date}"
 
 # ==========================================
-# 5. صفحة تسجيل الدخول (كانت مفقودة سابقاً)
+# 6. صفحة تسجيل الدخول (معلم + زائر)
 # ==========================================
 def login_page():
-    st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
-    st.markdown("""
-        <div class="school-banner" style="text-align: center;">
-            <div style="font-size: 26px; font-weight: bold; margin-bottom: 5px;">ملف الإنجاز المهني</div>
-            <div style="font-size: 14px; opacity: 0.9;">بوابة توثيق شواهد الأداء الوظيفي</div>
+    st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
+    st.markdown(f"""
+        <div class="school-banner" style="text-align: center; display: block;">
+            <div style="font-size: 25px; font-weight: bold; margin-bottom: 5px;">ملف الإنجاز المهني الإلكتروني</div>
+            <div style="font-size: 14px; opacity: 0.9;">{user_info['full_name']} • {user_info['school_name']}</div>
         </div>
     """, unsafe_allow_html=True)
     
-    with st.form("login_form"):
-        st.markdown("#### 🔒 تسجيل الدخول")
-        email = st.text_input("البريد الإلكتروني")
-        password = st.text_input("كلمة المرور", type="password")
-        submit = st.form_submit_button("دخول للنظام", type="primary", use_container_width=True)
-        
-        if submit:
-            if email and password:
-                try:
-                    response = supabase.auth.sign_in_with_password({"email": email, "password": password})
-                    st.session_state.user = response.user
-                    st.success("تم تسجيل الدخول بنجاح!")
-                    time.sleep(0.5)
+    tab_teacher, tab_visitor = st.tabs(["🔒 دخول المعلم (تحكم كامل)", "👁️ دخول زائر (مشاهدة فقط)"])
+    
+    with tab_teacher:
+        with st.form("login_form"):
+            email = st.text_input("البريد الإلكتروني")
+            password = st.text_input("كلمة المرور", type="password")
+            submit = st.form_submit_button("تسجيل الدخول", type="primary", use_container_width=True)
+            if submit:
+                if email and password:
+                    try:
+                        response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                        st.session_state.user = response.user
+                        st.session_state.is_visitor = False
+                        st.success("تم تسجيل الدخول بنجاح!")
+                        time.sleep(0.4)
+                        st.rerun()
+                    except Exception:
+                        st.error("البريد الإلكتروني أو كلمة المرور غير صحيحة.")
+                else:
+                    st.warning("يرجى إدخال البريد الإلكتروني وكلمة المرور.")
+
+    with tab_visitor:
+        st.info("هذه البوابة مخصصة لمدير المدرسة والمشرف التربوي للاطلاع على ملف الإنجاز بواسطة رمز المشاهدة الممنوح من المعلم.")
+        with st.form("visitor_form"):
+            v_code = st.text_input("أدخل رمز المشاهدة للزائر:", type="password")
+            v_submit = st.form_submit_button("👁️ استعراض ملف الإنجاز", use_container_width=True)
+            if v_submit:
+                saved_code = str(user_info.get("visitor_code", "1448")).strip()
+                if not user_info.get("allow_visitor", True):
+                    st.error("المعلم قام بإيقاف خاصية دخول الزوار حالياً.")
+                elif v_code.strip() == saved_code:
+                    st.session_state.is_visitor = True
                     st.rerun()
-                except Exception:
-                    st.error("البريد الإلكتروني أو كلمة المرور غير صحيحة.")
-            else:
-                st.warning("يرجى إدخال البريد الإلكتروني وكلمة المرور.")
+                else:
+                    st.error("رمز المشاهدة غير صحيح.")
 
 # ==========================================
-# 6. التطبيق الرئيسي
+# 7. التطبيق الرئيسي
 # ==========================================
 def main_app():
+    is_visitor = st.session_state.is_visitor
+
     # جلب السنة الدراسية النشطة
     year_res = supabase.table("academic_years").select("*").eq("is_active", True).execute()
-    active_year = year_res.data[0] if year_res.data else None
+    active_year = year_res.data[0] if year_res.data else {"id": None, "year_name": "1448"}
 
-    # جلب بيانات المعلم والمدرسة بأمان
-    default_profile = {
-        "full_name": "زياد المعمري",
-        "specialization": "لغة إنجليزية / تربية خاصة",
-        "school_name": "ابتدائية عبادة بن قيس الأنصاري",
-        "education_stage": "ابتدائي / متوسط",
-        "city": "المدينة المنورة",
-        "principal_name": "عبدالمجيد الحربي",
-        "banner_note": "الأسبوع 11 • إجازة الخريف بعد 11 يوماً"
-    }
-    try:
-        profile_res = supabase.table("user_profile").select("*").eq("id", 1).execute()
-        user_info = {**default_profile, **profile_res.data[0]} if profile_res.data else default_profile
-    except Exception:
-        user_info = default_profile
+    # تنبيه في حال كان التصفح بوضع الزائر
+    if is_visitor:
+        col_v1, col_v2 = st.columns([4, 1])
+        with col_v1:
+            st.markdown("<div class='visitor-banner'>👁️ تتصفح الملف حالياً بوضع الزائر (قراءة ومشاهدة فقط)</div>", unsafe_allow_html=True)
+        with col_v2:
+            if st.button("🚪 خروج الزائر", use_container_width=True):
+                st.session_state.is_visitor = False
+                st.query_params.clear()
+                st.rerun()
 
-    # شريط التنقل العلوي السريع (متوافق مع الجوال)
-    nav1, nav2, nav3, nav4, nav5 = st.columns(5)
-    with nav1:
-        if st.button("🏠 الرئيسية", use_container_width=True): navigate_to('home')
-    with nav2:
-        if st.button("📋 البنود", use_container_width=True): navigate_to('standard_view', st.session_state.view_standard_id)
-    with nav3:
-        if st.button("➕ إضافة", type="primary", use_container_width=True): navigate_to('quick_add')
-    with nav4:
-        if st.button("📄 التقرير", use_container_width=True): navigate_to('reports')
-    with nav5:
-        if st.button("⚙️ حسابي", use_container_width=True): navigate_to('settings')
-
-    st.write("---")
+    # شريط التنقل العلوي
+    if is_visitor:
+        nav1, nav2, nav3 = st.columns(3)
+        with nav1:
+            if st.button("🏠 الرئيسية", use_container_width=True): navigate_to('home')
+        with nav2:
+            if st.button("📋 تصفح البنود", use_container_width=True): navigate_to('standard_view', st.session_state.view_standard_id)
+        with nav3:
+            if st.button("📄 طباعة التقرير", type="primary", use_container_width=True): navigate_to('reports')
+    else:
+        nav1, nav2, nav3, nav4, nav5 = st.columns(5)
+        with nav1:
+            if st.button("🏠 الرئيسية", use_container_width=True): navigate_to('home')
+        with nav2:
+            if st.button("📋 البنود", use_container_width=True): navigate_to('standard_view', st.session_state.view_standard_id)
+        with nav3:
+            if st.button("➕ إضافة", type="primary", use_container_width=True): navigate_to('quick_add')
+        with nav4:
+            if st.button("📄 التقرير", use_container_width=True): navigate_to('reports')
+        with nav5:
+            if st.button("⚙️ حسابي", use_container_width=True): navigate_to('settings')
 
     # الهيدر الترحيبي بالتاريخ الهجري والميلادي
     greeting, today_str = get_greeting_and_dates()
@@ -334,24 +461,28 @@ def main_app():
     stds = standards_res.data
     
     evidences = []
-    if active_year:
+    if active_year and active_year.get('id'):
         ev_res = supabase.table("evidences").select("*, evidence_files(*)").eq("year_id", active_year['id']).order("created_at", desc=True).execute()
         evidences = ev_res.data
 
     # ----------------------------------------
-    # 🏠 1. الصفحة الرئيسية (لوحة الإنجاز والبنود الـ 11)
+    # 🏠 1. الصفحة الرئيسية المطورة
     # ----------------------------------------
     if st.session_state.current_page == 'home':
-        banner_text = user_info.get('banner_note', 'الأسبوع الدراسي الحالي')
         st.markdown(f"""
             <div class="school-banner">
-                <div class="school-name">{user_info['school_name']}</div>
-                <div class="holiday-text">{banner_text}</div>
+                <div>
+                    <div class="banner-sub">🏫 {user_info['school_name']} • المرحلة: {user_info['education_stage']}</div>
+                    <div class="banner-main">{user_info['full_name']}</div>
+                    <div class="banner-sub">التخصص: {user_info['specialization']} • مدير المدرسة: {user_info['principal_name']}</div>
+                </div>
+                <div class="banner-badge">📅 العام الدراسي {active_year['year_name']}هـ</div>
             </div>
         """, unsafe_allow_html=True)
 
-        # حساب إحصائيات البنود
+        # حساب الإحصائيات
         total_stds = len(stds)
+        total_ev_count = len(evidences)
         stds_with_ev = 0
         stds_reached_target = 0
         empty_stds = 0
@@ -369,30 +500,38 @@ def main_app():
 
         pct = int((stds_with_ev / total_stds) * 100) if total_stds else 0
 
-        # بطاقة نسبة الإنجاز
+        # بطاقات الإحصائيات الرباعية
         st.markdown(f"""
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-val">{total_ev_count}</div>
+                    <div class="kpi-lbl">إجمالي الشواهد</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val">{stds_with_ev}/{total_stds}</div>
+                    <div class="kpi-lbl">البنود المغطاة</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val">{stds_reached_target}</div>
+                    <div class="kpi-lbl">حققت المستهدف</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-val" style="color:#dc2626;">{empty_stds}</div>
+                    <div class="kpi-lbl">بنود فارغة</div>
+                </div>
+            </div>
             <div class="progress-card">
-                <div style="flex-grow: 1;">
-                    <div style="display:flex; justify-content:space-between; font-weight:700; font-size:15px;">
-                        <span>{stds_with_ev} من {total_stds} فيها شواهد</span>
-                        <span style="color:#146c59;">{pct}%</span>
-                    </div>
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" style="width: {pct}%;"></div>
-                    </div>
+                <div style="display:flex; justify-content:space-between; font-weight:700; font-size:14px;">
+                    <span>نسبة تغطية معايير الأداء الوظيفي</span>
+                    <span style="color:{th['primary']};">{pct}%</span>
                 </div>
-                <div class="stat-mini">
-                    <div style="font-size:20px; font-weight:700; color:#146c59;">{stds_reached_target}</div>
-                    <div style="font-size:11px; color:#777;">وصلت الهدف</div>
-                </div>
-                <div class="stat-mini">
-                    <div style="font-size:20px; font-weight:700; color:#c0392b;">{empty_stds}</div>
-                    <div style="font-size:11px; color:#777;">فارغة</div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" style="width: {pct}%;"></div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # أزرار الفلترة
+        # الفلاتر
         f_col1, f_col2, f_col3 = st.columns(3)
         less_than_3 = sum(1 for s in stds if ev_by_std[s['id']] < s.get('target_evidences', 3))
         with f_col1:
@@ -425,13 +564,13 @@ def main_app():
             ])
             
             if count == 0:
-                status_txt = "<span style='color:#c0392b; font-size:12px;'>لا شواهد بعد</span>"
+                status_txt = "<span style='color:#dc2626; font-size:12px;'>لا شواهد بعد</span>"
                 num_cls = "std-num std-num-empty"
             elif count >= target:
-                status_txt = f"<span style='color:#146c59; font-size:12px;'>مكتمل ({count} شواهد)</span>"
+                status_txt = f"<span style='color:{th['primary']}; font-size:12px; font-weight:bold;'>مكتمل ({count} شواهد)</span>"
                 num_cls = "std-num"
             else:
-                status_txt = f"<span style='color:#c57b30; font-size:12px;'>{count} شاهد • بقي {target - count}</span>"
+                status_txt = f"<span style='color:{th['accent']}; font-size:12px;'>{count} شاهد • بقي {target - count}</span>"
                 num_cls = "std-num"
 
             st.markdown(f"""
@@ -440,7 +579,7 @@ def main_app():
                         <div class="{num_cls}">{s_id}</div>
                         <div>
                             <div class="std-title">{s_id}. {std['title']}</div>
-                            <span class="weight-badge">الوزن {std['weight']}%</span>
+                            <span class="weight-badge">الوزن النسبي: {std['weight']}%</span>
                         </div>
                     </div>
                     <div style="text-align:left;">
@@ -450,11 +589,11 @@ def main_app():
                 </div>
             """, unsafe_allow_html=True)
             
-            if st.button(f"📂 فتح البند {s_id}: {std['title']}", key=f"open_std_{s_id}", use_container_width=True):
+            if st.button(f"📂 استعراض شواهد البند {s_id}", key=f"open_std_{s_id}", use_container_width=True):
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة تفاصيل البند الفردي والشواهد
+    # 📋 2. صفحة تفاصيل البند الفردي (الصور المصغرة + تاريخ التنفيذ)
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         std_id = st.session_state.view_standard_id
@@ -468,150 +607,166 @@ def main_app():
         with c_title:
             st.markdown(f"### البند {std_id}: {std_data['title']} (الوزن {std_data['weight']}%)")
 
-        # جلب الشواهد الخاصة بهذا البند
         std_evidences = [e for e in evidences if e['standard_id'] == std_id]
         st.markdown(f"#### شواهدك المرفوعة ({len(std_evidences)})")
 
         if not std_evidences:
-            st.info("لا توجد شواهد مرفوعة في هذا البند حتى الآن. اختر من الأفكار بالأسفل لإضافة شاهدك الأول.")
+            st.info("لا توجد شواهد مرفوعة في هذا البند حتى الآن.")
         else:
-            for idx, ev in enumerate(std_evidences):
+            for ev in std_evidences:
                 files = ev.get("evidence_files", [])
-                exec_date = ev['created_at'][:10]
+                # قراءة تاريخ التنفيذ (أو تاريخ الرفع كبديل للشواهد القديمة)
+                exec_date = ev.get('execution_date') or ev['created_at'][:10]
                 
+                # بناء الصور المصغرة القابلة للضغط للتكبير بالحجم الأصلي
+                thumbs_html = "<div class='thumbs-container'>"
+                for i, f_rec in enumerate(files):
+                    try:
+                        url_res = supabase.storage.from_("private-achievements").create_signed_url(f_rec['file_url'], 1800)
+                        sec_url = url_res['signedURL']
+                        if f_rec.get('file_type', '').startswith('image/'):
+                            thumbs_html += f"""
+                                <a href="{sec_url}" target="_blank" class="thumb-link" title="اضغط لعرض الصورة بالحجم الأصلي">
+                                    <img src="{sec_url}" alt="شاهد">
+                                    <div class="thumb-overlay">🔍 تكبير</div>
+                                </a>
+                            """
+                        else:
+                            thumbs_html += f"""
+                                <a href="{sec_url}" target="_blank" class="pdf-badge">
+                                    📄 فتح PDF ({i+1})
+                                </a>
+                            """
+                    except Exception:
+                        pass
+                thumbs_html += "</div>"
+
                 st.markdown(f"""
                     <div class="ev-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="font-weight:700; font-size:16px; color:#146c59;">📄 {ev['title']}</span>
-                            <span style="background:#e6f2ef; color:#146c59; padding:3px 10px; border-radius:10px; font-size:12px;">تاريخ الرفع: {exec_date}</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                            <span style="font-weight:700; font-size:16px; color:{th['primary']};">📄 {ev['title']}</span>
+                            <span style="background:{th['tint']}; color:{th['primary_dark']}; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;">
+                                📅 تاريخ التنفيذ: {exec_date}
+                            </span>
                         </div>
-                        <div style="font-size:14px; color:#444; line-height:1.6;">{ev.get('description') or ''}</div>
+                        <div style="font-size:14px; color:#334155; line-height:1.6; margin-bottom:6px;">{ev.get('description') or ''}</div>
+                        <div style="font-size:11px; color:#64748b; margin-bottom:4px;">💡 اضغط على الصورة المصغرة لعرضها بالحجم الأصلي الكامل:</div>
+                        {thumbs_html}
                     </div>
                 """, unsafe_allow_html=True)
 
-                # عرض الصور المصغرة وملفات الـ PDF
-                if files:
-                    cols = st.columns(min(len(files), 3))
-                    for i, f_rec in enumerate(files):
-                        try:
-                            url_res = supabase.storage.from_("private-achievements").create_signed_url(f_rec['file_url'], 300)
-                            sec_url = url_res['signedURL']
-                            with cols[i % 3]:
-                                if f_rec.get('file_type', '').startswith('image/'):
-                                    st.image(sec_url, use_container_width=True)
-                                else:
-                                    st.link_button(f"📎 عرض ملف PDF ({i+1})", sec_url, use_container_width=True)
-                        except Exception:
-                            st.caption("تعذر تحميل المرفق")
-
-                # تعديل أو حذف الشاهد
-                ed_col, del_col = st.columns(2)
-                with ed_col:
-                    with st.expander("✏️ تعديل الشاهد"):
-                        with st.form(f"edit_form_{ev['id']}"):
-                            new_t = st.text_input("عنوان الشاهد:", value=ev['title'])
-                            new_d = st.text_area("وصف الشاهد:", value=ev.get('description', ''))
-                            new_files = st.file_uploader("استبدال المرفقات (اختياري):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True, key=f"up_{ev['id']}")
-                            if st.form_submit_button("حفظ التعديل 💾", type="primary"):
-                                supabase.table("evidences").update({"title": new_t, "description": new_d}).eq("id", ev['id']).execute()
-                                if new_files:
-                                    old_paths = [f['file_url'] for f in files]
-                                    if old_paths:
-                                        supabase.storage.from_("private-achievements").remove(old_paths)
-                                    supabase.table("evidence_files").delete().eq("evidence_id", ev['id']).execute()
-                                    for nf in new_files:
-                                        ext = nf.name.split('.')[-1]
-                                        path = f"{ev['id']}/{uuid.uuid4()}.{ext}"
-                                        supabase.storage.from_("private-achievements").upload(path=path, file=nf.getvalue(), file_options={"content-type": nf.type})
-                                        supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": path, "file_type": nf.type}).execute()
-                                st.success("تم التحديث!")
-                                time.sleep(0.5)
+                # أزرار التعديل والحذف (تظهر للمعلم فقط وتختفي عن الزائر)
+                if not is_visitor:
+                    ed_col, del_col = st.columns(2)
+                    with ed_col:
+                        with st.expander("✏️ تعديل الشاهد وتاريخ التنفيذ"):
+                            with st.form(f"edit_form_{ev['id']}"):
+                                new_t = st.text_input("عنوان الشاهد:", value=ev['title'])
+                                try:
+                                    default_d = datetime.date.fromisoformat(str(exec_date)[:10])
+                                except Exception:
+                                    default_d = datetime.date.today()
+                                new_exec_date = st.date_input("تاريخ التنفيذ (حسب توزيع المنهج):", value=default_d)
+                                new_d = st.text_area("وصف الشاهد:", value=ev.get('description', ''))
+                                new_files = st.file_uploader("استبدال المرفقات (اختياري):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True, key=f"up_{ev['id']}")
+                                
+                                if st.form_submit_button("حفظ التعديل 💾", type="primary"):
+                                    update_payload = {"title": new_t, "description": new_d, "execution_date": str(new_exec_date)}
+                                    try:
+                                        supabase.table("evidences").update(update_payload).eq("id", ev['id']).execute()
+                                    except Exception:
+                                        supabase.table("evidences").update({"title": new_t, "description": new_d}).eq("id", ev['id']).execute()
+                                        
+                                    if new_files:
+                                        old_paths = [f['file_url'] for f in files]
+                                        if old_paths:
+                                            supabase.storage.from_("private-achievements").remove(old_paths)
+                                        supabase.table("evidence_files").delete().eq("evidence_id", ev['id']).execute()
+                                        for nf in new_files:
+                                            ext = nf.name.split('.')[-1]
+                                            path = f"{ev['id']}/{uuid.uuid4()}.{ext}"
+                                            supabase.storage.from_("private-achievements").upload(path=path, file=nf.getvalue(), file_options={"content-type": nf.type})
+                                            supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": path, "file_type": nf.type}).execute()
+                                    st.success("تم التحديث بنجاح!")
+                                    time.sleep(0.4)
+                                    st.rerun()
+                    with del_col:
+                        with st.expander("🗑️ حذف الشاهد"):
+                            if st.button("تأكيد الحذف النهائي", key=f"confirm_del_{ev['id']}", type="primary"):
+                                old_paths = [f['file_url'] for f in files]
+                                if old_paths:
+                                    supabase.storage.from_("private-achievements").remove(old_paths)
+                                supabase.table("evidences").delete().eq("id", ev['id']).execute()
+                                st.success("تم الحذف!")
+                                time.sleep(0.4)
                                 st.rerun()
-                with del_col:
-                    with st.expander("🗑️ حذف الشاهد"):
-                        st.warning("هل أنت متأكد من حذف الشاهد ومرفقاته؟")
-                        if st.button("تأكيد الحذف النهائي", key=f"confirm_del_{ev['id']}", type="primary"):
-                            old_paths = [f['file_url'] for f in files]
-                            if old_paths:
-                                supabase.storage.from_("private-achievements").remove(old_paths)
-                            supabase.table("evidences").delete().eq("id", ev['id']).execute()
-                            st.success("تم الحذف!")
-                            time.sleep(0.5)
-                            st.rerun()
 
         st.write("---")
 
-        # جلب البنود الفرعية (من قاعدة البيانات أو من القائمة الافتراضية)
+        # جلب البنود الفرعية
         try:
             sub_res = supabase.table("sub_items").select("*").eq("standard_id", std_id).execute()
             db_subs = [item['title'] for item in sub_res.data] if sub_res.data else []
         except Exception:
             db_subs = []
-            
         sub_options = db_subs if db_subs else DEFAULT_SUB_ITEMS.get(std_id, [])
 
-        st.markdown("#### 💡 أفكار تبدأ منها (بنود التقييم الفرعية)")
+        st.markdown("#### 💡 الشواهد المستهدفة لهذا المعيار")
         for idea in sub_options:
             st.markdown(f"""
                 <div class="idea-card">
                     <span>💡 {idea}</span>
-                    <span style="color:#146c59; font-weight:bold;">⊕</span>
+                    <span style="color:{th['primary']}; font-weight:bold;">✔</span>
                 </div>
             """, unsafe_allow_html=True)
 
-        # نموذج إضافة شاهد لهذا البند
-        st.markdown("#### ➕ إضافة شاهد لهذا البند")
-        with st.form(f"add_ev_std_{std_id}", clear_on_submit=True):
-            chosen_idea = st.selectbox("اختر البند الفرعي:", sub_options + ["أخرى (كتابة عنوان مخصص)"])
-            custom_title = st.text_input("عنوان مخصص للشاهد (اتركه فارغاً إذا اخترت من القائمة أعلاه):")
-            desc = st.text_area("وصف الشاهد (الهدف، التنفيذ، الأثر):")
-            uploaded_files = st.file_uploader("ارفع المرفقات (صور أو PDF - يدعم عدة ملفات):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True)
-            
-            if st.form_submit_button("حفظ الشاهد ورفع المرفقات 💾", type="primary", use_container_width=True):
-                final_title = custom_title.strip() if (chosen_idea == "أخرى (كتابة عنوان مخصص)" or custom_title.strip()) else chosen_idea
-                if final_title and uploaded_files and active_year:
-                    with st.spinner("جاري رفع المرفقات وحفظ الشاهد..."):
-                        ev_data = supabase.table("evidences").insert({
-                            "standard_id": std_id,
-                            "year_id": active_year['id'],
-                            "title": final_title,
-                            "description": desc
-                        }).execute()
-                        new_id = ev_data.data[0]['id']
-                        for up_file in uploaded_files:
-                            ext = up_file.name.split('.')[-1]
-                            path = f"{new_id}/{uuid.uuid4()}.{ext}"
-                            supabase.storage.from_("private-achievements").upload(
-                                path=path,
-                                file=up_file.getvalue(),
-                                file_options={"content-type": up_file.type}
-                            )
-                            supabase.table("evidence_files").insert({
-                                "evidence_id": new_id,
-                                "file_url": path,
-                                "file_type": up_file.type
-                            }).execute()
-                        st.success("تم حفظ الشاهد بنجاح!")
-                        time.sleep(0.7)
-                        st.rerun()
-                else:
-                    st.warning("يرجى اختيار العنوان وإرفاق ملف واحد على الأقل.")
-
-        # إمكانية إضافة بند فرعي جديد للقائمة
-        with st.expander("⚙️ إضافة فكرة / بند فرعي جديد لهذا المعيار"):
-            with st.form(f"new_sub_{std_id}", clear_on_submit=True):
-                new_sub_title = st.text_input("اسم البند الفرعي الجديد:")
-                if st.form_submit_button("إضافة للقائمة"):
-                    if new_sub_title:
-                        supabase.table("sub_items").insert({"standard_id": std_id, "title": new_sub_title}).execute()
-                        st.success("تمت الإضافة!")
-                        time.sleep(0.5)
-                        st.rerun()
+        # نموذج الإضافة (يظهر للمعلم فقط)
+        if not is_visitor:
+            st.markdown("#### ➕ إضافة شاهد جديد لهذا البند")
+            with st.form(f"add_ev_std_{std_id}", clear_on_submit=True):
+                chosen_idea = st.selectbox("اختر البند الفرعي:", sub_options + ["أخرى (كتابة عنوان مخصص)"])
+                custom_title = st.text_input("عنوان مخصص للشاهد (اختياري):")
+                exec_date_input = st.date_input("📅 تاريخ التنفيذ (حسب توزيع المنهج):", value=datetime.date.today())
+                desc = st.text_area("وصف الشاهد (الهدف، التنفيذ، الأثر):")
+                uploaded_files = st.file_uploader("ارفع المرفقات (صور أو PDF):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True)
+                
+                if st.form_submit_button("حفظ الشاهد ورفع المرفقات 💾", type="primary", use_container_width=True):
+                    final_title = custom_title.strip() if (chosen_idea == "أخرى (كتابة عنوان مخصص)" or custom_title.strip()) else chosen_idea
+                    if final_title and uploaded_files and active_year.get('id'):
+                        with st.spinner("جاري رفع المرفقات وحفظ الشاهد..."):
+                            insert_payload = {
+                                "standard_id": std_id,
+                                "year_id": active_year['id'],
+                                "title": final_title,
+                                "description": desc,
+                                "execution_date": str(exec_date_input)
+                            }
+                            try:
+                                ev_data = supabase.table("evidences").insert(insert_payload).execute()
+                            except Exception:
+                                insert_payload.pop("execution_date", None)
+                                ev_data = supabase.table("evidences").insert(insert_payload).execute()
+                                
+                            new_id = ev_data.data[0]['id']
+                            for up_file in uploaded_files:
+                                ext = up_file.name.split('.')[-1]
+                                path = f"{new_id}/{uuid.uuid4()}.{ext}"
+                                supabase.storage.from_("private-achievements").upload(
+                                    path=path, file=up_file.getvalue(), file_options={"content-type": up_file.type}
+                                )
+                                supabase.table("evidence_files").insert({
+                                    "evidence_id": new_id, "file_url": path, "file_type": up_file.type
+                                }).execute()
+                            st.success("تم حفظ الشاهد بنجاح!")
+                            time.sleep(0.5)
+                            st.rerun()
+                    else:
+                        st.warning("يرجى اختيار العنوان وإرفاق ملف واحد على الأقل.")
 
     # ----------------------------------------
-    # ➕ 3. صفحة الإضافة السريعة
+    # ➕ 3. صفحة الإضافة السريعة (للمعلم فقط)
     # ----------------------------------------
-    elif st.session_state.current_page == 'quick_add':
+    elif st.session_state.current_page == 'quick_add' and not is_visitor:
         st.markdown("### ➕ إضافة شاهد سريع")
         std_dict = {f"{s['id']}. {s['title']}": s['id'] for s in stds}
         selected_std_label = st.selectbox("اختر البند الرئيسي:", list(std_dict.keys()))
@@ -621,17 +776,25 @@ def main_app():
         with st.form("quick_add_form", clear_on_submit=True):
             chosen_idea = st.selectbox("اختر الشاهد الفرعي:", ideas + ["أخرى..."])
             custom_t = st.text_input("أو اكتب عنواناً مخصصاً:")
+            exec_date_q = st.date_input("📅 تاريخ التنفيذ (حسب توزيع المنهج):", value=datetime.date.today())
             desc = st.text_area("وصف الشاهد:")
             up_files = st.file_uploader("المرفقات (صور أو PDF):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True)
             if st.form_submit_button("حفظ الشاهد 💾", type="primary", use_container_width=True):
                 final_t = custom_t.strip() if custom_t.strip() else chosen_idea
-                if final_t and up_files and active_year:
-                    ev_data = supabase.table("evidences").insert({
+                if final_t and up_files and active_year.get('id'):
+                    payload = {
                         "standard_id": sel_std_id,
                         "year_id": active_year['id'],
                         "title": final_t,
-                        "description": desc
-                    }).execute()
+                        "description": desc,
+                        "execution_date": str(exec_date_q)
+                    }
+                    try:
+                        ev_data = supabase.table("evidences").insert(payload).execute()
+                    except Exception:
+                        payload.pop("execution_date", None)
+                        ev_data = supabase.table("evidences").insert(payload).execute()
+                        
                     new_id = ev_data.data[0]['id']
                     for f in up_files:
                         ext = f.name.split('.')[-1]
@@ -639,192 +802,225 @@ def main_app():
                         supabase.storage.from_("private-achievements").upload(path=path, file=f.getvalue(), file_options={"content-type": f.type})
                         supabase.table("evidence_files").insert({"evidence_id": new_id, "file_url": path, "file_type": f.type}).execute()
                     st.success("تم الحفظ بنجاح!")
-                    time.sleep(0.7)
+                    time.sleep(0.5)
                     navigate_to('standard_view', sel_std_id)
                 else:
                     st.warning("يرجى إكمال البيانات وإرفاق ملف.")
 
     # ----------------------------------------
-    # 📄 4. صفحة التقارير والطباعة (A4 كامل)
+    # 📄 4. صفحة التقارير والطباعة (3 تصاميم احترافية للاختيار قبل الطباعة)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
-        st.markdown("### 📄 تصدير وطباعة ملف الإنجاز (PDF)")
-        if not active_year:
-            st.error("لا توجد سنة دراسية نشطة.")
-        else:
-            if st.button("تجهيز التقرير الاحترافي للطباعة 🖨️", type="primary", use_container_width=True):
-                with st.spinner("جاري تجهيز صفحات A4..."):
-                    ev_res = supabase.table("evidences").select("*, standards(title, weight, target_evidences), evidence_files(*)").eq("year_id", active_year['id']).order("standard_id").execute()
-                    all_evidences = ev_res.data
-                    
-                    total_evidences = len(all_evidences)
-                    active_stds = [s for s in stds if len([e for e in all_evidences if e['standard_id'] == s['id']]) > 0]
-                    covered_stds = len(active_stds)
-                    
-                    html_content = """
-                    <!DOCTYPE html>
-                    <html dir="rtl" lang="ar">
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>ملف الإنجاز المهني</title>
-                        <style>
-                            @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
-                            body { font-family: 'Tajawal', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; }
-                            .page { background-color: white; width: 210mm; height: 296mm; padding: 10mm 15mm; margin: 0 auto 20mm auto; box-shadow: 0 10px 20px rgba(0,0,0,0.15); box-sizing: border-box; page-break-after: always; page-break-inside: avoid; display: flex; flex-direction: column; overflow: hidden; }
-                            .cover-page { border: 4px solid #146c59; border-radius: 15px; padding: 40px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; box-sizing: border-box; }
-                            .cover-title { color: #146c59; font-size: 40px; font-weight: bold; margin-bottom: 15px; }
-                            .cover-subtitle { font-size: 22px; margin-bottom: 50px; font-weight: bold; }
-                            .info-table { width: 85%; border-collapse: collapse; margin: 0 auto; font-size: 18px; }
-                            .info-table th, .info-table td { border: 1px solid #ccc; padding: 14px; text-align: center; }
-                            .info-table th { background-color: #f8fafc; width: 32%; font-weight: bold; color: #146c59; }
-                            .header-container { display: flex; justify-content: space-between; border-bottom: 2px solid #146c59; padding-bottom: 10px; margin-bottom: 15px; font-size: 14px; font-weight: bold; flex-shrink: 0; }
-                            .header-right { color: #146c59; }
-                            .header-left { text-align: left; }
-                            .index-title { color: #146c59; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
-                            .index-table { width: 100%; border-collapse: collapse; font-size: 15px; }
-                            .index-table th { background-color: #e6f2ef; color: #146c59; padding: 10px; text-align: center; border-bottom: 2px solid #146c59; }
-                            .index-table td { padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; }
-                            .content-wrapper { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
-                            .std-header { background-color: #146c59; color: white; padding: 10px 15px; font-size: 16px; font-weight: bold; border-radius: 8px 8px 0 0; flex-shrink: 0; }
-                            .ev-header { background-color: #0f5243; color: white; padding: 8px 15px; font-size: 14px; margin-bottom: 15px; border-radius: 0 0 8px 8px; flex-shrink: 0; }
-                            .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; flex-shrink: 0; }
-                            .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; text-align: center; border-radius: 8px; }
-                            .meta-title { font-size: 12px; color: #64748b; font-weight: bold; }
-                            .meta-value { font-size: 14px; font-weight: bold; color: #0f172a; }
-                            .desc-section { margin-bottom: 15px; line-height: 1.6; font-size: 14px; padding: 10px; background: #fafafa; border-right: 4px solid #146c59; border-radius: 5px; flex-shrink: 0; }
-                            .images-grid { flex-grow: 1; display: flex; justify-content: center; align-items: center; gap: 15px; min-height: 0; padding: 5px 0; overflow: hidden; }
-                            .images-grid img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #cbd5e1; border-radius: 8px; }
-                            .pdf-notice { background: #f1f5f9; padding: 10px; text-align: center; border-radius: 8px; font-size: 13px; color: #334155; margin-bottom: 10px; border: 1px dashed #94a3b8; flex-shrink: 0; }
-                            .signatures { display: flex; justify-content: space-between; margin-top: auto; border-top: 2px solid #e2e8f0; padding-top: 15px; text-align: center; flex-shrink: 0; }
-                            .sig-box { width: 40%; }
-                            @media print {
-                                body { background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                                .page { width: 210mm; height: 296mm; margin: 0; padding: 10mm 15mm; box-shadow: none; border: none; }
-                                @page { size: A4 portrait; margin: 0; }
-                            }
-                        </style>
-                    </head>
-                    <body>
-                    """
-                    
-                    html_content += f"""
-                    <div class="page">
-                        <div class="cover-page">
-                            <div class="cover-title">ملف الإنجاز</div>
-                            <div class="cover-subtitle">شواهد الأداء الوظيفي</div>
-                            <table class="info-table">
-                                <tr><th>الاسم</th><td>{user_info['full_name']}</td></tr>
-                                <tr><th>التخصص</th><td>{user_info['specialization']}</td></tr>
-                                <tr><th>المدرسة</th><td>{user_info['school_name']}</td></tr>
-                                <tr><th>المرحلة</th><td>{user_info['education_stage']}</td></tr>
-                                <tr><th>المدينة</th><td>{user_info['city']}</td></tr>
-                                <tr><th>دورة الأداء</th><td>{active_year['year_name']}</td></tr>
-                                <tr><th>عدد الشواهد</th><td>{total_evidences}</td></tr>
-                                <tr><th>البنود المغطاة</th><td>{covered_stds} من {len(stds)}</td></tr>
-                            </table>
-                        </div>
+        st.markdown("### 📄 تصدير وطباعة ملف الإنجاز (A4 PDF)")
+        
+        report_style = st.radio(
+            "🎨 اختر تصميم التقرير قبل الطباعة:",
+            [
+                "1. التصميم الرسمي الوزاري (إطار كلاسيكي وجداول رسمية)",
+                "2. التصميم العصري الحديث (بطاقات ناعمة وألوان المظهر الحالي)",
+                "3. التصميم التنفيذي المختصر (تخطيط مكثف بحدود هندسية أنيقة)"
+            ]
+        )
+
+        if st.button("تجهيز التقرير بالتصميم المختار للطباعة 🖨️", type="primary", use_container_width=True):
+            with st.spinner("جاري تجهيز صفحات A4..."):
+                ev_res = supabase.table("evidences").select("*, standards(title, weight, target_evidences), evidence_files(*)").eq("year_id", active_year['id']).order("standard_id").execute()
+                all_evidences = ev_res.data
+                
+                total_evidences = len(all_evidences)
+                active_stds = [s for s in stds if len([e for e in all_evidences if e['standard_id'] == s['id']]) > 0]
+                covered_stds = len(active_stds)
+
+                # تحديد ألوان وأنماط التقرير بناءً على التصميم المختار
+                if report_style.startswith("1."):
+                    rep_color = "#146c59"
+                    rep_sub = "#0f5243"
+                    cover_border = "6px double #146c59"
+                    box_radius = "4px"
+                elif report_style.startswith("2."):
+                    rep_color = th['primary']
+                    rep_sub = th['primary_dark']
+                    cover_border = f"3px solid {th['primary']}"
+                    box_radius = "14px"
+                else:
+                    rep_color = "#1e293b"
+                    rep_sub = "#334155"
+                    cover_border = "2px solid #1e293b"
+                    box_radius = "0px"
+
+                html_content = f"""
+                <!DOCTYPE html>
+                <html dir="rtl" lang="ar">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>ملف الإنجاز المهني - {user_info['full_name']}</title>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+                        body {{ font-family: 'Tajawal', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; }}
+                        .page {{ background-color: white; width: 210mm; height: 296mm; padding: 10mm 15mm; margin: 0 auto 20mm auto; box-shadow: 0 10px 20px rgba(0,0,0,0.15); box-sizing: border-box; page-break-after: always; page-break-inside: avoid; display: flex; flex-direction: column; overflow: hidden; }}
+                        .cover-page {{ border: {cover_border}; border-radius: {box_radius}; padding: 35px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; box-sizing: border-box; }}
+                        .cover-title {{ color: {rep_color}; font-size: 38px; font-weight: bold; margin-bottom: 10px; }}
+                        .cover-subtitle {{ font-size: 20px; margin-bottom: 40px; font-weight: bold; color: #475569; }}
+                        .info-table {{ width: 88%; border-collapse: collapse; margin: 0 auto; font-size: 17px; }}
+                        .info-table th, .info-table td {{ border: 1px solid #cbd5e1; padding: 13px; text-align: center; }}
+                        .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: bold; color: {rep_color}; }}
+                        .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 8px; margin-bottom: 14px; font-size: 13px; font-weight: bold; flex-shrink: 0; }}
+                        .header-right {{ color: {rep_color}; }}
+                        .header-left {{ text-align: left; }}
+                        .index-title {{ color: {rep_color}; font-size: 24px; font-weight: bold; margin-bottom: 18px; }}
+                        .index-table {{ width: 100%; border-collapse: collapse; font-size: 15px; }}
+                        .index-table th {{ background-color: #f1f5f9; color: {rep_color}; padding: 10px; text-align: center; border-bottom: 2px solid {rep_color}; }}
+                        .index-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; }}
+                        .content-wrapper {{ flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }}
+                        .std-header {{ background-color: {rep_color}; color: white; padding: 10px 15px; font-size: 16px; font-weight: bold; border-radius: {box_radius} {box_radius} 0 0; flex-shrink: 0; }}
+                        .ev-header {{ background-color: {rep_sub}; color: white; padding: 8px 15px; font-size: 14px; margin-bottom: 14px; border-radius: 0 0 {box_radius} {box_radius}; flex-shrink: 0; }}
+                        .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; flex-shrink: 0; }}
+                        .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 9px; text-align: center; border-radius: {box_radius}; }}
+                        .meta-title {{ font-size: 12px; color: #64748b; font-weight: bold; }}
+                        .meta-value {{ font-size: 14px; font-weight: bold; color: #0f172a; }}
+                        .desc-section {{ margin-bottom: 14px; line-height: 1.6; font-size: 14px; padding: 10px; background: #fafafa; border-right: 4px solid {rep_color}; border-radius: {box_radius}; flex-shrink: 0; }}
+                        .images-grid {{ flex-grow: 1; display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 0; padding: 5px 0; overflow: hidden; }}
+                        .images-grid img {{ max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #cbd5e1; border-radius: {box_radius}; }}
+                        .pdf-notice {{ background: #f1f5f9; padding: 9px; text-align: center; border-radius: {box_radius}; font-size: 13px; color: #334155; margin-bottom: 10px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
+                        .signatures {{ display: flex; justify-content: space-between; margin-top: auto; border-top: 2px solid #e2e8f0; padding-top: 12px; text-align: center; flex-shrink: 0; }}
+                        .sig-box {{ width: 42%; }}
+                        @media print {{
+                            body {{ background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                            .page {{ width: 210mm; height: 296mm; margin: 0; padding: 10mm 15mm; box-shadow: none; border: none; }}
+                            @page {{ size: A4 portrait; margin: 0; }}
+                        }}
+                    </style>
+                </head>
+                <body>
+                """
+                
+                html_content += f"""
+                <div class="page">
+                    <div class="cover-page">
+                        <div style="font-size:16px; font-weight:bold; color:{rep_color}; margin-bottom:10px;">المملكة العربية السعودية • وزارة التعليم</div>
+                        <div class="cover-title">ملف الإنجاز المهني</div>
+                        <div class="cover-subtitle">توثيق شواهد الأداء الوظيفي</div>
+                        <table class="info-table">
+                            <tr><th>اسم المعلم</th><td>{user_info['full_name']}</td></tr>
+                            <tr><th>التخصص</th><td>{user_info['specialization']}</td></tr>
+                            <tr><th>المدرسة</th><td>{user_info['school_name']}</td></tr>
+                            <tr><th>المرحلة الدراسية</th><td>{user_info['education_stage']}</td></tr>
+                            <tr><th>المدينة</th><td>{user_info['city']}</td></tr>
+                            <tr><th>مدير المدرسة</th><td>{user_info['principal_name']}</td></tr>
+                            <tr><th>العام الدراسي</th><td>{active_year['year_name']}هـ</td></tr>
+                            <tr><th>إجمالي الشواهد الموثقة</th><td>{total_evidences} شاهد ({covered_stds} من {len(stds)} معايير)</td></tr>
+                        </table>
                     </div>
-                    """
-                    
-                    shared_header = f"""
-                    <div class="header-container">
-                        <div class="header-right">
-                            {user_info['full_name']}<br>
-                            <span style="font-size:11px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - دورة {active_year['year_name']}</span>
-                        </div>
-                        <div class="header-left">
-                            المملكة العربية السعودية<br>
-                            <span style="font-size:11px; font-weight:normal; color:#666;">وزارة التعليم - {user_info['school_name']}</span>
-                        </div>
+                </div>
+                """
+                
+                shared_header = f"""
+                <div class="header-container">
+                    <div class="header-right">
+                        {user_info['full_name']}<br>
+                        <span style="font-size:11px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - العام الدراسي {active_year['year_name']}هـ</span>
                     </div>
-                    """
+                    <div class="header-left">
+                        المملكة العربية السعودية<br>
+                        <span style="font-size:11px; font-weight:normal; color:#666;">وزارة التعليم - {user_info['school_name']}</span>
+                    </div>
+                </div>
+                """
+                
+                html_content += f"""
+                <div class="page">
+                    {shared_header}
+                    <div class="index-title">فهرس معايير الأداء المنجزة</div>
+                    <table class="index-table">
+                        <tr><th>م</th><th>المعيار</th><th>الوزن النسبي</th><th>الشواهد الموثقة</th><th>المستهدف</th></tr>
+                """
+                for std in stds:
+                    count = len([e for e in all_evidences if e['standard_id'] == std['id']])
+                    if count == 0:
+                        continue
+                    target = std.get('target_evidences', 3)
+                    html_content += f"<tr><td>{std['id']}</td><td style='text-align:right; font-weight:bold;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:{rep_color}; font-weight:bold;'>{count}</td><td>{target}</td></tr>"
+                html_content += "</table></div>"
+                
+                for ev in all_evidences:
+                    std = ev['standards']
+                    exec_date = ev.get('execution_date') or ev['created_at'][:10]
+                    files = ev.get('evidence_files', [])
+                    img_html = ""
+                    pdf_count = 0
+                    for f in files:
+                        if f.get('file_type', '').startswith('image/'):
+                            url_res = supabase.storage.from_("private-achievements").create_signed_url(f['file_url'], 3600)
+                            img_html += f"<img src='{url_res['signedURL']}'>"
+                        elif f.get('file_type') == 'application/pdf':
+                            pdf_count += 1
+                            
+                    pdf_notice = f"<div class='pdf-notice'>📌 مرفق مستند PDF رسمي عدد ({pdf_count}) محفوظ في النظام الإلكتروني.</div>" if pdf_count > 0 else ""
+                    images_section = f"<div class='images-grid'>{img_html}</div>" if img_html else ""
                     
                     html_content += f"""
                     <div class="page">
                         {shared_header}
-                        <div class="index-title">فهرس البنود المنجزة</div>
-                        <table class="index-table">
-                            <tr><th>م</th><th>البند</th><th>الوزن</th><th>الشواهد المرفوعة</th><th>المستهدف</th></tr>
+                        <div class="content-wrapper">
+                            <div class="std-header">المعيار {ev['standard_id']}: {std['title']} (الوزن {std['weight']}%)</div>
+                            <div class="ev-header">الشاهد: {ev['title']}</div>
+                            <div class="meta-grid">
+                                <div class="meta-box"><div class="meta-title">تاريخ التنفيذ الفعلي</div><div class="meta-value">{exec_date}</div></div>
+                                <div class="meta-box"><div class="meta-title">حالة التوثيق</div><div class="meta-value">شاهد معتمد وموثق</div></div>
+                            </div>
+                            <div class="desc-section"><strong>وصف الشاهد والأثر:</strong><br>{ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'}</div>
+                            {pdf_notice}
+                            {images_section}
+                        </div>
+                        <div class="signatures">
+                            <div class="sig-box">
+                                <div style="color:#666; font-size:12px; margin-bottom:18px;">المعلم:</div>
+                                <div style="font-weight:bold;">{user_info['full_name']}</div>
+                            </div>
+                            <div class="sig-box">
+                                <div style="color:#666; font-size:12px; margin-bottom:18px;">مدير المدرسة:</div>
+                                <div style="font-weight:bold;">{user_info['principal_name']}</div>
+                            </div>
+                        </div>
+                    </div>
                     """
-                    for std in stds:
-                        count = len([e for e in all_evidences if e['standard_id'] == std['id']])
-                        if count == 0:
-                            continue
-                        target = std.get('target_evidences', 3)
-                        html_content += f"<tr><td>{std['id']}</td><td style='text-align:right;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:#146c59; font-weight:bold;'>{count}</td><td>{target}</td></tr>"
-                    html_content += "</table></div>"
-                    
-                    for ev in all_evidences:
-                        std = ev['standards']
-                        created_date = ev['created_at'][:10]
-                        files = ev.get('evidence_files', [])
-                        img_html = ""
-                        pdf_count = 0
-                        for f in files:
-                            if f.get('file_type', '').startswith('image/'):
-                                url_res = supabase.storage.from_("private-achievements").create_signed_url(f['file_url'], 3600)
-                                img_html += f"<img src='{url_res['signedURL']}'>"
-                            elif f.get('file_type') == 'application/pdf':
-                                pdf_count += 1
-                                
-                        pdf_notice = f"<div class='pdf-notice'>📌 يوجد مرفق PDF عدد ({pdf_count}) محفوظ في النظام.</div>" if pdf_count > 0 else ""
-                        images_section = f"<div class='images-grid'>{img_html}</div>" if img_html else ""
-                        
-                        html_content += f"""
-                        <div class="page">
-                            {shared_header}
-                            <div class="content-wrapper">
-                                <div class="std-header">{ev['standard_id']}. {std['title']} · الوزن {std['weight']}%</div>
-                                <div class="ev-header">الشاهد: {ev['title']}</div>
-                                <div class="meta-grid">
-                                    <div class="meta-box"><div class="meta-title">تاريخ التنفيذ / الرفع</div><div class="meta-value">{created_date}</div></div>
-                                    <div class="meta-box"><div class="meta-title">نوع الشاهد</div><div class="meta-value">شاهد موثق</div></div>
-                                </div>
-                                <div class="desc-section"><strong>الوصف:</strong><br>{ev.get('description') or 'لا يوجد وصف مضاف.'}</div>
-                                {pdf_notice}
-                                {images_section}
-                            </div>
-                            <div class="signatures">
-                                <div class="sig-box">
-                                    <div style="color:#666; font-size:12px; margin-bottom:20px;">المعلم:</div>
-                                    <div style="font-weight:bold;">{user_info['full_name']}</div>
-                                </div>
-                                <div class="sig-box">
-                                    <div style="color:#666; font-size:12px; margin-bottom:20px;">مدير المدرسة:</div>
-                                    <div style="font-weight:bold;">{user_info['principal_name']}</div>
-                                </div>
-                            </div>
-                        </div>
-                        """
-                    
-                    html_content += "</body></html>"
-                    safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
-                    
-                    components.html(f"""
-                        <div style="text-align: center; margin-top: 10px;">
-                            <button onclick="openPrintWindow()" style="width: 100%; padding: 15px; background-color: #146c59; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; font-family: 'Tajawal', sans-serif;">
-                                🖨️ فتح التقرير للطباعة (A4)
-                            </button>
-                        </div>
-                        <script>
-                            function openPrintWindow() {{
-                                var win = window.open('', '_blank');
-                                win.document.write(`{safe_html}`);
-                                win.document.close();
-                                setTimeout(function() {{ win.print(); }}, 1500);
-                            }}
-                        </script>
-                    """, height=85)
+                
+                html_content += "</body></html>"
+                safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+                
+                components.html(f"""
+                    <div style="text-align: center; margin-top: 10px;">
+                        <button onclick="openPrintWindow()" style="width: 100%; padding: 15px; background-color: {rep_color}; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; font-family: 'Tajawal', sans-serif;">
+                            🖨️ فتح التقرير للطباعة بحجم A4
+                        </button>
+                    </div>
+                    <script>
+                        function openPrintWindow() {{
+                            var win = window.open('', '_blank');
+                            win.document.write(`{safe_html}`);
+                            win.document.close();
+                            setTimeout(function() {{ win.print(); }}, 1500);
+                        }}
+                    </script>
+                """, height=85)
 
     # ----------------------------------------
-    # ⚙️ 5. صفحة الإعدادات والنسخ الاحتياطي
+    # ⚙️ 5. صفحة حسابي (البيانات + المظاهر + مشاركة الزائر + النسخ الاحتياطي)
     # ----------------------------------------
-    elif st.session_state.current_page == 'settings':
-        st.markdown("### ⚙️ إعدادات الحساب والنسخ الاحتياطي")
-        t1, t2, t3 = st.tabs(["👤 بيانات المعلم والمدرسة", "💾 النسخ الاحتياطي", "🚪 الخروج"])
+    elif st.session_state.current_page == 'settings' and not is_visitor:
+        st.markdown("### ⚙️ إعدادات الحساب والمظهر والمشاركة")
+        t1, t2, t3, t4 = st.tabs(["👤 البيانات والمظهر", "🔗 مشاركة الملف (للزوار)", "💾 النسخ الاحتياطي", "🚪 الخروج"])
         
         with t1:
             with st.form("profile_form"):
+                st.markdown("#### 🎨 مظهر التطبيق")
+                theme_keys = list(THEMES.keys())
+                theme_labels = [THEMES[k]["name"] for k in theme_keys]
+                current_idx = theme_keys.index(active_theme_key) if active_theme_key in theme_keys else 0
+                selected_theme_label = st.selectbox("اختر المظهر اللوني للتطبيق:", theme_labels, index=current_idx)
+                chosen_theme_key = theme_keys[theme_labels.index(selected_theme_label)]
+
+                st.markdown("#### 📝 البيانات الأساسية")
                 c1, c2 = st.columns(2)
                 with c1:
                     n_name = st.text_input("اسم المعلم:", value=user_info['full_name'])
@@ -835,30 +1031,51 @@ def main_app():
                     n_stage = st.text_input("المرحلة الدراسية:", value=user_info['education_stage'])
                     n_prin = st.text_input("اسم مدير المدرسة:", value=user_info['principal_name'])
                 
-                if st.form_submit_button("حفظ البيانات 💾", type="primary", use_container_width=True):
+                if st.form_submit_button("حفظ البيانات والمظهر 💾", type="primary", use_container_width=True):
+                    payload = {
+                        "id": 1,
+                        "full_name": n_name,
+                        "specialization": n_spec,
+                        "school_name": n_school,
+                        "education_stage": n_stage,
+                        "city": n_city,
+                        "principal_name": n_prin,
+                        "theme": chosen_theme_key
+                    }
                     try:
-                        supabase.table("user_profile").upsert({
-                            "id": 1,
-                            "full_name": n_name,
-                            "specialization": n_spec,
-                            "school_name": n_school,
-                            "education_stage": n_stage,
-                            "city": n_city,
-                            "principal_name": n_prin
-                        }).execute()
-                        st.success("تم حفظ البيانات بنجاح!")
-                        time.sleep(0.5)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"تأكد من إنشاء جدول user_profile في Supabase: {e}")
+                        supabase.table("user_profile").upsert(payload).execute()
+                    except Exception:
+                        payload.pop("theme", None)
+                        supabase.table("user_profile").upsert(payload).execute()
+                    st.success("تم تحديث البيانات والمظهر بنجاح!")
+                    time.sleep(0.4)
+                    st.rerun()
 
         with t2:
+            st.markdown("#### 🔗 التحكم في وصول الزوار (قراءة ومشاهدة فقط)")
+            st.write("يمكنك مشاركة ملف إنجازك مع مدير المدرسة أو المشرف التربوي للاطلاع فقط دون السماح لهم بالتعديل أو الحذف.")
+            with st.form("visitor_settings_form"):
+                allow_v = st.checkbox("تفعيل السماح بدخول الزوار عبر الرمز السري", value=user_info.get("allow_visitor", True))
+                v_code_input = st.text_input("الرمز السري للزائر (أعطِ هذا الرمز فقط لمن ترغب باطلاعه على ملفك):", value=str(user_info.get("visitor_code", "1448")))
+                if st.form_submit_button("حفظ إعدادات الزائر 🔒", type="primary"):
+                    try:
+                        supabase.table("user_profile").update({
+                            "allow_visitor": allow_v,
+                            "visitor_code": v_code_input.strip()
+                        }).eq("id", 1).execute()
+                        st.success("تم تحديث إعدادات الزائر بنجاح!")
+                        time.sleep(0.4)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"يرجى تنفيذ كود SQL الخاص بحقول الزائر أولاً: {e}")
+
+            curr_code = user_info.get("visitor_code", "1448")
+            st.info(f"💡 **طريقة المشاركة السريعة:** أضف `?visitor={curr_code}` في نهاية رابط تطبيقك لإرساله مباشرة للمدير أو المشرف، أو اطلب منه إدخال الرمز `{curr_code}` في تبويب (دخول زائر) بصفحة الدخول.")
+
+        with t3:
             st.write("تصدير نسخة احتياطية كاملة لبياناتك بصيغة JSON:")
             if st.button("📦 تجهيز ملف النسخة الاحتياطية", type="primary", use_container_width=True):
-                backup = {
-                    "standards": stds,
-                    "evidences": evidences
-                }
+                backup = {"standards": stds, "evidences": evidences}
                 st.download_button(
                     label="⬇️ تحميل النسخة الاحتياطية (JSON)",
                     data=json.dumps(backup, ensure_ascii=False, indent=4),
@@ -867,18 +1084,17 @@ def main_app():
                     use_container_width=True
                 )
 
-        with t3:
+        with t4:
             if st.button("🚪 تسجيل الخروج من الحساب", use_container_width=True):
                 supabase.auth.sign_out()
                 st.session_state.user = None
+                st.session_state.is_visitor = False
                 st.rerun()
 
-    st.markdown("<div class='spacer'></div>", unsafe_allow_html=True)
-
 # ==========================================
-# 7. نقطة تشغيل التطبيق
+# 8. نقطة تشغيل التطبيق
 # ==========================================
-if st.session_state.user is None:
+if st.session_state.user is None and not st.session_state.is_visitor:
     login_page()
 else:
     main_app()
