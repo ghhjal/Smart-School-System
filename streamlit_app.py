@@ -11,8 +11,8 @@ import streamlit.components.v1 as components
 # 1. إعدادات الصفحة الأساسية
 # ==========================================
 st.set_page_config(
-    page_title="ملف الإنجاز المهني",
-    page_icon="💼",
+    page_title="منصة زياد الذكية | ملف الإنجاز المهني",
+    page_icon="🎓",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
@@ -22,16 +22,18 @@ st.set_page_config(
 # ==========================================
 THEMES = {
     "emerald": {
-        "name": "🟢 الأخضر الوزاري (الافتراضي)",
-        "primary": "#146c59",
-        "primary_dark": "#0f5243",
-        "bg": "#f7f6f2",
-        "accent": "#c57b30",
+        "name": "🟢 الأخضر الوزاري الفاخر",
+        "primary": "#0f5243",
+        "primary_light": "#146c59",
+        "primary_dark": "#09352b",
+        "bg": "#f4f6f5",
+        "accent": "#d97706",
         "tint": "#e6f2ef"
     },
     "royal": {
         "name": "🔵 الأزرق الملكي الاحترافي",
         "primary": "#1e3a8a",
+        "primary_light": "#2563eb",
         "primary_dark": "#172554",
         "bg": "#f0f4f8",
         "accent": "#0284c7",
@@ -39,8 +41,9 @@ THEMES = {
     },
     "bronze": {
         "name": "🟤 الذهبي الكلاسيكي الفاخر",
-        "primary": "#7c4d25",
-        "primary_dark": "#5c3719",
+        "primary": "#78350f",
+        "primary_light": "#92400e",
+        "primary_dark": "#451a03",
         "bg": "#faf6f0",
         "accent": "#b45309",
         "tint": "#fef3c7"
@@ -48,6 +51,7 @@ THEMES = {
     "slate": {
         "name": "⚫ الرمادي العصري الداكن",
         "primary": "#1e293b",
+        "primary_light": "#334155",
         "primary_dark": "#0f172a",
         "bg": "#f1f5f9",
         "accent": "#475569",
@@ -148,7 +152,7 @@ if 'is_visitor' not in st.session_state:
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'home'
 if 'view_standard_id' not in st.session_state:
-    st.session_state.view_standard_id = 1
+    st.session_state.view_standard_id = 0  # 0 يعني استعراض جميع البنود
 if 'filter_mode' not in st.session_state:
     st.session_state.filter_mode = 'all'
 
@@ -178,98 +182,175 @@ def get_user_profile():
         pass
     return default_profile
 
-# تطبيق التصميم (CSS) بناءً على المظهر المختار
 user_info = get_user_profile()
 active_theme_key = user_info.get("theme", "emerald")
 if active_theme_key not in THEMES:
     active_theme_key = "emerald"
 th = THEMES[active_theme_key]
 
+# شعار منصة زياد الذكية (SVG احترافي مدمج)
+ZIYAD_LOGO_SVG = f"""
+<svg width="46" height="46" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/>
+  <path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/>
+  <path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/>
+  <path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/>
+</svg>
+"""
+
+# ==========================================
+# 5. التصميم الاحترافي والخط العصري (Readex Pro & Cairo)
+# ==========================================
 st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Readex+Pro:wght@400;500;600;700&display=swap');
     
     header {{visibility: hidden;}}
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
     .stSidebar {{display: none !important;}}
     
-    body, [class*="css"] {{
+    html, body, [class*="css"], .stMarkdown, p, div, span, h1, h2, h3, h4, button, input, textarea, select {{
         direction: rtl; 
         text-align: right; 
-        font-family: 'Tajawal', sans-serif;
-        background-color: {th['bg']};
+        font-family: 'Readex Pro', 'Cairo', sans-serif !important;
     }}
     .stApp {{ background-color: {th['bg']}; }}
     
-    /* الهيدر الترحيبي */
-    .greeting-header {{
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 8px 0 14px 0; border-bottom: 1px solid rgba(0,0,0,0.08); margin-bottom: 16px;
+    /* الهيدر والبنر المدمج الاحترافي */
+    .hero-wrapper {{
+        background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%);
+        color: white;
+        padding: 22px 24px;
+        border-radius: 22px;
+        margin-bottom: 20px;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.12);
     }}
-    .greeting-title {{ font-size: 23px; font-weight: 700; color: {th['primary_dark']}; margin: 0;}}
-    .greeting-date {{ font-size: 13px; color: #64748b; margin-top: 4px;}}
-    .icon-btn {{ 
-        background: {th['primary']}; color: white; width: 40px; height: 40px; 
-        border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; 
-        font-weight: bold; font-size: 17px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    .hero-top {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255,255,255,0.14);
+        padding-bottom: 14px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }}
+    .brand-box {{
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }}
+    .brand-title {{
+        font-size: 16px;
+        font-weight: 700;
+        color: #fbbf24;
+        letter-spacing: 0.3px;
+        margin: 0;
+    }}
+    .brand-sub {{
+        font-size: 11px;
+        color: rgba(255,255,255,0.82);
+        margin: 0;
+    }}
+    .date-pill {{
+        background: rgba(255,255,255,0.12);
+        padding: 6px 14px;
+        border-radius: 99px;
+        font-size: 12px;
+        color: #f8fafc;
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(255,255,255,0.15);
+    }}
+    .hero-body {{
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: 14px;
+    }}
+    .welcome-line {{
+        font-size: 14px;
+        color: #fde68a;
+        font-weight: 500;
+        margin-bottom: 4px;
+    }}
+    .teacher-name {{
+        font-size: 24px;
+        font-weight: 800;
+        color: #ffffff;
+        margin: 0 0 8px 0;
+    }}
+    .meta-badges {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }}
+    .meta-pill {{
+        background: rgba(0,0,0,0.22);
+        color: rgba(255,255,255,0.95);
+        padding: 5px 12px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 500;
+    }}
+    .year-badge {{
+        background: #fbbf24;
+        color: #1e293b;
+        padding: 8px 16px;
+        border-radius: 14px;
+        font-size: 14px;
+        font-weight: 700;
+        box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
     }}
 
-    /* بانر المدرسة المطور (بدون إجازة ثابتة) */
-    .school-banner {{
-        background: linear-gradient(135deg, {th['primary']}, {th['primary_dark']});
-        color: white; padding: 20px 22px; border-radius: 18px;
-        margin-bottom: 18px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-        display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
-    }}
-    .banner-main {{ font-size: 19px; font-weight: 700; margin: 4px 0; }}
-    .banner-sub {{ font-size: 13px; opacity: 0.9; }}
-    .banner-badge {{
-        background: rgba(255,255,255,0.18); padding: 6px 14px; border-radius: 12px;
-        font-size: 13px; font-weight: 700; backdrop-filter: blur(4px);
-    }}
-    
     /* بطاقات الإحصائيات السريعة */
     .kpi-grid {{
         display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;
     }}
     .kpi-card {{
-        background: white; border-radius: 14px; padding: 12px 8px; text-align: center;
-        border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        background: white; border-radius: 16px; padding: 14px 8px; text-align: center;
+        border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 3px 8px rgba(0,0,0,0.03);
     }}
-    .kpi-val {{ font-size: 21px; font-weight: 700; color: {th['primary']}; }}
-    .kpi-lbl {{ font-size: 11px; color: #64748b; margin-top: 2px; }}
+    .kpi-val {{ font-size: 22px; font-weight: 700; color: {th['primary']}; }}
+    .kpi-lbl {{ font-size: 11px; color: #64748b; margin-top: 3px; font-weight: 500; }}
 
     /* شريط الإنجاز */
     .progress-card {{
         background: white; padding: 16px 20px; border-radius: 16px; 
         margin-bottom: 18px; border: 1px solid rgba(0,0,0,0.06);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.02);
     }}
     .progress-bar-bg {{
-        background: #e2e8f0; height: 9px; border-radius: 5px; width: 100%; overflow: hidden; margin-top: 8px;
+        background: #e2e8f0; height: 10px; border-radius: 6px; width: 100%; overflow: hidden; margin-top: 8px;
     }}
     .progress-bar-fill {{
-        background: {th['primary']}; height: 100%; border-radius: 5px;
+        background: linear-gradient(90deg, {th['primary']}, {th['primary_light']});
+        height: 100%; border-radius: 6px;
     }}
     
     /* بطاقة المعيار */
     .std-card {{
-        background: white; border: 1px solid rgba(0,0,0,0.07); border-radius: 16px;
-        padding: 15px 18px; margin-bottom: 8px;
+        background: white; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px;
+        padding: 16px 18px; margin-bottom: 8px;
         display: flex; justify-content: space-between; align-items: center;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     }}
     .std-num {{
-        width: 42px; height: 42px; border-radius: 12px;
+        width: 44px; height: 44px; border-radius: 13px;
         background: {th['tint']}; color: {th['primary']};
         display: flex; align-items: center; justify-content: center;
         font-weight: 700; font-size: 18px; margin-left: 14px; flex-shrink: 0;
     }}
     .std-num-empty {{ background: #fee2e2; color: #dc2626; }}
-    .std-title {{ font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }}
+    .std-title {{ font-size: 15.5px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }}
     .weight-badge {{
-        background: #f1f5f9; color: #475569; font-size: 12px; padding: 2px 10px;
-        border-radius: 8px; display: inline-block;
+        background: #f1f5f9; color: #475569; font-size: 11.5px; padding: 3px 10px;
+        border-radius: 8px; display: inline-block; font-weight: 600;
     }}
     .dots-row {{ display: flex; gap: 5px; margin-bottom: 5px; justify-content: flex-end; }}
     .dot {{ width: 14px; height: 6px; border-radius: 3px; }}
@@ -291,7 +372,7 @@ st.markdown(f"""
     }}
     .thumb-overlay {{
         position: absolute; bottom: 0; left: 0; right: 0;
-        background: rgba(0,0,0,0.6); color: white; font-size: 10px;
+        background: rgba(0,0,0,0.65); color: white; font-size: 10px;
         text-align: center; padding: 3px 0;
     }}
     .pdf-badge {{
@@ -308,13 +389,34 @@ st.markdown(f"""
     }}
     .idea-card {{
         background: white; border: 1px solid rgba(0,0,0,0.06); padding: 11px 15px;
-        border-radius: 11px; margin-bottom: 7px; font-size: 14px; color: #334155;
+        border-radius: 11px; margin-bottom: 7px; font-size: 13.5px; color: #334155;
         display: flex; justify-content: space-between; align-items: center;
     }}
     .visitor-banner {{
         background: #fef3c7; color: #92400e; border: 1px solid #f59e0b;
         padding: 10px 16px; border-radius: 12px; margin-bottom: 14px;
         font-weight: 700; font-size: 14px; text-align: center;
+    }}
+
+    /* حقوق منصة زياد الذكية في أسفل الملف */
+    .ziyad-footer {{
+        margin-top: 45px;
+        padding: 20px 15px;
+        background: white;
+        border-top: 3px solid {th['primary']};
+        border-radius: 18px 18px 8px 8px;
+        text-align: center;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+    }}
+    .footer-brand {{
+        font-size: 15px;
+        font-weight: 700;
+        color: {th['primary']};
+        margin-bottom: 4px;
+    }}
+    .footer-rights {{
+        font-size: 12px;
+        color: #64748b;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -328,13 +430,13 @@ if "visitor" in query_params and st.session_state.user is None:
         st.session_state.is_visitor = True
 
 # ==========================================
-# 5. دوال التاريخ والترحيب
+# 6. دوال التاريخ والترحيب والفوتر
 # ==========================================
 def get_greeting_and_dates():
     tz = datetime.timezone(datetime.timedelta(hours=3))
     now = datetime.datetime.now(tz)
     today = now.date()
-    greeting = "صباح الخير" if now.hour < 12 else "مساء الخير"
+    greeting = "صباح الخير والتميز" if now.hour < 12 else "مساء الخير والعطاء"
     
     days_ar = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
     months_ar = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
@@ -348,15 +450,26 @@ def get_greeting_and_dates():
     
     return greeting, f"{day_name} • {h_date} • {g_date}"
 
+def render_footer():
+    year_now = datetime.date.today().year
+    st.markdown(f"""
+        <div class="ziyad-footer">
+            <div class="footer-brand">🎓 منصة زياد الذكية | نظام ملف الإنجاز المهني الإلكتروني</div>
+            <div class="footer-rights">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {user_info['full_name']}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
 # ==========================================
-# 6. صفحة تسجيل الدخول (معلم + زائر)
+# 7. صفحة تسجيل الدخول (معلم + زائر)
 # ==========================================
 def login_page():
-    st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
     st.markdown(f"""
-        <div class="school-banner" style="text-align: center; display: block;">
-            <div style="font-size: 25px; font-weight: bold; margin-bottom: 5px;">ملف الإنجاز المهني الإلكتروني</div>
-            <div style="font-size: 14px; opacity: 0.9;">{user_info['full_name']} • {user_info['school_name']}</div>
+        <div class="hero-wrapper" style="text-align: center;">
+            <div style="display:flex; justify-content:center; margin-bottom:10px;">{ZIYAD_LOGO_SVG}</div>
+            <div style="font-size: 15px; color: #fbbf24; font-weight: 700;">منصة زياد الذكية</div>
+            <div style="font-size: 24px; font-weight: 800; margin: 5px 0;">ملف الإنجاز المهني الإلكتروني</div>
+            <div style="font-size: 13px; opacity: 0.9;">أ. {user_info['full_name']} • {user_info['school_name']}</div>
         </div>
     """, unsafe_allow_html=True)
     
@@ -366,7 +479,7 @@ def login_page():
         with st.form("login_form"):
             email = st.text_input("البريد الإلكتروني")
             password = st.text_input("كلمة المرور", type="password")
-            submit = st.form_submit_button("تسجيل الدخول", type="primary", use_container_width=True)
+            submit = st.form_submit_button("تسجيل الدخول للنظام", type="primary", use_container_width=True)
             if submit:
                 if email and password:
                     try:
@@ -382,7 +495,7 @@ def login_page():
                     st.warning("يرجى إدخال البريد الإلكتروني وكلمة المرور.")
 
     with tab_visitor:
-        st.info("هذه البوابة مخصصة لمدير المدرسة والمشرف التربوي للاطلاع على ملف الإنجاز بواسطة رمز المشاهدة الممنوح من المعلم.")
+        st.info("بوابة مخصصة لمدير المدرسة والمشرف التربوي للاطلاع على ملف الإنجاز بواسطة رمز المشاهدة الممنوح من المعلم.")
         with st.form("visitor_form"):
             v_code = st.text_input("أدخل رمز المشاهدة للزائر:", type="password")
             v_submit = st.form_submit_button("👁️ استعراض ملف الإنجاز", use_container_width=True)
@@ -396,34 +509,38 @@ def login_page():
                 else:
                     st.error("رمز المشاهدة غير صحيح.")
 
+    render_footer()
+
 # ==========================================
-# 7. التطبيق الرئيسي
+# 8. التطبيق الرئيسي
 # ==========================================
 def main_app():
     is_visitor = st.session_state.is_visitor
 
-    # جلب السنة الدراسية النشطة
-    year_res = supabase.table("academic_years").select("*").eq("is_active", True).execute()
-    active_year = year_res.data[0] if year_res.data else {"id": None, "year_name": "1448"}
+    # جلب جميع السنوات الدراسية وتحديد السنة النشطة
+    all_years_res = supabase.table("academic_years").select("*").order("created_at", desc=True).execute()
+    all_years = all_years_res.data if all_years_res.data else []
+    active_years = [y for y in all_years if y.get("is_active")]
+    active_year = active_years[0] if active_years else (all_years[0] if all_years else {"id": None, "year_name": "1448"})
 
-    # تنبيه في حال كان التصفح بوضع الزائر
+    # تنبيه وضع الزائر
     if is_visitor:
         col_v1, col_v2 = st.columns([4, 1])
         with col_v1:
             st.markdown("<div class='visitor-banner'>👁️ تتصفح الملف حالياً بوضع الزائر (قراءة ومشاهدة فقط)</div>", unsafe_allow_html=True)
         with col_v2:
-            if st.button("🚪 خروج الزائر", use_container_width=True):
+            if st.button("🚪 خروج", use_container_width=True):
                 st.session_state.is_visitor = False
                 st.query_params.clear()
                 st.rerun()
 
-    # شريط التنقل العلوي
+    # شريط التنقل العلوي المطور (مع تبويب الأرشيف الجديد)
     if is_visitor:
         nav1, nav2, nav3 = st.columns(3)
         with nav1:
             if st.button("🏠 الرئيسية", use_container_width=True): navigate_to('home')
         with nav2:
-            if st.button("📋 تصفح البنود", use_container_width=True): navigate_to('standard_view', st.session_state.view_standard_id)
+            if st.button("📋 تصفح البنود", use_container_width=True): navigate_to('standard_view', 0)
         with nav3:
             if st.button("📄 طباعة التقرير", type="primary", use_container_width=True): navigate_to('reports')
     else:
@@ -431,32 +548,44 @@ def main_app():
         with nav1:
             if st.button("🏠 الرئيسية", use_container_width=True): navigate_to('home')
         with nav2:
-            if st.button("📋 البنود", use_container_width=True): navigate_to('standard_view', st.session_state.view_standard_id)
+            if st.button("📋 البنود", use_container_width=True): navigate_to('standard_view', 0)
         with nav3:
-            if st.button("➕ إضافة", type="primary", use_container_width=True): navigate_to('quick_add')
+            if st.button("📅 الأرشيف", use_container_width=True): navigate_to('archive')
         with nav4:
             if st.button("📄 التقرير", use_container_width=True): navigate_to('reports')
         with nav5:
             if st.button("⚙️ حسابي", use_container_width=True): navigate_to('settings')
 
-    # الهيدر الترحيبي بالتاريخ الهجري والميلادي
+    # الهيدر والبنر المدمج الاحترافي بشعار منصة زياد الذكية
     greeting, today_str = get_greeting_and_dates()
-    first_name = user_info['full_name'].split()[0] if user_info['full_name'] else "المعلم"
-    first_letter = first_name[0] if first_name else "ز"
-    
     st.markdown(f"""
-        <div class="greeting-header">
-            <div>
-                <h1 class="greeting-title">{greeting}، أ. {first_name}</h1>
-                <div class="greeting-date">{today_str}</div>
+        <div class="hero-wrapper">
+            <div class="hero-top">
+                <div class="brand-box">
+                    {ZIYAD_LOGO_SVG}
+                    <div>
+                        <div class="brand-title">منصة زياد الذكية</div>
+                        <div class="brand-sub">نظام إدارة وتوثيق شواهد الأداء الوظيفي</div>
+                    </div>
+                </div>
+                <div class="date-pill">🗓️ {today_str}</div>
             </div>
-            <div>
-                <span class="icon-btn">{first_letter}</span>
+            <div class="hero-body">
+                <div>
+                    <div class="welcome-line">✨ {greeting}</div>
+                    <div class="teacher-name">أ. {user_info['full_name']}</div>
+                    <div class="meta-badges">
+                        <span class="meta-pill">🏫 {user_info['school_name']}</span>
+                        <span class="meta-pill">📚 {user_info['specialization']}</span>
+                        <span class="meta-pill">👔 مدير المدرسة: {user_info['principal_name']}</span>
+                    </div>
+                </div>
+                <div class="year-badge">📁 ملف إنجاز عام {active_year['year_name']}هـ</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # جلب المعايير والشواهد
+    # جلب المعايير والشواهد الخاصة بالعام النشط
     standards_res = supabase.table("standards").select("*").order("id").execute()
     stds = standards_res.data
     
@@ -466,21 +595,9 @@ def main_app():
         evidences = ev_res.data
 
     # ----------------------------------------
-    # 🏠 1. الصفحة الرئيسية المطورة
+    # 🏠 1. الصفحة الرئيسية
     # ----------------------------------------
     if st.session_state.current_page == 'home':
-        st.markdown(f"""
-            <div class="school-banner">
-                <div>
-                    <div class="banner-sub">🏫 {user_info['school_name']} • المرحلة: {user_info['education_stage']}</div>
-                    <div class="banner-main">{user_info['full_name']}</div>
-                    <div class="banner-sub">التخصص: {user_info['specialization']} • مدير المدرسة: {user_info['principal_name']}</div>
-                </div>
-                <div class="banner-badge">📅 العام الدراسي {active_year['year_name']}هـ</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # حساب الإحصائيات
         total_stds = len(stds)
         total_ev_count = len(evidences)
         stds_with_ev = 0
@@ -522,7 +639,7 @@ def main_app():
             </div>
             <div class="progress-card">
                 <div style="display:flex; justify-content:space-between; font-weight:700; font-size:14px;">
-                    <span>نسبة تغطية معايير الأداء الوظيفي</span>
+                    <span>نسبة تغطية معايير الأداء الوظيفي للعام ({active_year['year_name']}هـ)</span>
                     <span style="color:{th['primary']};">{pct}%</span>
                 </div>
                 <div class="progress-bar-bg">
@@ -589,226 +706,299 @@ def main_app():
                 </div>
             """, unsafe_allow_html=True)
             
-            if st.button(f"📂 استعراض شواهد البند {s_id}", key=f"open_std_{s_id}", use_container_width=True):
+            if st.button(f"📂 فتح وإدارة شواهد البند {s_id}", key=f"open_std_{s_id}", use_container_width=True):
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة تفاصيل البند الفردي (الصور المصغرة + تاريخ التنفيذ)
+    # 📋 2. صفحة البنود والشواهد (تم إصلاحها بالكامل لتعرض كل البنود أو بند محدد)
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
-        std_id = st.session_state.view_standard_id
-        std_list = [s for s in stds if s['id'] == std_id]
-        std_data = std_list[0] if std_list else stds[0]
+        st.markdown("### 📋 استعراض وإدارة بنود الأداء والشواهد")
+        
+        # قائمة منسدلة علوية للتنقل السلس بين جميع البنود أو اختيار بند محدد
+        options_map = {0: "🔍 عرض شامل لجميع البنود التي تحتوي على شواهد"}
+        for s in stds:
+            c_ev = len([e for e in evidences if e['standard_id'] == s['id']])
+            options_map[s['id']] = f"البند {s['id']}: {s['title']} ({c_ev} شواهد)"
+            
+        current_std_id = st.session_state.view_standard_id
+        if current_std_id not in options_map:
+            current_std_id = 0
+            
+        selected_option = st.selectbox(
+            "اختر البند المراد استعراضه أو إضافة شاهد له:",
+            options=list(options_map.keys()),
+            format_func=lambda x: options_map[x],
+            index=list(options_map.keys()).index(current_std_id)
+        )
+        
+        if selected_option != st.session_state.view_standard_id:
+            st.session_state.view_standard_id = selected_option
+            st.rerun()
 
-        c_back, c_title = st.columns([1, 4])
-        with c_back:
-            if st.button("➡️ رجوع", use_container_width=True):
-                navigate_to('home')
-        with c_title:
-            st.markdown(f"### البند {std_id}: {std_data['title']} (الوزن {std_data['weight']}%)")
+        # الحالة (أ): إذا اختار "عرض شامل لجميع البنود" (يظهر عند الضغط على تبويب البنود)
+        if selected_option == 0:
+            st.info("💡 هنا تظهر جميع شواهدك المرفوعة في كافة البنود مرتبة حسب المعايير. لإضافة شاهد جديد لبند معين، اختر البند من القائمة المنسدلة أعلاه أو اضغط على زر (➕ إضافة شاهد لهذا البند).")
+            for s in stds:
+                s_evs = [e for e in evidences if e['standard_id'] == s['id']]
+                with st.expander(f"{'✅' if len(s_evs)>0 else '⚪'} البند {s['id']}: {s['title']} — ({len(s_evs)} شواهد)", expanded=(len(s_evs) > 0)):
+                    if not s_evs:
+                        st.caption("لا توجد شواهد مرفوعة في هذا البند حتى الآن.")
+                    else:
+                        for ev in s_evs:
+                            files = ev.get("evidence_files", [])
+                            exec_date = ev.get('execution_date') or ev['created_at'][:10]
+                            thumbs_html = "<div class='thumbs-container'>"
+                            for i, f_rec in enumerate(files):
+                                try:
+                                    url_res = supabase.storage.from_("private-achievements").create_signed_url(f_rec['file_url'], 1800)
+                                    sec_url = url_res['signedURL']
+                                    if f_rec.get('file_type', '').startswith('image/'):
+                                        thumbs_html += f"""
+                                            <a href="{sec_url}" target="_blank" class="thumb-link" title="اضغط للتكبير بالحجم الأصلي">
+                                                <img src="{sec_url}" alt="شاهد">
+                                                <div class="thumb-overlay">🔍 تكبير</div>
+                                            </a>
+                                        """
+                                    else:
+                                        thumbs_html += f"""<a href="{sec_url}" target="_blank" class="pdf-badge">📄 PDF ({i+1})</a>"""
+                                except Exception:
+                                    pass
+                            thumbs_html += "</div>"
+                            st.markdown(f"""
+                                <div class="ev-box">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                        <span style="font-weight:700; color:{th['primary']};">📄 {ev['title']}</span>
+                                        <span style="font-size:12px; color:#64748b;">📅 تاريخ التنفيذ: {exec_date}</span>
+                                    </div>
+                                    <div style="font-size:13.5px; color:#334155;">{ev.get('description') or ''}</div>
+                                    {thumbs_html}
+                                </div>
+                            """, unsafe_allow_html=True)
+                    if st.button(f"➕ إدارة وإضافة شواهد للبند {s['id']}", key=f"jump_std_{s['id']}"):
+                        navigate_to('standard_view', s['id'])
 
-        std_evidences = [e for e in evidences if e['standard_id'] == std_id]
-        st.markdown(f"#### شواهدك المرفوعة ({len(std_evidences)})")
-
-        if not std_evidences:
-            st.info("لا توجد شواهد مرفوعة في هذا البند حتى الآن.")
+        # الحالة (ب): عند استعراض بند محدد
         else:
-            for ev in std_evidences:
-                files = ev.get("evidence_files", [])
-                # قراءة تاريخ التنفيذ (أو تاريخ الرفع كبديل للشواهد القديمة)
-                exec_date = ev.get('execution_date') or ev['created_at'][:10]
-                
-                # بناء الصور المصغرة القابلة للضغط للتكبير بالحجم الأصلي
-                thumbs_html = "<div class='thumbs-container'>"
-                for i, f_rec in enumerate(files):
-                    try:
-                        url_res = supabase.storage.from_("private-achievements").create_signed_url(f_rec['file_url'], 1800)
-                        sec_url = url_res['signedURL']
-                        if f_rec.get('file_type', '').startswith('image/'):
-                            thumbs_html += f"""
-                                <a href="{sec_url}" target="_blank" class="thumb-link" title="اضغط لعرض الصورة بالحجم الأصلي">
-                                    <img src="{sec_url}" alt="شاهد">
-                                    <div class="thumb-overlay">🔍 تكبير</div>
-                                </a>
-                            """
-                        else:
-                            thumbs_html += f"""
-                                <a href="{sec_url}" target="_blank" class="pdf-badge">
-                                    📄 فتح PDF ({i+1})
-                                </a>
-                            """
-                    except Exception:
-                        pass
-                thumbs_html += "</div>"
+            std_id = selected_option
+            std_data = [s for s in stds if s['id'] == std_id][0]
+            std_evidences = [e for e in evidences if e['standard_id'] == std_id]
 
-                st.markdown(f"""
-                    <div class="ev-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-                            <span style="font-weight:700; font-size:16px; color:{th['primary']};">📄 {ev['title']}</span>
-                            <span style="background:{th['tint']}; color:{th['primary_dark']}; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;">
-                                📅 تاريخ التنفيذ: {exec_date}
-                            </span>
+            st.markdown(f"#### 📂 الشواهد المرفوعة في البند {std_id} ({len(std_evidences)})")
+            if not std_evidences:
+                st.info("لا توجد شواهد مرفوعة في هذا البند حتى الآن. يمكنك إضافة شاهد من النموذج بالأسفل.")
+            else:
+                for ev in std_evidences:
+                    files = ev.get("evidence_files", [])
+                    exec_date = ev.get('execution_date') or ev['created_at'][:10]
+                    
+                    thumbs_html = "<div class='thumbs-container'>"
+                    for i, f_rec in enumerate(files):
+                        try:
+                            url_res = supabase.storage.from_("private-achievements").create_signed_url(f_rec['file_url'], 1800)
+                            sec_url = url_res['signedURL']
+                            if f_rec.get('file_type', '').startswith('image/'):
+                                thumbs_html += f"""
+                                    <a href="{sec_url}" target="_blank" class="thumb-link" title="اضغط لعرض الصورة بالحجم الأصلي">
+                                        <img src="{sec_url}" alt="شاهد">
+                                        <div class="thumb-overlay">🔍 تكبير</div>
+                                    </a>
+                                """
+                            else:
+                                thumbs_html += f"""
+                                    <a href="{sec_url}" target="_blank" class="pdf-badge">
+                                        📄 فتح PDF ({i+1})
+                                    </a>
+                                """
+                        except Exception:
+                            pass
+                    thumbs_html += "</div>"
+
+                    st.markdown(f"""
+                        <div class="ev-box">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                                <span style="font-weight:700; font-size:16px; color:{th['primary']};">📄 {ev['title']}</span>
+                                <span style="background:{th['tint']}; color:{th['primary_dark']}; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;">
+                                    📅 تاريخ التنفيذ: {exec_date}
+                                </span>
+                            </div>
+                            <div style="font-size:14px; color:#334155; line-height:1.6; margin-bottom:6px;">{ev.get('description') or ''}</div>
+                            <div style="font-size:11px; color:#64748b; margin-bottom:4px;">💡 اضغط على الصورة المصغرة لعرضها بالحجم الأصلي الكامل:</div>
+                            {thumbs_html}
                         </div>
-                        <div style="font-size:14px; color:#334155; line-height:1.6; margin-bottom:6px;">{ev.get('description') or ''}</div>
-                        <div style="font-size:11px; color:#64748b; margin-bottom:4px;">💡 اضغط على الصورة المصغرة لعرضها بالحجم الأصلي الكامل:</div>
-                        {thumbs_html}
+                    """, unsafe_allow_html=True)
+
+                    if not is_visitor:
+                        ed_col, del_col = st.columns(2)
+                        with ed_col:
+                            with st.expander("✏️ تعديل الشاهد وتاريخ التنفيذ"):
+                                with st.form(f"edit_form_{ev['id']}"):
+                                    new_t = st.text_input("عنوان الشاهد:", value=ev['title'])
+                                    try:
+                                        default_d = datetime.date.fromisoformat(str(exec_date)[:10])
+                                    except Exception:
+                                        default_d = datetime.date.today()
+                                    new_exec_date = st.date_input("تاريخ التنفيذ (حسب توزيع المنهج):", value=default_d)
+                                    new_d = st.text_area("وصف الشاهد:", value=ev.get('description', ''))
+                                    new_files = st.file_uploader("استبدال المرفقات (اختياري):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True, key=f"up_{ev['id']}")
+                                    
+                                    if st.form_submit_button("حفظ التعديل 💾", type="primary"):
+                                        update_payload = {"title": new_t, "description": new_d, "execution_date": str(new_exec_date)}
+                                        try:
+                                            supabase.table("evidences").update(update_payload).eq("id", ev['id']).execute()
+                                        except Exception:
+                                            supabase.table("evidences").update({"title": new_t, "description": new_d}).eq("id", ev['id']).execute()
+                                            
+                                        if new_files:
+                                            old_paths = [f['file_url'] for f in files]
+                                            if old_paths:
+                                                supabase.storage.from_("private-achievements").remove(old_paths)
+                                            supabase.table("evidence_files").delete().eq("evidence_id", ev['id']).execute()
+                                            for nf in new_files:
+                                                ext = nf.name.split('.')[-1]
+                                                path = f"{ev['id']}/{uuid.uuid4()}.{ext}"
+                                                supabase.storage.from_("private-achievements").upload(path=path, file=nf.getvalue(), file_options={"content-type": nf.type})
+                                                supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": path, "file_type": nf.type}).execute()
+                                        st.success("تم التحديث بنجاح!")
+                                        time.sleep(0.4)
+                                        st.rerun()
+                        with del_col:
+                            with st.expander("🗑️ حذف الشاهد"):
+                                if st.button("تأكيد الحذف النهائي", key=f"confirm_del_{ev['id']}", type="primary"):
+                                    old_paths = [f['file_url'] for f in files]
+                                    if old_paths:
+                                        supabase.storage.from_("private-achievements").remove(old_paths)
+                                    supabase.table("evidences").delete().eq("id", ev['id']).execute()
+                                    st.success("تم الحذف!")
+                                    time.sleep(0.4)
+                                    st.rerun()
+
+            st.write("---")
+
+            try:
+                sub_res = supabase.table("sub_items").select("*").eq("standard_id", std_id).execute()
+                db_subs = [item['title'] for item in sub_res.data] if sub_res.data else []
+            except Exception:
+                db_subs = []
+            sub_options = db_subs if db_subs else DEFAULT_SUB_ITEMS.get(std_id, [])
+
+            st.markdown("#### 💡 الشواهد المستهدفة لهذا المعيار")
+            for idea in sub_options:
+                st.markdown(f"""
+                    <div class="idea-card">
+                        <span>💡 {idea}</span>
+                        <span style="color:{th['primary']}; font-weight:bold;">✔</span>
                     </div>
                 """, unsafe_allow_html=True)
 
-                # أزرار التعديل والحذف (تظهر للمعلم فقط وتختفي عن الزائر)
-                if not is_visitor:
-                    ed_col, del_col = st.columns(2)
-                    with ed_col:
-                        with st.expander("✏️ تعديل الشاهد وتاريخ التنفيذ"):
-                            with st.form(f"edit_form_{ev['id']}"):
-                                new_t = st.text_input("عنوان الشاهد:", value=ev['title'])
+            if not is_visitor:
+                st.markdown("#### ➕ إضافة شاهد جديد لهذا البند")
+                with st.form(f"add_ev_std_{std_id}", clear_on_submit=True):
+                    chosen_idea = st.selectbox("اختر البند الفرعي:", sub_options + ["أخرى (كتابة عنوان مخصص)"])
+                    custom_title = st.text_input("عنوان مخصص للشاهد (اختياري):")
+                    exec_date_input = st.date_input("📅 تاريخ التنفيذ (حسب توزيع المنهج):", value=datetime.date.today())
+                    desc = st.text_area("وصف الشاهد (الهدف، التنفيذ، الأثر):")
+                    uploaded_files = st.file_uploader("ارفع المرفقات (صور أو PDF):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True)
+                    
+                    if st.form_submit_button("حفظ الشاهد ورفع المرفقات 💾", type="primary", use_container_width=True):
+                        final_title = custom_title.strip() if (chosen_idea == "أخرى (كتابة عنوان مخصص)" or custom_title.strip()) else chosen_idea
+                        if final_title and uploaded_files and active_year.get('id'):
+                            with st.spinner("جاري رفع المرفقات وحفظ الشاهد..."):
+                                insert_payload = {
+                                    "standard_id": std_id,
+                                    "year_id": active_year['id'],
+                                    "title": final_title,
+                                    "description": desc,
+                                    "execution_date": str(exec_date_input)
+                                }
                                 try:
-                                    default_d = datetime.date.fromisoformat(str(exec_date)[:10])
+                                    ev_data = supabase.table("evidences").insert(insert_payload).execute()
                                 except Exception:
-                                    default_d = datetime.date.today()
-                                new_exec_date = st.date_input("تاريخ التنفيذ (حسب توزيع المنهج):", value=default_d)
-                                new_d = st.text_area("وصف الشاهد:", value=ev.get('description', ''))
-                                new_files = st.file_uploader("استبدال المرفقات (اختياري):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True, key=f"up_{ev['id']}")
-                                
-                                if st.form_submit_button("حفظ التعديل 💾", type="primary"):
-                                    update_payload = {"title": new_t, "description": new_d, "execution_date": str(new_exec_date)}
-                                    try:
-                                        supabase.table("evidences").update(update_payload).eq("id", ev['id']).execute()
-                                    except Exception:
-                                        supabase.table("evidences").update({"title": new_t, "description": new_d}).eq("id", ev['id']).execute()
-                                        
-                                    if new_files:
-                                        old_paths = [f['file_url'] for f in files]
-                                        if old_paths:
-                                            supabase.storage.from_("private-achievements").remove(old_paths)
-                                        supabase.table("evidence_files").delete().eq("evidence_id", ev['id']).execute()
-                                        for nf in new_files:
-                                            ext = nf.name.split('.')[-1]
-                                            path = f"{ev['id']}/{uuid.uuid4()}.{ext}"
-                                            supabase.storage.from_("private-achievements").upload(path=path, file=nf.getvalue(), file_options={"content-type": nf.type})
-                                            supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": path, "file_type": nf.type}).execute()
-                                    st.success("تم التحديث بنجاح!")
-                                    time.sleep(0.4)
-                                    st.rerun()
-                    with del_col:
-                        with st.expander("🗑️ حذف الشاهد"):
-                            if st.button("تأكيد الحذف النهائي", key=f"confirm_del_{ev['id']}", type="primary"):
-                                old_paths = [f['file_url'] for f in files]
-                                if old_paths:
-                                    supabase.storage.from_("private-achievements").remove(old_paths)
-                                supabase.table("evidences").delete().eq("id", ev['id']).execute()
-                                st.success("تم الحذف!")
-                                time.sleep(0.4)
+                                    insert_payload.pop("execution_date", None)
+                                    ev_data = supabase.table("evidences").insert(insert_payload).execute()
+                                    
+                                new_id = ev_data.data[0]['id']
+                                for up_file in uploaded_files:
+                                    ext = up_file.name.split('.')[-1]
+                                    path = f"{new_id}/{uuid.uuid4()}.{ext}"
+                                    supabase.storage.from_("private-achievements").upload(
+                                        path=path, file=up_file.getvalue(), file_options={"content-type": up_file.type}
+                                    )
+                                    supabase.table("evidence_files").insert({
+                                        "evidence_id": new_id, "file_url": path, "file_type": up_file.type
+                                    }).execute()
+                                st.success("تم حفظ الشاهد بنجاح!")
+                                time.sleep(0.5)
                                 st.rerun()
+                        else:
+                            st.warning("يرجى اختيار العنوان وإرفاق ملف واحد على الأقل.")
+
+    # ----------------------------------------
+    # 📅 3. صفحة أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية (الجديدة كلياً)
+    # ----------------------------------------
+    elif st.session_state.current_page == 'archive' and not is_visitor:
+        st.markdown("### 📅 أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية")
+        st.write("في نهاية كل عام دراسي، يمكنك أرشفة ملف الإنجاز الحالي وبدء ملف إنجاز جديد للعام القادم دون فقدان أي شواهد أو مرفقات سابقة، مع إمكانية العودة لأي عام مؤرشف في أي وقت.")
+
+        # قسم أرشفة العام الحالي وفتح عام جديد
+        st.markdown("#### 🆕 أرشفة العام الحالي وفتح ملف إنجاز جديد")
+        with st.form("archive_and_new_year_form", clear_on_submit=True):
+            new_year_name = st.text_input("اسم العام الدراسي الجديد (مثال: 1449 أو 1449-1450):")
+            submit_new_year = st.form_submit_button("📦 أرشفة العام الحالي وبدء ملف الإنجاز الجديد", type="primary", use_container_width=True)
+            if submit_new_year:
+                if new_year_name.strip():
+                    # تحويل جميع الأعوام السابقة إلى مؤرشفة (is_active = False)
+                    for y in all_years:
+                        supabase.table("academic_years").update({"is_active": False}).eq("id", y['id']).execute()
+                    # إنشاء العام الجديد وجعله نشطاً
+                    supabase.table("academic_years").insert({
+                        "year_name": new_year_name.strip(),
+                        "is_active": True
+                    }).execute()
+                    st.success(f"تمت أرشفة العام السابق بنجاح، وتم فتح ملف إنجاز جديد لعام ({new_year_name.strip()})!")
+                    time.sleep(0.6)
+                    st.rerun()
+                else:
+                    st.warning("يرجى كتابة اسم العام الدراسي الجديد.")
 
         st.write("---")
-
-        # جلب البنود الفرعية
-        try:
-            sub_res = supabase.table("sub_items").select("*").eq("standard_id", std_id).execute()
-            db_subs = [item['title'] for item in sub_res.data] if sub_res.data else []
-        except Exception:
-            db_subs = []
-        sub_options = db_subs if db_subs else DEFAULT_SUB_ITEMS.get(std_id, [])
-
-        st.markdown("#### 💡 الشواهد المستهدفة لهذا المعيار")
-        for idea in sub_options:
+        st.markdown("#### 🗂️ سجل ملفات الإنجاز (الحالي والمؤرشفة)")
+        
+        for y in all_years:
+            y_ev_res = supabase.table("evidences").select("id", count="exact").eq("year_id", y['id']).execute()
+            y_count = y_ev_res.count if y_ev_res.count is not None else len(y_ev_res.data)
+            is_act = y.get("is_active", False)
+            
+            badge_html = f"<span style='background:#10b981; color:white; padding:3px 10px; border-radius:8px; font-size:12px;'>🟢 الملف النشط حالياً</span>" if is_act else "<span style='background:#64748b; color:white; padding:3px 10px; border-radius:8px; font-size:12px;'>📦 مؤرشف</span>"
+            
             st.markdown(f"""
-                <div class="idea-card">
-                    <span>💡 {idea}</span>
-                    <span style="color:{th['primary']}; font-weight:bold;">✔</span>
+                <div class="std-card">
+                    <div>
+                        <div class="std-title">📁 ملف إنجاز العام الدراسي: {y['year_name']}هـ</div>
+                        <div style="font-size:13px; color:#64748b;">عدد الشواهد المحفوظة في هذا الملف: <strong>{y_count} شاهد</strong></div>
+                    </div>
+                    <div>{badge_html}</div>
                 </div>
             """, unsafe_allow_html=True)
-
-        # نموذج الإضافة (يظهر للمعلم فقط)
-        if not is_visitor:
-            st.markdown("#### ➕ إضافة شاهد جديد لهذا البند")
-            with st.form(f"add_ev_std_{std_id}", clear_on_submit=True):
-                chosen_idea = st.selectbox("اختر البند الفرعي:", sub_options + ["أخرى (كتابة عنوان مخصص)"])
-                custom_title = st.text_input("عنوان مخصص للشاهد (اختياري):")
-                exec_date_input = st.date_input("📅 تاريخ التنفيذ (حسب توزيع المنهج):", value=datetime.date.today())
-                desc = st.text_area("وصف الشاهد (الهدف، التنفيذ، الأثر):")
-                uploaded_files = st.file_uploader("ارفع المرفقات (صور أو PDF):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True)
-                
-                if st.form_submit_button("حفظ الشاهد ورفع المرفقات 💾", type="primary", use_container_width=True):
-                    final_title = custom_title.strip() if (chosen_idea == "أخرى (كتابة عنوان مخصص)" or custom_title.strip()) else chosen_idea
-                    if final_title and uploaded_files and active_year.get('id'):
-                        with st.spinner("جاري رفع المرفقات وحفظ الشاهد..."):
-                            insert_payload = {
-                                "standard_id": std_id,
-                                "year_id": active_year['id'],
-                                "title": final_title,
-                                "description": desc,
-                                "execution_date": str(exec_date_input)
-                            }
-                            try:
-                                ev_data = supabase.table("evidences").insert(insert_payload).execute()
-                            except Exception:
-                                insert_payload.pop("execution_date", None)
-                                ev_data = supabase.table("evidences").insert(insert_payload).execute()
-                                
-                            new_id = ev_data.data[0]['id']
-                            for up_file in uploaded_files:
-                                ext = up_file.name.split('.')[-1]
-                                path = f"{new_id}/{uuid.uuid4()}.{ext}"
-                                supabase.storage.from_("private-achievements").upload(
-                                    path=path, file=up_file.getvalue(), file_options={"content-type": up_file.type}
-                                )
-                                supabase.table("evidence_files").insert({
-                                    "evidence_id": new_id, "file_url": path, "file_type": up_file.type
-                                }).execute()
-                            st.success("تم حفظ الشاهد بنجاح!")
-                            time.sleep(0.5)
-                            st.rerun()
-                    else:
-                        st.warning("يرجى اختيار العنوان وإرفاق ملف واحد على الأقل.")
+            
+            col_a, col_b = st.columns([3, 1])
+            with col_a:
+                if not is_act:
+                    if st.button(f"🔄 تفعيل واستعراض ملف عام {y['year_name']}هـ", key=f"act_{y['id']}", use_container_width=True):
+                        for item_y in all_years:
+                            supabase.table("academic_years").update({"is_active": False}).eq("id", item_y['id']).execute()
+                        supabase.table("academic_years").update({"is_active": True}).eq("id", y['id']).execute()
+                        st.success(f"تم التبديل إلى ملف إنجاز عام {y['year_name']}هـ!")
+                        time.sleep(0.4)
+                        st.rerun()
+            with col_b:
+                if not is_act and y_count == 0:
+                    if st.button("🗑️ حذف العام الفارغ", key=f"del_y_{y['id']}", use_container_width=True):
+                        supabase.table("academic_years").delete().eq("id", y['id']).execute()
+                        st.rerun()
 
     # ----------------------------------------
-    # ➕ 3. صفحة الإضافة السريعة (للمعلم فقط)
-    # ----------------------------------------
-    elif st.session_state.current_page == 'quick_add' and not is_visitor:
-        st.markdown("### ➕ إضافة شاهد سريع")
-        std_dict = {f"{s['id']}. {s['title']}": s['id'] for s in stds}
-        selected_std_label = st.selectbox("اختر البند الرئيسي:", list(std_dict.keys()))
-        sel_std_id = std_dict[selected_std_label]
-        
-        ideas = DEFAULT_SUB_ITEMS.get(sel_std_id, [])
-        with st.form("quick_add_form", clear_on_submit=True):
-            chosen_idea = st.selectbox("اختر الشاهد الفرعي:", ideas + ["أخرى..."])
-            custom_t = st.text_input("أو اكتب عنواناً مخصصاً:")
-            exec_date_q = st.date_input("📅 تاريخ التنفيذ (حسب توزيع المنهج):", value=datetime.date.today())
-            desc = st.text_area("وصف الشاهد:")
-            up_files = st.file_uploader("المرفقات (صور أو PDF):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True)
-            if st.form_submit_button("حفظ الشاهد 💾", type="primary", use_container_width=True):
-                final_t = custom_t.strip() if custom_t.strip() else chosen_idea
-                if final_t and up_files and active_year.get('id'):
-                    payload = {
-                        "standard_id": sel_std_id,
-                        "year_id": active_year['id'],
-                        "title": final_t,
-                        "description": desc,
-                        "execution_date": str(exec_date_q)
-                    }
-                    try:
-                        ev_data = supabase.table("evidences").insert(payload).execute()
-                    except Exception:
-                        payload.pop("execution_date", None)
-                        ev_data = supabase.table("evidences").insert(payload).execute()
-                        
-                    new_id = ev_data.data[0]['id']
-                    for f in up_files:
-                        ext = f.name.split('.')[-1]
-                        path = f"{new_id}/{uuid.uuid4()}.{ext}"
-                        supabase.storage.from_("private-achievements").upload(path=path, file=f.getvalue(), file_options={"content-type": f.type})
-                        supabase.table("evidence_files").insert({"evidence_id": new_id, "file_url": path, "file_type": f.type}).execute()
-                    st.success("تم الحفظ بنجاح!")
-                    time.sleep(0.5)
-                    navigate_to('standard_view', sel_std_id)
-                else:
-                    st.warning("يرجى إكمال البيانات وإرفاق ملف.")
-
-    # ----------------------------------------
-    # 📄 4. صفحة التقارير والطباعة (3 تصاميم احترافية للاختيار قبل الطباعة)
+    # 📄 4. صفحة التقارير والطباعة (3 تصاميم احترافية + حقوق منصة زياد الذكية)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("### 📄 تصدير وطباعة ملف الإنجاز (A4 PDF)")
@@ -831,7 +1021,6 @@ def main_app():
                 active_stds = [s for s in stds if len([e for e in all_evidences if e['standard_id'] == s['id']]) > 0]
                 covered_stds = len(active_stds)
 
-                # تحديد ألوان وأنماط التقرير بناءً على التصميم المختار
                 if report_style.startswith("1."):
                     rep_color = "#146c59"
                     rep_sub = "#0f5243"
@@ -855,35 +1044,36 @@ def main_app():
                     <meta charset="UTF-8">
                     <title>ملف الإنجاز المهني - {user_info['full_name']}</title>
                     <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
-                        body {{ font-family: 'Tajawal', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; }}
+                        @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap');
+                        body {{ font-family: 'Readex Pro', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; }}
                         .page {{ background-color: white; width: 210mm; height: 296mm; padding: 10mm 15mm; margin: 0 auto 20mm auto; box-shadow: 0 10px 20px rgba(0,0,0,0.15); box-sizing: border-box; page-break-after: always; page-break-inside: avoid; display: flex; flex-direction: column; overflow: hidden; }}
                         .cover-page {{ border: {cover_border}; border-radius: {box_radius}; padding: 35px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; box-sizing: border-box; }}
-                        .cover-title {{ color: {rep_color}; font-size: 38px; font-weight: bold; margin-bottom: 10px; }}
-                        .cover-subtitle {{ font-size: 20px; margin-bottom: 40px; font-weight: bold; color: #475569; }}
-                        .info-table {{ width: 88%; border-collapse: collapse; margin: 0 auto; font-size: 17px; }}
-                        .info-table th, .info-table td {{ border: 1px solid #cbd5e1; padding: 13px; text-align: center; }}
-                        .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: bold; color: {rep_color}; }}
-                        .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 8px; margin-bottom: 14px; font-size: 13px; font-weight: bold; flex-shrink: 0; }}
+                        .cover-title {{ color: {rep_color}; font-size: 36px; font-weight: 700; margin-bottom: 10px; }}
+                        .cover-subtitle {{ font-size: 19px; margin-bottom: 35px; font-weight: 600; color: #475569; }}
+                        .info-table {{ width: 88%; border-collapse: collapse; margin: 0 auto; font-size: 16px; }}
+                        .info-table th, .info-table td {{ border: 1px solid #cbd5e1; padding: 12px; text-align: center; }}
+                        .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: 700; color: {rep_color}; }}
+                        .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 8px; margin-bottom: 14px; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }}
                         .header-right {{ color: {rep_color}; }}
                         .header-left {{ text-align: left; }}
-                        .index-title {{ color: {rep_color}; font-size: 24px; font-weight: bold; margin-bottom: 18px; }}
-                        .index-table {{ width: 100%; border-collapse: collapse; font-size: 15px; }}
+                        .index-title {{ color: {rep_color}; font-size: 22px; font-weight: 700; margin-bottom: 16px; }}
+                        .index-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
                         .index-table th {{ background-color: #f1f5f9; color: {rep_color}; padding: 10px; text-align: center; border-bottom: 2px solid {rep_color}; }}
                         .index-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; }}
                         .content-wrapper {{ flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }}
-                        .std-header {{ background-color: {rep_color}; color: white; padding: 10px 15px; font-size: 16px; font-weight: bold; border-radius: {box_radius} {box_radius} 0 0; flex-shrink: 0; }}
-                        .ev-header {{ background-color: {rep_sub}; color: white; padding: 8px 15px; font-size: 14px; margin-bottom: 14px; border-radius: 0 0 {box_radius} {box_radius}; flex-shrink: 0; }}
-                        .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; flex-shrink: 0; }}
-                        .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 9px; text-align: center; border-radius: {box_radius}; }}
-                        .meta-title {{ font-size: 12px; color: #64748b; font-weight: bold; }}
-                        .meta-value {{ font-size: 14px; font-weight: bold; color: #0f172a; }}
-                        .desc-section {{ margin-bottom: 14px; line-height: 1.6; font-size: 14px; padding: 10px; background: #fafafa; border-right: 4px solid {rep_color}; border-radius: {box_radius}; flex-shrink: 0; }}
+                        .std-header {{ background-color: {rep_color}; color: white; padding: 10px 15px; font-size: 15px; font-weight: 700; border-radius: {box_radius} {box_radius} 0 0; flex-shrink: 0; }}
+                        .ev-header {{ background-color: {rep_sub}; color: white; padding: 8px 15px; font-size: 13.5px; margin-bottom: 12px; border-radius: 0 0 {box_radius} {box_radius}; flex-shrink: 0; }}
+                        .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; flex-shrink: 0; }}
+                        .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; text-align: center; border-radius: {box_radius}; }}
+                        .meta-title {{ font-size: 11.5px; color: #64748b; font-weight: 600; }}
+                        .meta-value {{ font-size: 13.5px; font-weight: 700; color: #0f172a; }}
+                        .desc-section {{ margin-bottom: 12px; line-height: 1.6; font-size: 13.5px; padding: 10px; background: #fafafa; border-right: 4px solid {rep_color}; border-radius: {box_radius}; flex-shrink: 0; }}
                         .images-grid {{ flex-grow: 1; display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 0; padding: 5px 0; overflow: hidden; }}
                         .images-grid img {{ max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #cbd5e1; border-radius: {box_radius}; }}
-                        .pdf-notice {{ background: #f1f5f9; padding: 9px; text-align: center; border-radius: {box_radius}; font-size: 13px; color: #334155; margin-bottom: 10px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
-                        .signatures {{ display: flex; justify-content: space-between; margin-top: auto; border-top: 2px solid #e2e8f0; padding-top: 12px; text-align: center; flex-shrink: 0; }}
+                        .pdf-notice {{ background: #f1f5f9; padding: 8px; text-align: center; border-radius: {box_radius}; font-size: 12.5px; color: #334155; margin-bottom: 10px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
+                        .signatures {{ display: flex; justify-content: space-between; margin-top: auto; border-top: 2px solid #e2e8f0; padding-top: 10px; text-align: center; flex-shrink: 0; }}
                         .sig-box {{ width: 42%; }}
+                        .print-footer {{ text-align: center; font-size: 10px; color: #64748b; margin-top: 8px; padding-top: 4px; border-top: 1px dashed #e2e8f0; flex-shrink: 0; }}
                         @media print {{
                             body {{ background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                             .page {{ width: 210mm; height: 296mm; margin: 0; padding: 10mm 15mm; box-shadow: none; border: none; }}
@@ -897,7 +1087,8 @@ def main_app():
                 html_content += f"""
                 <div class="page">
                     <div class="cover-page">
-                        <div style="font-size:16px; font-weight:bold; color:{rep_color}; margin-bottom:10px;">المملكة العربية السعودية • وزارة التعليم</div>
+                        <div style="font-size:15px; font-weight:700; color:{rep_color}; margin-bottom:8px;">المملكة العربية السعودية • وزارة التعليم</div>
+                        <div style="font-size:13px; color:#b45309; font-weight:700; margin-bottom:12px;">🎓 منصة زياد الذكية لتوثيق الأداء المهني</div>
                         <div class="cover-title">ملف الإنجاز المهني</div>
                         <div class="cover-subtitle">توثيق شواهد الأداء الوظيفي</div>
                         <table class="info-table">
@@ -910,6 +1101,7 @@ def main_app():
                             <tr><th>العام الدراسي</th><td>{active_year['year_name']}هـ</td></tr>
                             <tr><th>إجمالي الشواهد الموثقة</th><td>{total_evidences} شاهد ({covered_stds} من {len(stds)} معايير)</td></tr>
                         </table>
+                        <div style="margin-top:35px; font-size:11px; color:#64748b;">صدر إلكترونياً عبر منصة زياد الذكية — جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
                     </div>
                 </div>
                 """
@@ -917,7 +1109,7 @@ def main_app():
                 shared_header = f"""
                 <div class="header-container">
                     <div class="header-right">
-                        {user_info['full_name']}<br>
+                        منصة زياد الذكية | أ. {user_info['full_name']}<br>
                         <span style="font-size:11px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - العام الدراسي {active_year['year_name']}هـ</span>
                     </div>
                     <div class="header-left">
@@ -940,7 +1132,11 @@ def main_app():
                         continue
                     target = std.get('target_evidences', 3)
                     html_content += f"<tr><td>{std['id']}</td><td style='text-align:right; font-weight:bold;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:{rep_color}; font-weight:bold;'>{count}</td><td>{target}</td></tr>"
-                html_content += "</table></div>"
+                html_content += f"""
+                    </table>
+                    <div class="print-footer" style="margin-top:auto;">منصة زياد الذكية | جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
+                </div>
+                """
                 
                 for ev in all_evidences:
                     std = ev['standards']
@@ -974,14 +1170,15 @@ def main_app():
                         </div>
                         <div class="signatures">
                             <div class="sig-box">
-                                <div style="color:#666; font-size:12px; margin-bottom:18px;">المعلم:</div>
+                                <div style="color:#666; font-size:12px; margin-bottom:16px;">المعلم:</div>
                                 <div style="font-weight:bold;">{user_info['full_name']}</div>
                             </div>
                             <div class="sig-box">
-                                <div style="color:#666; font-size:12px; margin-bottom:18px;">مدير المدرسة:</div>
+                                <div style="color:#666; font-size:12px; margin-bottom:16px;">مدير المدرسة:</div>
                                 <div style="font-weight:bold;">{user_info['principal_name']}</div>
                             </div>
                         </div>
+                        <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
                     </div>
                     """
                 
@@ -990,7 +1187,7 @@ def main_app():
                 
                 components.html(f"""
                     <div style="text-align: center; margin-top: 10px;">
-                        <button onclick="openPrintWindow()" style="width: 100%; padding: 15px; background-color: {rep_color}; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; font-family: 'Tajawal', sans-serif;">
+                        <button onclick="openPrintWindow()" style="width: 100%; padding: 15px; background-color: {rep_color}; color: white; border: none; border-radius: 12px; font-size: 17px; font-weight: bold; cursor: pointer; font-family: 'Readex Pro', sans-serif;">
                             🖨️ فتح التقرير للطباعة بحجم A4
                         </button>
                     </div>
@@ -1053,10 +1250,9 @@ def main_app():
 
         with t2:
             st.markdown("#### 🔗 التحكم في وصول الزوار (قراءة ومشاهدة فقط)")
-            st.write("يمكنك مشاركة ملف إنجازك مع مدير المدرسة أو المشرف التربوي للاطلاع فقط دون السماح لهم بالتعديل أو الحذف.")
             with st.form("visitor_settings_form"):
                 allow_v = st.checkbox("تفعيل السماح بدخول الزوار عبر الرمز السري", value=user_info.get("allow_visitor", True))
-                v_code_input = st.text_input("الرمز السري للزائر (أعطِ هذا الرمز فقط لمن ترغب باطلاعه على ملفك):", value=str(user_info.get("visitor_code", "1448")))
+                v_code_input = st.text_input("الرمز السري للزائر:", value=str(user_info.get("visitor_code", "1448")))
                 if st.form_submit_button("حفظ إعدادات الزائر 🔒", type="primary"):
                     try:
                         supabase.table("user_profile").update({
@@ -1067,19 +1263,19 @@ def main_app():
                         time.sleep(0.4)
                         st.rerun()
                     except Exception as e:
-                        st.error(f"يرجى تنفيذ كود SQL الخاص بحقول الزائر أولاً: {e}")
+                        st.error(f"يرجى التأكد من تحديث جدول user_profile: {e}")
 
             curr_code = user_info.get("visitor_code", "1448")
-            st.info(f"💡 **طريقة المشاركة السريعة:** أضف `?visitor={curr_code}` في نهاية رابط تطبيقك لإرساله مباشرة للمدير أو المشرف، أو اطلب منه إدخال الرمز `{curr_code}` في تبويب (دخول زائر) بصفحة الدخول.")
+            st.info(f"💡 **رابط المشاركة السريعة للزائر:** أضف `?visitor={curr_code}` لنهاية رابط موقعك، أو أعطِ الرمز `{curr_code}` للزائر ليدخله في تبويب (دخول زائر).")
 
         with t3:
             st.write("تصدير نسخة احتياطية كاملة لبياناتك بصيغة JSON:")
             if st.button("📦 تجهيز ملف النسخة الاحتياطية", type="primary", use_container_width=True):
-                backup = {"standards": stds, "evidences": evidences}
+                backup = {"academic_years": all_years, "standards": stds, "evidences": evidences}
                 st.download_button(
                     label="⬇️ تحميل النسخة الاحتياطية (JSON)",
                     data=json.dumps(backup, ensure_ascii=False, indent=4),
-                    file_name=f"portfolio_backup_{datetime.date.today()}.json",
+                    file_name=f"ziyad_portfolio_backup_{datetime.date.today()}.json",
                     mime="application/json",
                     use_container_width=True
                 )
@@ -1091,8 +1287,11 @@ def main_app():
                 st.session_state.is_visitor = False
                 st.rerun()
 
+    # الفوتر الثابت بحقوق منصة زياد الذكية
+    render_footer()
+
 # ==========================================
-# 8. نقطة تشغيل التطبيق
+# 9. نقطة تشغيل التطبيق
 # ==========================================
 if st.session_state.user is None and not st.session_state.is_visitor:
     login_page()
