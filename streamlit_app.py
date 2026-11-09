@@ -152,7 +152,7 @@ if 'is_visitor' not in st.session_state:
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'home'
 if 'view_standard_id' not in st.session_state:
-    st.session_state.view_standard_id = 0  # 0 يعني استعراض جميع البنود
+    st.session_state.view_standard_id = 0
 if 'filter_mode' not in st.session_state:
     st.session_state.filter_mode = 'all'
 
@@ -188,237 +188,238 @@ if active_theme_key not in THEMES:
     active_theme_key = "emerald"
 th = THEMES[active_theme_key]
 
-# شعار منصة زياد الذكية (SVG احترافي مدمج)
-ZIYAD_LOGO_SVG = f"""
-<svg width="46" height="46" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/>
-  <rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/>
-  <path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/>
-  <path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/>
-  <path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/>
-</svg>
-"""
+# شعار منصة زياد الذكية بدون أي مسافات بادئة لمنع مشكلة الكود الخام
+ZIYAD_LOGO_SVG = '<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 5. التصميم الاحترافي والخط العصري (Readex Pro & Cairo)
+# 5. التصميم الاحترافي والخط العصري (مع إصلاح أيقونة كلمة المرور)
 # ==========================================
 st.markdown(f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Readex+Pro:wght@400;500;600;700&display=swap');
-    
-    header {{visibility: hidden;}}
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
-    .stSidebar {{display: none !important;}}
-    
-    html, body, [class*="css"], .stMarkdown, p, div, span, h1, h2, h3, h4, button, input, textarea, select {{
-        direction: rtl; 
-        text-align: right; 
-        font-family: 'Readex Pro', 'Cairo', sans-serif !important;
-    }}
-    .stApp {{ background-color: {th['bg']}; }}
-    
-    /* الهيدر والبنر المدمج الاحترافي */
-    .hero-wrapper {{
-        background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%);
-        color: white;
-        padding: 22px 24px;
-        border-radius: 22px;
-        margin-bottom: 20px;
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
-        position: relative;
-        overflow: hidden;
-        border: 1px solid rgba(255,255,255,0.12);
-    }}
-    .hero-top {{
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid rgba(255,255,255,0.14);
-        padding-bottom: 14px;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-        gap: 10px;
-    }}
-    .brand-box {{
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }}
-    .brand-title {{
-        font-size: 16px;
-        font-weight: 700;
-        color: #fbbf24;
-        letter-spacing: 0.3px;
-        margin: 0;
-    }}
-    .brand-sub {{
-        font-size: 11px;
-        color: rgba(255,255,255,0.82);
-        margin: 0;
-    }}
-    .date-pill {{
-        background: rgba(255,255,255,0.12);
-        padding: 6px 14px;
-        border-radius: 99px;
-        font-size: 12px;
-        color: #f8fafc;
-        backdrop-filter: blur(6px);
-        border: 1px solid rgba(255,255,255,0.15);
-    }}
-    .hero-body {{
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        flex-wrap: wrap;
-        gap: 14px;
-    }}
-    .welcome-line {{
-        font-size: 14px;
-        color: #fde68a;
-        font-weight: 500;
-        margin-bottom: 4px;
-    }}
-    .teacher-name {{
-        font-size: 24px;
-        font-weight: 800;
-        color: #ffffff;
-        margin: 0 0 8px 0;
-    }}
-    .meta-badges {{
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-    }}
-    .meta-pill {{
-        background: rgba(0,0,0,0.22);
-        color: rgba(255,255,255,0.95);
-        padding: 5px 12px;
-        border-radius: 10px;
-        font-size: 12px;
-        font-weight: 500;
-    }}
-    .year-badge {{
-        background: #fbbf24;
-        color: #1e293b;
-        padding: 8px 16px;
-        border-radius: 14px;
-        font-size: 14px;
-        font-weight: 700;
-        box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
-    }}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Readex+Pro:wght@400;500;600;700&display=swap');
 
-    /* بطاقات الإحصائيات السريعة */
-    .kpi-grid {{
-        display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;
-    }}
-    .kpi-card {{
-        background: white; border-radius: 16px; padding: 14px 8px; text-align: center;
-        border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 3px 8px rgba(0,0,0,0.03);
-    }}
-    .kpi-val {{ font-size: 22px; font-weight: 700; color: {th['primary']}; }}
-    .kpi-lbl {{ font-size: 11px; color: #64748b; margin-top: 3px; font-weight: 500; }}
+header {{visibility: hidden;}}
+#MainMenu {{visibility: hidden;}}
+footer {{visibility: hidden;}}
+.stSidebar {{display: none !important;}}
 
-    /* شريط الإنجاز */
-    .progress-card {{
-        background: white; padding: 16px 20px; border-radius: 16px; 
-        margin-bottom: 18px; border: 1px solid rgba(0,0,0,0.06);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.02);
-    }}
-    .progress-bar-bg {{
-        background: #e2e8f0; height: 10px; border-radius: 6px; width: 100%; overflow: hidden; margin-top: 8px;
-    }}
-    .progress-bar-fill {{
-        background: linear-gradient(90deg, {th['primary']}, {th['primary_light']});
-        height: 100%; border-radius: 6px;
-    }}
-    
-    /* بطاقة المعيار */
-    .std-card {{
-        background: white; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px;
-        padding: 16px 18px; margin-bottom: 8px;
-        display: flex; justify-content: space-between; align-items: center;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-    }}
-    .std-num {{
-        width: 44px; height: 44px; border-radius: 13px;
-        background: {th['tint']}; color: {th['primary']};
-        display: flex; align-items: center; justify-content: center;
-        font-weight: 700; font-size: 18px; margin-left: 14px; flex-shrink: 0;
-    }}
-    .std-num-empty {{ background: #fee2e2; color: #dc2626; }}
-    .std-title {{ font-size: 15.5px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }}
-    .weight-badge {{
-        background: #f1f5f9; color: #475569; font-size: 11.5px; padding: 3px 10px;
-        border-radius: 8px; display: inline-block; font-weight: 600;
-    }}
-    .dots-row {{ display: flex; gap: 5px; margin-bottom: 5px; justify-content: flex-end; }}
-    .dot {{ width: 14px; height: 6px; border-radius: 3px; }}
-    .dot-on {{ background: {th['primary']}; }}
-    .dot-off {{ background: #e2e8f0; }}
-    
-    /* تصغير صور الشواهد تلقائياً وتكبيرها عند الضغط */
-    .thumbs-container {{
-        display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 14px 0;
-    }}
-    .thumb-link {{
-        position: relative; display: inline-block; width: 105px; height: 105px;
-        border-radius: 12px; overflow: hidden; border: 2px solid {th['tint']};
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: transform 0.2s ease;
-    }}
-    .thumb-link:hover {{ transform: scale(1.05); border-color: {th['primary']}; }}
-    .thumb-link img {{
-        width: 100%; height: 100%; object-fit: cover;
-    }}
-    .thumb-overlay {{
-        position: absolute; bottom: 0; left: 0; right: 0;
-        background: rgba(0,0,0,0.65); color: white; font-size: 10px;
-        text-align: center; padding: 3px 0;
-    }}
-    .pdf-badge {{
-        display: inline-flex; align-items: center; justify-content: center;
-        height: 105px; padding: 0 16px; border-radius: 12px;
-        background: #f8fafc; border: 1px dashed {th['primary']};
-        color: {th['primary']}; font-weight: 700; font-size: 13px; text-decoration: none;
-    }}
-    
-    /* بطاقة الشاهد */
-    .ev-box {{
-        background: white; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px;
-        padding: 16px; margin-bottom: 12px; border-right: 4px solid {th['primary']};
-    }}
-    .idea-card {{
-        background: white; border: 1px solid rgba(0,0,0,0.06); padding: 11px 15px;
-        border-radius: 11px; margin-bottom: 7px; font-size: 13.5px; color: #334155;
-        display: flex; justify-content: space-between; align-items: center;
-    }}
-    .visitor-banner {{
-        background: #fef3c7; color: #92400e; border: 1px solid #f59e0b;
-        padding: 10px 16px; border-radius: 12px; margin-bottom: 14px;
-        font-weight: 700; font-size: 14px; text-align: center;
-    }}
+html, body, .stApp {{
+    direction: rtl; 
+    text-align: right; 
+    font-family: 'Readex Pro', 'Cairo', sans-serif;
+    background-color: {th['bg']};
+}}
 
-    /* حقوق منصة زياد الذكية في أسفل الملف */
-    .ziyad-footer {{
-        margin-top: 45px;
-        padding: 20px 15px;
-        background: white;
-        border-top: 3px solid {th['primary']};
-        border-radius: 18px 18px 8px 8px;
-        text-align: center;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
-    }}
-    .footer-brand {{
-        font-size: 15px;
-        font-weight: 700;
-        color: {th['primary']};
-        margin-bottom: 4px;
-    }}
-    .footer-rights {{
-        font-size: 12px;
-        color: #64748b;
-    }}
-    </style>
+/* تطبيق الخط على النصوص مع استثناء أيقونات النظام لمنع ظهور كلمة visibility */
+h1, h2, h3, h4, h5, h6, p, label, input, textarea, button, a, table, th, td, .stMarkdown {{
+    font-family: 'Readex Pro', 'Cairo', sans-serif;
+}}
+
+/* الحفاظ على خط أيقونات Material Symbols الخاص بـ Streamlit */
+span[data-testid="stIconMaterial"], .material-icons, [ class*="material-symbols" ] {{
+    font-family: 'Material Symbols Rounded', 'Material Icons' !important;
+    direction: ltr !important;
+}}
+
+/* الهيدر والبنر المدمج الاحترافي */
+.hero-wrapper {{
+    background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%);
+    color: white;
+    padding: 22px 24px;
+    border-radius: 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255,255,255,0.12);
+}}
+.hero-top {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}}
+.brand-box {{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}}
+.brand-title {{
+    font-size: 17px;
+    font-weight: 700;
+    color: #fbbf24;
+    margin: 0;
+}}
+.brand-sub {{
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.85);
+    margin: 2px 0 0 0;
+}}
+.date-pill {{
+    background: rgba(255,255,255,0.14);
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 12px;
+    color: #ffffff;
+    border: 1px solid rgba(255,255,255,0.2);
+}}
+.hero-body {{
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 14px;
+}}
+.welcome-line {{
+    font-size: 14px;
+    color: #fde68a;
+    font-weight: 600;
+    margin-bottom: 4px;
+}}
+.teacher-name {{
+    font-size: 25px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 10px 0;
+}}
+.meta-badges {{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}}
+.meta-pill {{
+    background: rgba(0,0,0,0.25);
+    color: #ffffff;
+    padding: 5px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+}}
+.year-badge {{
+    background: #fbbf24;
+    color: #1e293b;
+    padding: 8px 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}}
+
+/* بطاقات الإحصائيات السريعة */
+.kpi-grid {{
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;
+}}
+.kpi-card {{
+    background: white; border-radius: 16px; padding: 14px 8px; text-align: center;
+    border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 3px 8px rgba(0,0,0,0.03);
+}}
+.kpi-val {{ font-size: 22px; font-weight: 700; color: {th['primary']}; text-align: center; }}
+.kpi-lbl {{ font-size: 11px; color: #64748b; margin-top: 3px; font-weight: 500; text-align: center; }}
+
+/* شريط الإنجاز */
+.progress-card {{
+    background: white; padding: 16px 20px; border-radius: 16px; 
+    margin-bottom: 18px; border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.02);
+}}
+.progress-bar-bg {{
+    background: #e2e8f0; height: 10px; border-radius: 6px; width: 100%; overflow: hidden; margin-top: 8px;
+}}
+.progress-bar-fill {{
+    background: linear-gradient(90deg, {th['primary']}, {th['primary_light']});
+    height: 100%; border-radius: 6px;
+}}
+
+/* بطاقة المعيار */
+.std-card {{
+    background: white; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px;
+    padding: 16px 18px; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}}
+.std-num {{
+    width: 44px; height: 44px; border-radius: 13px;
+    background: {th['tint']}; color: {th['primary']};
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px; margin-left: 14px; flex-shrink: 0;
+}}
+.std-num-empty {{ background: #fee2e2; color: #dc2626; }}
+.std-title {{ font-size: 15.5px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }}
+.weight-badge {{
+    background: #f1f5f9; color: #475569; font-size: 11.5px; padding: 3px 10px;
+    border-radius: 8px; display: inline-block; font-weight: 600;
+}}
+.dots-row {{ display: flex; gap: 5px; margin-bottom: 5px; justify-content: flex-end; }}
+.dot {{ width: 14px; height: 6px; border-radius: 3px; }}
+.dot-on {{ background: {th['primary']}; }}
+.dot-off {{ background: #e2e8f0; }}
+
+/* تصغير صور الشواهد تلقائياً وتكبيرها عند الضغط */
+.thumbs-container {{
+    display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 14px 0;
+}}
+.thumb-link {{
+    position: relative; display: inline-block; width: 105px; height: 105px;
+    border-radius: 12px; overflow: hidden; border: 2px solid {th['tint']};
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: transform 0.2s ease;
+}}
+.thumb-link:hover {{ transform: scale(1.05); border-color: {th['primary']}; }}
+.thumb-link img {{
+    width: 100%; height: 100%; object-fit: cover;
+}}
+.thumb-overlay {{
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.65); color: white; font-size: 10px;
+    text-align: center; padding: 3px 0;
+}}
+.pdf-badge {{
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 105px; padding: 0 16px; border-radius: 12px;
+    background: #f8fafc; border: 1px dashed {th['primary']};
+    color: {th['primary']}; font-weight: 700; font-size: 13px; text-decoration: none;
+}}
+
+/* بطاقة الشاهد */
+.ev-box {{
+    background: white; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px;
+    padding: 16px; margin-bottom: 12px; border-right: 4px solid {th['primary']};
+}}
+.idea-card {{
+    background: white; border: 1px solid rgba(0,0,0,0.06); padding: 11px 15px;
+    border-radius: 11px; margin-bottom: 7px; font-size: 13.5px; color: #334155;
+    display: flex; justify-content: space-between; align-items: center;
+}}
+.visitor-banner {{
+    background: #fef3c7; color: #92400e; border: 1px solid #f59e0b;
+    padding: 10px 16px; border-radius: 12px; margin-bottom: 14px;
+    font-weight: 700; font-size: 14px; text-align: center;
+}}
+
+/* حقوق منصة زياد الذكية في أسفل الملف */
+.ziyad-footer {{
+    margin-top: 45px;
+    padding: 20px 15px;
+    background: white;
+    border-top: 3px solid {th['primary']};
+    border-radius: 18px 18px 8px 8px;
+    text-align: center;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+}}
+.footer-brand {{
+    font-size: 15px;
+    font-weight: 700;
+    color: {th['primary']};
+    margin-bottom: 4px;
+    text-align: center;
+}}
+.footer-rights {{
+    font-size: 12px;
+    color: #64748b;
+    text-align: center;
+}}
+</style>
 """, unsafe_allow_html=True)
 
 # التحقق التلقائي من رابط الزائر (?visitor=CODE)
@@ -452,26 +453,28 @@ def get_greeting_and_dates():
 
 def render_footer():
     year_now = datetime.date.today().year
-    st.markdown(f"""
-        <div class="ziyad-footer">
-            <div class="footer-brand">🎓 منصة زياد الذكية | نظام ملف الإنجاز المهني الإلكتروني</div>
-            <div class="footer-rights">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {user_info['full_name']}</div>
-        </div>
-    """, unsafe_allow_html=True)
+    footer_html = (
+        f'<div class="ziyad-footer">'
+        f'<div class="footer-brand">🎓 منصة زياد الذكية | نظام ملف الإنجاز المهني الإلكتروني</div>'
+        f'<div class="footer-rights">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {user_info["full_name"]}</div>'
+        f'</div>'
+    )
+    st.markdown(footer_html, unsafe_allow_html=True)
 
 # ==========================================
 # 7. صفحة تسجيل الدخول (معلم + زائر)
 # ==========================================
 def login_page():
-    st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
-    st.markdown(f"""
-        <div class="hero-wrapper" style="text-align: center;">
-            <div style="display:flex; justify-content:center; margin-bottom:10px;">{ZIYAD_LOGO_SVG}</div>
-            <div style="font-size: 15px; color: #fbbf24; font-weight: 700;">منصة زياد الذكية</div>
-            <div style="font-size: 24px; font-weight: 800; margin: 5px 0;">ملف الإنجاز المهني الإلكتروني</div>
-            <div style="font-size: 13px; opacity: 0.9;">أ. {user_info['full_name']} • {user_info['school_name']}</div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    login_hero = (
+        f'<div class="hero-wrapper" style="text-align:center;">'
+        f'<div style="display:flex; justify-content:center; margin-bottom:10px;">{ZIYAD_LOGO_SVG}</div>'
+        f'<div style="font-size:15px; color:#fbbf24; font-weight:700; text-align:center;">منصة زياد الذكية</div>'
+        f'<div style="font-size:24px; font-weight:800; margin:6px 0; color:white; text-align:center;">ملف الإنجاز المهني الإلكتروني</div>'
+        f'<div style="font-size:13px; opacity:0.9; color:white; text-align:center;">أ. {user_info["full_name"]} • {user_info["school_name"]}</div>'
+        f'</div>'
+    )
+    st.markdown(login_hero, unsafe_allow_html=True)
     
     tab_teacher, tab_visitor = st.tabs(["🔒 دخول المعلم (تحكم كامل)", "👁️ دخول زائر (مشاهدة فقط)"])
     
@@ -527,14 +530,14 @@ def main_app():
     if is_visitor:
         col_v1, col_v2 = st.columns([4, 1])
         with col_v1:
-            st.markdown("<div class='visitor-banner'>👁️ تتصفح الملف حالياً بوضع الزائر (قراءة ومشاهدة فقط)</div>", unsafe_allow_html=True)
+            st.markdown('<div class="visitor-banner">👁️ تتصفح الملف حالياً بوضع الزائر (قراءة ومشاهدة فقط)</div>', unsafe_allow_html=True)
         with col_v2:
             if st.button("🚪 خروج", use_container_width=True):
                 st.session_state.is_visitor = False
                 st.query_params.clear()
                 st.rerun()
 
-    # شريط التنقل العلوي المطور (مع تبويب الأرشيف الجديد)
+    # شريط التنقل العلوي
     if is_visitor:
         nav1, nav2, nav3 = st.columns(3)
         with nav1:
@@ -556,34 +559,31 @@ def main_app():
         with nav5:
             if st.button("⚙️ حسابي", use_container_width=True): navigate_to('settings')
 
-    # الهيدر والبنر المدمج الاحترافي بشعار منصة زياد الذكية
+    # الهيدر والبنر المدمج الاحترافي (مضغوط بدون مسافات بادئة لمنع ظهور الكود كنص)
     greeting, today_str = get_greeting_and_dates()
-    st.markdown(f"""
-        <div class="hero-wrapper">
-            <div class="hero-top">
-                <div class="brand-box">
-                    {ZIYAD_LOGO_SVG}
-                    <div>
-                        <div class="brand-title">منصة زياد الذكية</div>
-                        <div class="brand-sub">نظام إدارة وتوثيق شواهد الأداء الوظيفي</div>
-                    </div>
-                </div>
-                <div class="date-pill">🗓️ {today_str}</div>
-            </div>
-            <div class="hero-body">
-                <div>
-                    <div class="welcome-line">✨ {greeting}</div>
-                    <div class="teacher-name">أ. {user_info['full_name']}</div>
-                    <div class="meta-badges">
-                        <span class="meta-pill">🏫 {user_info['school_name']}</span>
-                        <span class="meta-pill">📚 {user_info['specialization']}</span>
-                        <span class="meta-pill">👔 مدير المدرسة: {user_info['principal_name']}</span>
-                    </div>
-                </div>
-                <div class="year-badge">📁 ملف إنجاز عام {active_year['year_name']}هـ</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    hero_html = (
+        f'<div class="hero-wrapper">'
+        f'<div class="hero-top">'
+        f'<div class="brand-box">{ZIYAD_LOGO_SVG}'
+        f'<div><div class="brand-title">منصة زياد الذكية</div>'
+        f'<div class="brand-sub">نظام إدارة وتوثيق شواهد الأداء الوظيفي</div></div></div>'
+        f'<div class="date-pill">🗓️ {today_str}</div>'
+        f'</div>'
+        f'<div class="hero-body">'
+        f'<div>'
+        f'<div class="welcome-line">✨ {greeting}</div>'
+        f'<div class="teacher-name">أ. {user_info["full_name"]}</div>'
+        f'<div class="meta-badges">'
+        f'<span class="meta-pill">🏫 {user_info["school_name"]}</span>'
+        f'<span class="meta-pill">📚 {user_info["specialization"]}</span>'
+        f'<span class="meta-pill">👔 مدير المدرسة: {user_info["principal_name"]}</span>'
+        f'</div>'
+        f'</div>'
+        f'<div class="year-badge">📁 ملف إنجاز عام {active_year["year_name"]}هـ</div>'
+        f'</div>'
+        f'</div>'
+    )
+    st.markdown(hero_html, unsafe_allow_html=True)
 
     # جلب المعايير والشواهد الخاصة بالعام النشط
     standards_res = supabase.table("standards").select("*").order("id").execute()
@@ -617,36 +617,22 @@ def main_app():
 
         pct = int((stds_with_ev / total_stds) * 100) if total_stds else 0
 
-        # بطاقات الإحصائيات الرباعية
-        st.markdown(f"""
-            <div class="kpi-grid">
-                <div class="kpi-card">
-                    <div class="kpi-val">{total_ev_count}</div>
-                    <div class="kpi-lbl">إجمالي الشواهد</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-val">{stds_with_ev}/{total_stds}</div>
-                    <div class="kpi-lbl">البنود المغطاة</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-val">{stds_reached_target}</div>
-                    <div class="kpi-lbl">حققت المستهدف</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-val" style="color:#dc2626;">{empty_stds}</div>
-                    <div class="kpi-lbl">بنود فارغة</div>
-                </div>
-            </div>
-            <div class="progress-card">
-                <div style="display:flex; justify-content:space-between; font-weight:700; font-size:14px;">
-                    <span>نسبة تغطية معايير الأداء الوظيفي للعام ({active_year['year_name']}هـ)</span>
-                    <span style="color:{th['primary']};">{pct}%</span>
-                </div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" style="width: {pct}%;"></div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        kpi_html = (
+            f'<div class="kpi-grid">'
+            f'<div class="kpi-card"><div class="kpi-val">{total_ev_count}</div><div class="kpi-lbl">إجمالي الشواهد</div></div>'
+            f'<div class="kpi-card"><div class="kpi-val">{stds_with_ev}/{total_stds}</div><div class="kpi-lbl">البنود المغطاة</div></div>'
+            f'<div class="kpi-card"><div class="kpi-val">{stds_reached_target}</div><div class="kpi-lbl">حققت المستهدف</div></div>'
+            f'<div class="kpi-card"><div class="kpi-val" style="color:#dc2626;">{empty_stds}</div><div class="kpi-lbl">بنود فارغة</div></div>'
+            f'</div>'
+            f'<div class="progress-card">'
+            f'<div style="display:flex; justify-content:space-between; font-weight:700; font-size:14px;">'
+            f'<span>نسبة تغطية معايير الأداء الوظيفي للعام ({active_year["year_name"]}هـ)</span>'
+            f'<span style="color:{th["primary"]};">{pct}%</span>'
+            f'</div>'
+            f'<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:{pct}%;"></div></div>'
+            f'</div>'
+        )
+        st.markdown(kpi_html, unsafe_allow_html=True)
 
         # الفلاتر
         f_col1, f_col2, f_col3 = st.columns(3)
@@ -676,46 +662,41 @@ def main_app():
                 continue
 
             dots_html = "".join([
-                f"<div class='dot {'dot-on' if i < count else 'dot-off'}'></div>"
+                f'<div class="dot {"dot-on" if i < count else "dot-off"}"></div>'
                 for i in range(target)
             ])
             
             if count == 0:
-                status_txt = "<span style='color:#dc2626; font-size:12px;'>لا شواهد بعد</span>"
+                status_txt = '<span style="color:#dc2626; font-size:12px;">لا شواهد بعد</span>'
                 num_cls = "std-num std-num-empty"
             elif count >= target:
-                status_txt = f"<span style='color:{th['primary']}; font-size:12px; font-weight:bold;'>مكتمل ({count} شواهد)</span>"
+                status_txt = f'<span style="color:{th["primary"]}; font-size:12px; font-weight:bold;">مكتمل ({count} شواهد)</span>'
                 num_cls = "std-num"
             else:
-                status_txt = f"<span style='color:{th['accent']}; font-size:12px;'>{count} شاهد • بقي {target - count}</span>"
+                status_txt = f'<span style="color:{th["accent"]}; font-size:12px;">{count} شاهد • بقي {target - count}</span>'
                 num_cls = "std-num"
 
-            st.markdown(f"""
-                <div class="std-card">
-                    <div style="display:flex; align-items:center;">
-                        <div class="{num_cls}">{s_id}</div>
-                        <div>
-                            <div class="std-title">{s_id}. {std['title']}</div>
-                            <span class="weight-badge">الوزن النسبي: {std['weight']}%</span>
-                        </div>
-                    </div>
-                    <div style="text-align:left;">
-                        <div class="dots-row">{dots_html}</div>
-                        {status_txt}
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+            card_html = (
+                f'<div class="std-card">'
+                f'<div style="display:flex; align-items:center;">'
+                f'<div class="{num_cls}">{s_id}</div>'
+                f'<div><div class="std-title">{s_id}. {std["title"]}</div>'
+                f'<span class="weight-badge">الوزن النسبي: {std["weight"]}%</span></div>'
+                f'</div>'
+                f'<div style="text-align:left;"><div class="dots-row">{dots_html}</div>{status_txt}</div>'
+                f'</div>'
+            )
+            st.markdown(card_html, unsafe_allow_html=True)
             
             if st.button(f"📂 فتح وإدارة شواهد البند {s_id}", key=f"open_std_{s_id}", use_container_width=True):
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة البنود والشواهد (تم إصلاحها بالكامل لتعرض كل البنود أو بند محدد)
+    # 📋 2. صفحة البنود والشواهد
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         st.markdown("### 📋 استعراض وإدارة بنود الأداء والشواهد")
         
-        # قائمة منسدلة علوية للتنقل السلس بين جميع البنود أو اختيار بند محدد
         options_map = {0: "🔍 عرض شامل لجميع البنود التي تحتوي على شواهد"}
         for s in stds:
             c_ev = len([e for e in evidences if e['standard_id'] == s['id']])
@@ -736,9 +717,8 @@ def main_app():
             st.session_state.view_standard_id = selected_option
             st.rerun()
 
-        # الحالة (أ): إذا اختار "عرض شامل لجميع البنود" (يظهر عند الضغط على تبويب البنود)
         if selected_option == 0:
-            st.info("💡 هنا تظهر جميع شواهدك المرفوعة في كافة البنود مرتبة حسب المعايير. لإضافة شاهد جديد لبند معين، اختر البند من القائمة المنسدلة أعلاه أو اضغط على زر (➕ إضافة شاهد لهذا البند).")
+            st.info("💡 هنا تظهر جميع شواهدك المرفوعة في كافة البنود مرتبة حسب المعايير. لإضافة شاهد جديد لبند معين، اختر البند من القائمة المنسدلة أعلاه أو اضغط على زر الإدارة داخل البند.")
             for s in stds:
                 s_evs = [e for e in evidences if e['standard_id'] == s['id']]
                 with st.expander(f"{'✅' if len(s_evs)>0 else '⚪'} البند {s['id']}: {s['title']} — ({len(s_evs)} شواهد)", expanded=(len(s_evs) > 0)):
@@ -748,37 +728,34 @@ def main_app():
                         for ev in s_evs:
                             files = ev.get("evidence_files", [])
                             exec_date = ev.get('execution_date') or ev['created_at'][:10]
-                            thumbs_html = "<div class='thumbs-container'>"
+                            thumbs_html = '<div class="thumbs-container">'
                             for i, f_rec in enumerate(files):
                                 try:
                                     url_res = supabase.storage.from_("private-achievements").create_signed_url(f_rec['file_url'], 1800)
                                     sec_url = url_res['signedURL']
                                     if f_rec.get('file_type', '').startswith('image/'):
-                                        thumbs_html += f"""
-                                            <a href="{sec_url}" target="_blank" class="thumb-link" title="اضغط للتكبير بالحجم الأصلي">
-                                                <img src="{sec_url}" alt="شاهد">
-                                                <div class="thumb-overlay">🔍 تكبير</div>
-                                            </a>
-                                        """
+                                        thumbs_html += (
+                                            f'<a href="{sec_url}" target="_blank" class="thumb-link" title="اضغط للتكبير بالحجم الأصلي">'
+                                            f'<img src="{sec_url}" alt="شاهد"><div class="thumb-overlay">🔍 تكبير</div></a>'
+                                        )
                                     else:
-                                        thumbs_html += f"""<a href="{sec_url}" target="_blank" class="pdf-badge">📄 PDF ({i+1})</a>"""
+                                        thumbs_html += f'<a href="{sec_url}" target="_blank" class="pdf-badge">📄 PDF ({i+1})</a>'
                                 except Exception:
                                     pass
-                            thumbs_html += "</div>"
-                            st.markdown(f"""
-                                <div class="ev-box">
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                        <span style="font-weight:700; color:{th['primary']};">📄 {ev['title']}</span>
-                                        <span style="font-size:12px; color:#64748b;">📅 تاريخ التنفيذ: {exec_date}</span>
-                                    </div>
-                                    <div style="font-size:13.5px; color:#334155;">{ev.get('description') or ''}</div>
-                                    {thumbs_html}
-                                </div>
-                            """, unsafe_allow_html=True)
+                            thumbs_html += '</div>'
+                            ev_card = (
+                                f'<div class="ev-box">'
+                                f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">'
+                                f'<span style="font-weight:700; color:{th["primary"]};">📄 {ev["title"]}</span>'
+                                f'<span style="font-size:12px; color:#64748b;">📅 تاريخ التنفيذ: {exec_date}</span>'
+                                f'</div>'
+                                f'<div style="font-size:13.5px; color:#334155;">{ev.get("description") or ""}</div>'
+                                f'{thumbs_html}</div>'
+                            )
+                            st.markdown(ev_card, unsafe_allow_html=True)
                     if st.button(f"➕ إدارة وإضافة شواهد للبند {s['id']}", key=f"jump_std_{s['id']}"):
                         navigate_to('standard_view', s['id'])
 
-        # الحالة (ب): عند استعراض بند محدد
         else:
             std_id = selected_option
             std_data = [s for s in stds if s['id'] == std_id][0]
@@ -792,41 +769,33 @@ def main_app():
                     files = ev.get("evidence_files", [])
                     exec_date = ev.get('execution_date') or ev['created_at'][:10]
                     
-                    thumbs_html = "<div class='thumbs-container'>"
+                    thumbs_html = '<div class="thumbs-container">'
                     for i, f_rec in enumerate(files):
                         try:
                             url_res = supabase.storage.from_("private-achievements").create_signed_url(f_rec['file_url'], 1800)
                             sec_url = url_res['signedURL']
                             if f_rec.get('file_type', '').startswith('image/'):
-                                thumbs_html += f"""
-                                    <a href="{sec_url}" target="_blank" class="thumb-link" title="اضغط لعرض الصورة بالحجم الأصلي">
-                                        <img src="{sec_url}" alt="شاهد">
-                                        <div class="thumb-overlay">🔍 تكبير</div>
-                                    </a>
-                                """
+                                thumbs_html += (
+                                    f'<a href="{sec_url}" target="_blank" class="thumb-link" title="اضغط لعرض الصورة بالحجم الأصلي">'
+                                    f'<img src="{sec_url}" alt="شاهد"><div class="thumb-overlay">🔍 تكبير</div></a>'
+                                )
                             else:
-                                thumbs_html += f"""
-                                    <a href="{sec_url}" target="_blank" class="pdf-badge">
-                                        📄 فتح PDF ({i+1})
-                                    </a>
-                                """
+                                thumbs_html += f'<a href="{sec_url}" target="_blank" class="pdf-badge">📄 فتح PDF ({i+1})</a>'
                         except Exception:
                             pass
-                    thumbs_html += "</div>"
+                    thumbs_html += '</div>'
 
-                    st.markdown(f"""
-                        <div class="ev-box">
-                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-                                <span style="font-weight:700; font-size:16px; color:{th['primary']};">📄 {ev['title']}</span>
-                                <span style="background:{th['tint']}; color:{th['primary_dark']}; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;">
-                                    📅 تاريخ التنفيذ: {exec_date}
-                                </span>
-                            </div>
-                            <div style="font-size:14px; color:#334155; line-height:1.6; margin-bottom:6px;">{ev.get('description') or ''}</div>
-                            <div style="font-size:11px; color:#64748b; margin-bottom:4px;">💡 اضغط على الصورة المصغرة لعرضها بالحجم الأصلي الكامل:</div>
-                            {thumbs_html}
-                        </div>
-                    """, unsafe_allow_html=True)
+                    ev_detail_html = (
+                        f'<div class="ev-box">'
+                        f'<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">'
+                        f'<span style="font-weight:700; font-size:16px; color:{th["primary"]};">📄 {ev["title"]}</span>'
+                        f'<span style="background:{th["tint"]}; color:{th["primary_dark"]}; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;">'
+                        f'📅 تاريخ التنفيذ: {exec_date}</span></div>'
+                        f'<div style="font-size:14px; color:#334155; line-height:1.6; margin-bottom:6px;">{ev.get("description") or ""}</div>'
+                        f'<div style="font-size:11px; color:#64748b; margin-bottom:4px;">💡 اضغط على الصورة المصغرة لعرضها بالحجم الأصلي الكامل:</div>'
+                        f'{thumbs_html}</div>'
+                    )
+                    st.markdown(ev_detail_html, unsafe_allow_html=True)
 
                     if not is_visitor:
                         ed_col, del_col = st.columns(2)
@@ -884,12 +853,7 @@ def main_app():
 
             st.markdown("#### 💡 الشواهد المستهدفة لهذا المعيار")
             for idea in sub_options:
-                st.markdown(f"""
-                    <div class="idea-card">
-                        <span>💡 {idea}</span>
-                        <span style="color:{th['primary']}; font-weight:bold;">✔</span>
-                    </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f'<div class="idea-card"><span>💡 {idea}</span><span style="color:{th["primary"]}; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
 
             if not is_visitor:
                 st.markdown("#### ➕ إضافة شاهد جديد لهذا البند")
@@ -934,23 +898,20 @@ def main_app():
                             st.warning("يرجى اختيار العنوان وإرفاق ملف واحد على الأقل.")
 
     # ----------------------------------------
-    # 📅 3. صفحة أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية (الجديدة كلياً)
+    # 📅 3. صفحة أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية
     # ----------------------------------------
     elif st.session_state.current_page == 'archive' and not is_visitor:
         st.markdown("### 📅 أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية")
         st.write("في نهاية كل عام دراسي، يمكنك أرشفة ملف الإنجاز الحالي وبدء ملف إنجاز جديد للعام القادم دون فقدان أي شواهد أو مرفقات سابقة، مع إمكانية العودة لأي عام مؤرشف في أي وقت.")
 
-        # قسم أرشفة العام الحالي وفتح عام جديد
         st.markdown("#### 🆕 أرشفة العام الحالي وفتح ملف إنجاز جديد")
         with st.form("archive_and_new_year_form", clear_on_submit=True):
             new_year_name = st.text_input("اسم العام الدراسي الجديد (مثال: 1449 أو 1449-1450):")
             submit_new_year = st.form_submit_button("📦 أرشفة العام الحالي وبدء ملف الإنجاز الجديد", type="primary", use_container_width=True)
             if submit_new_year:
                 if new_year_name.strip():
-                    # تحويل جميع الأعوام السابقة إلى مؤرشفة (is_active = False)
                     for y in all_years:
                         supabase.table("academic_years").update({"is_active": False}).eq("id", y['id']).execute()
-                    # إنشاء العام الجديد وجعله نشطاً
                     supabase.table("academic_years").insert({
                         "year_name": new_year_name.strip(),
                         "is_active": True
@@ -969,17 +930,16 @@ def main_app():
             y_count = y_ev_res.count if y_ev_res.count is not None else len(y_ev_res.data)
             is_act = y.get("is_active", False)
             
-            badge_html = f"<span style='background:#10b981; color:white; padding:3px 10px; border-radius:8px; font-size:12px;'>🟢 الملف النشط حالياً</span>" if is_act else "<span style='background:#64748b; color:white; padding:3px 10px; border-radius:8px; font-size:12px;'>📦 مؤرشف</span>"
+            badge_html = '<span style="background:#10b981; color:white; padding:4px 12px; border-radius:8px; font-size:12px;">🟢 الملف النشط حالياً</span>' if is_act else '<span style="background:#64748b; color:white; padding:4px 12px; border-radius:8px; font-size:12px;">📦 مؤرشف</span>'
             
-            st.markdown(f"""
-                <div class="std-card">
-                    <div>
-                        <div class="std-title">📁 ملف إنجاز العام الدراسي: {y['year_name']}هـ</div>
-                        <div style="font-size:13px; color:#64748b;">عدد الشواهد المحفوظة في هذا الملف: <strong>{y_count} شاهد</strong></div>
-                    </div>
-                    <div>{badge_html}</div>
-                </div>
-            """, unsafe_allow_html=True)
+            arch_card = (
+                f'<div class="std-card">'
+                f'<div><div class="std-title">📁 ملف إنجاز العام الدراسي: {y["year_name"]}هـ</div>'
+                f'<div style="font-size:13px; color:#64748b;">عدد الشواهد المحفوظة في هذا الملف: <strong>{y_count} شاهد</strong></div></div>'
+                f'<div>{badge_html}</div>'
+                f'</div>'
+            )
+            st.markdown(arch_card, unsafe_allow_html=True)
             
             col_a, col_b = st.columns([3, 1])
             with col_a:
@@ -1287,7 +1247,6 @@ def main_app():
                 st.session_state.is_visitor = False
                 st.rerun()
 
-    # الفوتر الثابت بحقوق منصة زياد الذكية
     render_footer()
 
 # ==========================================
