@@ -7,6 +7,7 @@ import datetime
 import zipfile
 import urllib.request
 from io import BytesIO
+from PIL import Image
 from xml.sax.saxutils import escape as xml_escape
 from hijri_converter import Gregorian
 import streamlit.components.v1 as components
@@ -295,7 +296,7 @@ def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", vari
     }
 
 # ==========================================
-# 5. الاتصال بقاعدة البيانات والتخزين المؤقت السريع
+# 5. الاتصال بقاعدة البيانات والفرز الزمني الذكي (الأقدم ثم الأحدث)
 # ==========================================
 @st.cache_resource
 def init_connection():
@@ -328,6 +329,19 @@ def navigate_to(page_name, std_id=None):
     if std_id is not None:
         st.session_state.view_standard_id = std_id
     st.rerun()
+
+def sort_evidences_chronologically(ev_list):
+    """
+    ترتيب الشواهد ذكياً حسب رقم البند ثم حسب تاريخ التنفيذ الفعلي (من الأقدم إلى الأحدث)
+    بحيث يظهر مثلاً الاختبار التشخيصي (29/9) قبل الخطة أو الأوراق العلاجية (1/10) تلقائياً
+    """
+    def _sort_key(ev):
+        std_id = ev.get('standard_id', 0)
+        exec_d = str(ev.get('execution_date') or ev.get('created_at', '')[:10] or '9999-12-31')
+        created_at = str(ev.get('created_at', '') or '')
+        ev_id = ev.get('id', 0)
+        return (std_id, exec_d, created_at, ev_id)
+    return sorted(ev_list, key=_sort_key)
 
 def run_ai_draft_callback(std_id, std_title, sub_options):
     desc_key = f"draft_desc_{std_id}"
@@ -397,8 +411,9 @@ def fetch_standards_and_subs():
 def fetch_year_evidences(year_id):
     if not year_id:
         return []
-    res = supabase.table("evidences").select("*, evidence_files(*)").eq("year_id", year_id).order("created_at", desc=True).execute()
-    return res.data if res.data else []
+    res = supabase.table("evidences").select("*, evidence_files(*)").eq("year_id", year_id).execute()
+    raw_data = res.data if res.data else []
+    return sort_evidences_chronologically(raw_data)
 
 @st.cache_data(ttl=1800)
 def get_signed_urls_batch(paths_tuple):
@@ -424,16 +439,67 @@ def get_signed_urls_batch(paths_tuple):
                     pass
     return url_map
 
+@st.cache_data(ttl=1800)
+def fetch_and_prepare_word_image(file_path, signed_url=""):
+    """
+    تحميل صورة الشاهد من السحابة وتحويلها إلى JPEG متوافق 100% مع برنامج Microsoft Word
+    مع حساب أبعادها التناسبية بدقة (EMUs) لمنع أي تشوه أو مط للصورة داخل ملف الوورد
+    """
+    raw_bytes = None
+    try:
+        raw_bytes = supabase.storage.from_("private-achievements").download(file_path)
+    except Exception:
+        if signed_url:
+            try:
+                req = urllib.request.Request(signed_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    raw_bytes = resp.read()
+            except Exception:
+                pass
+    if not raw_bytes:
+        return None
+
+    try:
+        img = Image.open(BytesIO(raw_bytes))
+        if img.mode in ("RGBA", "LA", "P"):
+            bg = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "P":
+                img = img.convert("RGBA")
+            bg.paste(img, mask=img.split()[-1] if len(img.split()) == 4 else None)
+            img = bg
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+
+        img.thumbnail((1000, 1000), Image.Resampling.LANCZOS)
+        w_px, h_px = img.size
+        out_buf = BytesIO()
+        img.save(out_buf, format="JPEG", quality=85)
+        jpeg_bytes = out_buf.getvalue()
+
+        # حساب الأبعاد بوحدة EMU الخاصة بـ Word (بحيث تتسع صورتان في الصف أو 4 صور في الصفحة دون خروج عن الهامش)
+        max_w_emu = 2650000  # قرابة 2.9 بوصة للعمود الواحد
+        max_h_emu = 2250000  # قرابة 2.46 بوصة للارتفاع
+        ratio = min(max_w_emu / max(w_px, 1), max_h_emu / max(h_px, 1))
+        cx = int(w_px * ratio)
+        cy = int(h_px * ratio)
+        return {"bytes": jpeg_bytes, "cx": cx, "cy": cy}
+    except Exception:
+        return None
+
 # ==========================================
-# 6. محرك توليد ملف Word قابل للتعديل (.docx)
+# 6. محرك توليد ملف Word قابل للتعديل (.docx) مع تضمين الصور الفعلي
 # ==========================================
-def generate_editable_docx(user_info, active_year, stds, evidences):
+def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_map):
     stds_map = {s['id']: s for s in stds}
-    sorted_evs = sorted(evidences, key=lambda x: x.get('standard_id', 0))
+    sorted_evs = sort_evidences_chronologically(evidences)
     total_ev = len(sorted_evs)
     covered_stds = len(set(e['standard_id'] for e in sorted_evs))
 
-    def w_para(text, bold=False, size_pt=12, color="1E293B", align="right", space_after=140):
+    media_files = {}  # filename -> bytes
+    rels_entries = []  # list of XML <Relationship .../>
+    img_counter = 1
+
+    def w_para(text, bold=False, size_pt=12, color="1E293B", align="right", space_after=120):
         sz = int(size_pt * 2)
         b_tag = "<w:b/><w:bCs/>" if bold else ""
         return f"""
@@ -456,6 +522,102 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
             </w:r>
         </w:p>
         """
+
+    def w_image_para(rel_id, img_id, cx, cy):
+        return f"""
+        <w:p>
+            <w:pPr>
+                <w:jc w:val="center"/>
+                <w:spacing w:before="60" w:after="60"/>
+            </w:pPr>
+            <w:r>
+                <w:drawing>
+                    <wp:inline distT="0" distB="0" distL="0" distR="0">
+                        <wp:extent cx="{cx}" cy="{cy}"/>
+                        <wp:docPr id="{img_id}" name="Picture {img_id}"/>
+                        <wp:cNvGraphicFramePr>
+                            <a:graphicFrameLocks noChangeAspect="1"/>
+                        </wp:cNvGraphicFramePr>
+                        <a:graphic>
+                            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                <pic:pic>
+                                    <pic:nvPicPr>
+                                        <pic:cNvPr id="{img_id}" name="image_{img_id}.jpg"/>
+                                        <pic:cNvPicPr/>
+                                    </pic:nvPicPr>
+                                    <pic:blipFill>
+                                        <a:blip r:embed="{rel_id}"/>
+                                        <a:stretch>
+                                            <a:fillRect/>
+                                        </a:stretch>
+                                    </pic:blipFill>
+                                    <pic:spPr>
+                                        <a:xfrm>
+                                            <a:off x="0" y="0"/>
+                                            <a:ext cx="{cx}" cy="{cy}"/>
+                                        </a:xfrm>
+                                        <a:prstGeom prst="rect">
+                                            <a:avLst/>
+                                        </a:prstGeom>
+                                    </pic:spPr>
+                                </pic:pic>
+                            </a:graphicData>
+                        </a:graphic>
+                    </wp:inline>
+                </w:drawing>
+            </w:r>
+        </w:p>
+        """
+
+    def w_images_grid_table(img_drawings_list):
+        """جدول شبكي من عمودين لعرض صور الشاهد المرفقة بشكل أنيق داخل ملف الوورد"""
+        tbl_xml = """
+        <w:tbl>
+            <w:tblPr>
+                <w:bidiVisual/>
+                <w:tblW w:w="5000" w:type="pct"/>
+                <w:tblBorders>
+                    <w:top w:val="single" w:sz="4" w:space="0" w:color="CBD5E1"/>
+                    <w:bottom w:val="single" w:sz="4" w:space="0" w:color="CBD5E1"/>
+                    <w:left w:val="single" w:sz="4" w:space="0" w:color="CBD5E1"/>
+                    <w:right w:val="single" w:sz="4" w:space="0" w:color="CBD5E1"/>
+                    <w:insideH w:val="single" w:sz="4" w:space="0" w:color="E2E8F0"/>
+                    <w:insideV w:val="single" w:sz="4" w:space="0" w:color="E2E8F0"/>
+                </w:tblBorders>
+            </w:tblPr>
+        """
+        for i in range(0, len(img_drawings_list), 2):
+            pair = img_drawings_list[i:i + 2]
+            tbl_xml += "<w:tr>"
+            for cell_xml in pair:
+                tbl_xml += f"""
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcW w:w="2500" w:type="pct"/>
+                        <w:shd w:val="clear" w:color="auto" w:fill="F8FAFC"/>
+                        <w:tcMar>
+                            <w:top w:w="100" w:type="dxa"/>
+                            <w:bottom w:w="100" w:type="dxa"/>
+                            <w:left w:w="100" w:type="dxa"/>
+                            <w:right w:w="100" w:type="dxa"/>
+                        </w:tcMar>
+                    </w:tcPr>
+                    {cell_xml}
+                </w:tc>
+                """
+            if len(pair) == 1:
+                tbl_xml += """
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcW w:w="2500" w:type="pct"/>
+                        <w:shd w:val="clear" w:color="auto" w:fill="F8FAFC"/>
+                    </w:tcPr>
+                    <w:p/>
+                </w:tc>
+                """
+            tbl_xml += "</w:tr>"
+        tbl_xml += "</w:tbl>"
+        return tbl_xml
 
     def w_table(rows_data, header_bg="0F5243"):
         tbl_xml = """
@@ -483,10 +645,10 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
                     <w:tcPr>
                         <w:shd w:val="clear" w:color="auto" w:fill="{fill}"/>
                         <w:tcMar>
-                            <w:top w:w="120" w:type="dxa"/>
-                            <w:bottom w:w="120" w:type="dxa"/>
-                            <w:left w:w="150" w:type="dxa"/>
-                            <w:right w:w="150" w:type="dxa"/>
+                            <w:top w:w="100" w:type="dxa"/>
+                            <w:bottom w:w="100" w:type="dxa"/>
+                            <w:left w:w="140" w:type="dxa"/>
+                            <w:right w:w="140" w:type="dxa"/>
                         </w:tcMar>
                     </w:tcPr>
                     {w_para(c_text, bold=is_header, size_pt=11, color=txt_color, align="center", space_after=0)}
@@ -497,6 +659,7 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
         return tbl_xml
 
     body_parts = []
+    # 1. صفحة الغلاف
     body_parts.append(w_para("المملكة العربية السعودية - وزارة التعليم", bold=True, size_pt=14, color="0F5243", align="center", space_after=120))
     body_parts.append(w_para("منصة زياد الذكية لتوثيق الأداء المهني", bold=True, size_pt=13, color="B45309", align="center", space_after=300))
     body_parts.append(w_para("ملف الإنجاز المهني الإلكتروني", bold=True, size_pt=24, color="0F5243", align="center", space_after=120))
@@ -516,6 +679,7 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
     body_parts.append(w_table(cover_rows))
     body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
 
+    # 2. صفحة الفهرس
     body_parts.append(w_para("فهرس معايير الأداء الوظيفي المنجزة", bold=True, size_pt=18, color="0F5243", align="right", space_after=240))
     index_rows = [[("م", True), ("معيار الأداء الوظيفي", True), ("الوزن النسبي", True), ("الشواهد الموثقة", True), ("المستهدف", True)]]
     for s in stds:
@@ -532,14 +696,22 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
     body_parts.append(w_table(index_rows))
     body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
 
+    # 3. صفحات الشواهد (مرتبة زمنياً من الأقدم للأحدث مع تضمين الصور فعلياً)
     for idx, ev in enumerate(sorted_evs):
         std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
         exec_date = ev.get('execution_date') or ev['created_at'][:10]
         files = ev.get('evidence_files', [])
         links_list = [f['file_url'] for f in files if f.get('file_type') == 'external/link' or f.get('file_url', '').startswith('http')]
-        att_summary = f"عدد المرفقات المحفوظة: {len(files)}" + (f" | الرابط: {links_list[0]}" if links_list else "")
+        pdf_cnt = sum(1 for f in files if f.get('file_type') == 'application/pdf')
 
-        body_parts.append(w_para(f"المعيار {ev['standard_id']}: {std['title']} (الوزن {std['weight']}%)", bold=True, size_pt=16, color="0F5243", align="right", space_after=140))
+        att_notes = [f"إجمالي المرفقات: {len(files)}"]
+        if pdf_cnt:
+            att_notes.append(f"ملفات PDF: {pdf_cnt}")
+        if links_list:
+            att_notes.append(f"الرابط: {links_list[0]}")
+        att_summary = " | ".join(att_notes)
+
+        body_parts.append(w_para(f"المعيار {ev['standard_id']}: {std['title']} (الوزن {std['weight']}%)", bold=True, size_pt=15, color="0F5243", align="right", space_after=100))
         ev_rows = [
             [("عنوان الشاهد", True), (ev.get("title", ""), False)],
             [("تاريخ التنفيذ الفعلي", True), (str(exec_date), False)],
@@ -549,18 +721,45 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
             [("مدير المدرسة", True), (user_info.get("principal_name", ""), False)]
         ]
         body_parts.append(w_table(ev_rows))
-        body_parts.append(w_para("ملاحظات إضافية / تعديل:", bold=True, size_pt=11, color="64748B", align="right", space_after=200))
+
+        # تحميل وتضمين الصور المرفقة لهذا الشاهد داخل صفحة الوورد
+        ev_img_drawings = []
+        for f in files:
+            f_url = f.get('file_url', '')
+            f_type = f.get('file_type', '')
+            if f_type.startswith('image/') and not f_url.startswith('http'):
+                s_url = signed_urls_map.get(f_url, '')
+                img_info = fetch_and_prepare_word_image(f_url, s_url)
+                if img_info:
+                    rel_id = f"rIdImg{img_counter}"
+                    media_name = f"image_{img_counter}.jpg"
+                    media_files[f"word/media/{media_name}"] = img_info["bytes"]
+                    rels_entries.append(
+                        f'<Relationship Id="{rel_id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/{media_name}"/>'
+                    )
+                    ev_img_drawings.append(w_image_para(rel_id, img_counter, img_info["cx"], img_info["cy"]))
+                    img_counter += 1
+
+        if ev_img_drawings:
+            body_parts.append(w_para("صور الشواهد المرفقة:", bold=True, size_pt=12, color="0F5243", align="right", space_after=80))
+            body_parts.append(w_images_grid_table(ev_img_drawings))
+
+        body_parts.append(w_para("ملاحظات إضافية / تعديل:", bold=True, size_pt=10, color="64748B", align="right", space_after=100))
         if idx < len(sorted_evs) - 1:
             body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
 
     document_xml = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
         <w:body>
             {''.join(body_parts)}
             <w:sectPr>
                 <w:bidi/>
                 <w:pgSz w:w="11906" w:h="16838"/>
-                <w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/>
+                <w:pgMar w:top="900" w:right="900" w:bottom="900" w:left="900"/>
             </w:sectPr>
         </w:body>
     </w:document>"""
@@ -569,6 +768,9 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
     <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
         <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
         <Default Extension="xml" ContentType="application/xml"/>
+        <Default Extension="jpg" ContentType="image/jpeg"/>
+        <Default Extension="jpeg" ContentType="image/jpeg"/>
+        <Default Extension="png" ContentType="image/png"/>
         <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
     </Types>"""
 
@@ -577,17 +779,25 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
         <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
     </Relationships>"""
 
+    doc_rels_xml = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        {''.join(rels_entries)}
+    </Relationships>"""
+
     buf = BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as docx_zip:
         docx_zip.writestr("[Content_Types].xml", content_types_xml.strip())
         docx_zip.writestr("_rels/.rels", rels_xml.strip())
+        docx_zip.writestr("word/_rels/document.xml.rels", doc_rels_xml.strip())
         docx_zip.writestr("word/document.xml", document_xml.strip())
+        for m_path, m_bytes in media_files.items():
+            docx_zip.writestr(m_path, m_bytes)
     return buf.getvalue()
 
 def generate_excel_csv(stds, evidences):
     stds_map = {s['id']: s['title'] for s in stds}
     lines = ["رقم المعيار,اسم المعيار,عنوان الشاهد,تاريخ التنفيذ,الوصف,عدد المرفقات"]
-    for ev in sorted(evidences, key=lambda x: x.get('standard_id', 0)):
+    for ev in sort_evidences_chronologically(evidences):
         s_id = ev.get('standard_id', '')
         s_title = str(stds_map.get(s_id, '')).replace(',', ' - ')
         title = str(ev.get('title', '')).replace(',', ' - ').replace('\n', ' ')
@@ -606,7 +816,7 @@ th = THEMES[active_theme_key]
 ZIYAD_LOGO_SVG = '<svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 7. التصميم الشامل (مع إصلاح عرض القوائم المنبثقة وتناسق نافذة التعديل)
+# 7. التصميم الشامل
 # ==========================================
 st.markdown(f"""
 <style>
@@ -702,7 +912,6 @@ div[data-baseweb="select"] svg {{
     line-height: 1.4 !important;
 }}
 
-/* إصلاح القوائم المنبثقة لمنع قص الجمل الطويلة على اليمين */
 div[data-baseweb="popover"],
 div[data-baseweb="popover"] > div,
 div[data-baseweb="menu"],
@@ -1092,7 +1301,7 @@ if "visitor" in query_params and st.session_state.user is None:
         st.session_state.is_visitor = True
 
 # ==========================================
-# 8. دوال التاريخ والترحيب والفوتر وإدارة وتعديل ونقل الشاهد (بعرض 100% متناسق)
+# 8. دوال التاريخ والترحيب والفوتر وإدارة وتعديل ونقل الشاهد
 # ==========================================
 def get_greeting_and_dates():
     tz = datetime.timezone(datetime.timedelta(hours=3))
@@ -1136,9 +1345,6 @@ def render_attachments_html(files, signed_urls_map):
     return thumbs_html
 
 def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
-    """
-    لوحة موحدة بعرض كامل الصفحة (100% Full-Width) لتعديل الشاهد أو نقله لبند آخر أو حذف صور فردية منه دون أي انضغاط أو فراغات جانبية
-    """
     files = ev.get("evidence_files", [])
     exec_date = ev.get('execution_date') or ev['created_at'][:10]
     existing_links = [f['file_url'] for f in files if f.get('file_type') == 'external/link' or f.get('file_url', '').startswith('http')]
@@ -1154,7 +1360,6 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
         tab_edit, tab_del = st.tabs(["✏️ تعديل البيانات وإدارة الصور", "🗑️ حذف الشاهد بالكامل"])
 
         with tab_edit:
-            # 1. قسم إدارة وحذف الصور الحالية بعرض كامل مريح
             if storage_files:
                 st.markdown("##### 🖼️ الصور والمرفقات الحالية (يمكنك حذف أي مرفق بمفرده):")
                 cols_count = min(len(storage_files), 3)
@@ -1188,7 +1393,6 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                             st.rerun()
                 st.write("---")
 
-            # 2. نموذج التعديل والنقل بعرض كامل وشبكة متوازنة
             with st.form(f"{key_prefix}edit_form_{ev['id']}"):
                 new_std_id = st.selectbox(
                     "⇄ البند (المعيار) التابع له الشاهد (اختر بنداً آخر لنقله):",
@@ -1271,7 +1475,7 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                     if new_std_id != current_ev_std_id:
                         st.success(f"تم حفظ التعديلات ونقل الشاهد إلى ({std_options_dict[new_std_id]}) بنجاح!")
                     else:
-                        st.success("تم حفظ التعديلات بنجاح!")
+                        st.success("تم حفظ التعديلات وإعادة ترتيب الشواهد زمنياً بنجاح!")
                     time.sleep(0.4)
                     st.rerun()
 
@@ -1537,7 +1741,7 @@ def main_app():
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة البنود والشواهد
+    # 📋 2. صفحة البنود والشواهد (مرتبة زمنياً من الأقدم إلى الأحدث)
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         st.markdown("#### 📋 استعراض وإدارة بنود الأداء والشواهد")
@@ -1563,19 +1767,19 @@ def main_app():
 
         if selected_option == 0:
             for s in stds:
-                s_evs = [e for e in evidences if e['standard_id'] == s['id']]
+                s_evs = sort_evidences_chronologically([e for e in evidences if e['standard_id'] == s['id']])
                 with st.expander(f"{'✅' if len(s_evs)>0 else '⚪'} البند {s['id']}: {s['title']} — ({len(s_evs)} شواهد)", expanded=(len(s_evs) > 0)):
                     if not s_evs:
                         st.caption("لا توجد شواهد مرفوعة في هذا البند حتى الآن.")
                     else:
-                        for ev in s_evs:
+                        for order_idx, ev in enumerate(s_evs, 1):
                             files = ev.get("evidence_files", [])
                             exec_date = ev.get('execution_date') or ev['created_at'][:10]
                             thumbs_html = render_attachments_html(files, signed_urls_map)
                             ev_card = (
                                 f'<div class="ev-box">'
                                 f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">'
-                                f'<span style="font-weight:700; color:{th["primary"]} !important;">📄 {ev["title"]}</span>'
+                                f'<span style="font-weight:700; color:{th["primary"]} !important;">{order_idx}. 📄 {ev["title"]}</span>'
                                 f'<span style="font-size:12px; color:#64748b !important;">📅 {exec_date}</span>'
                                 f'</div>'
                                 f'<div style="font-size:13.5px; color:#334155 !important; white-space:pre-line;">{ev.get("description") or ""}</div>'
@@ -1590,13 +1794,13 @@ def main_app():
         else:
             std_id = selected_option
             std_data = [s for s in stds if s['id'] == std_id][0]
-            std_evidences = [e for e in evidences if e['standard_id'] == std_id]
+            std_evidences = sort_evidences_chronologically([e for e in evidences if e['standard_id'] == std_id])
 
             st.markdown(f"##### 📂 الشواهد المرفوعة في البند {std_id}: {std_data['title']} ({len(std_evidences)})")
             if not std_evidences:
                 st.info("لا توجد شواهد مرفوعة في هذا البند حتى الآن. يمكنك إضافة شاهد جديد من النموذج بالأسفل.")
             else:
-                for ev in std_evidences:
+                for order_idx, ev in enumerate(std_evidences, 1):
                     files = ev.get("evidence_files", [])
                     exec_date = ev.get('execution_date') or ev['created_at'][:10]
                     thumbs_html = render_attachments_html(files, signed_urls_map)
@@ -1604,7 +1808,7 @@ def main_app():
                     ev_detail_html = (
                         f'<div class="ev-box">'
                         f'<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">'
-                        f'<span style="font-weight:700; font-size:15.5px; color:{th["primary"]} !important;">📄 {ev["title"]}</span>'
+                        f'<span style="font-weight:700; font-size:15.5px; color:{th["primary"]} !important;">{order_idx}. 📄 {ev["title"]}</span>'
                         f'<span style="background:{th["tint"]}; color:{th["primary_dark"]} !important; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;">'
                         f'📅 تاريخ التنفيذ: {exec_date}</span></div>'
                         f'<div style="font-size:13.5px; color:#334155 !important; line-height:1.6; margin-bottom:6px; white-space:pre-line;">{ev.get("description") or ""}</div>'
@@ -1736,7 +1940,7 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة
+    # 📄 3. صفحة التقارير والطباعة (ترتيب زمني ذكي من الأقدم للأحدث + تضمين الصور في Word و PDF)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
@@ -1751,7 +1955,7 @@ def main_app():
         )
 
         stds_map = {s['id']: s for s in stds}
-        all_evidences = sorted(evidences, key=lambda x: x.get('standard_id', 0))
+        all_evidences = sort_evidences_chronologically(evidences)
         total_evidences = len(all_evidences)
         active_stds = [s for s in stds if len([e for e in all_evidences if e['standard_id'] == s['id']]) > 0]
         covered_stds = len(active_stds)
@@ -2121,9 +2325,10 @@ def main_app():
             </script>
         """, height=62)
 
-        docx_bytes = generate_editable_docx(user_info, active_year, stds, evidences)
+        with st.spinner("جاري تجهيز ملف الـ Word وتضمين صور الشواهد بداخله..."):
+            docx_bytes = generate_editable_docx(user_info, active_year, stds, all_evidences, signed_urls_map)
         st.download_button(
-            label="📄 تصدير Word قابل للتعديل",
+            label="📄 تصدير Word قابل للتعديل (شامل الصور والمرفقات)",
             data=docx_bytes,
             file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -2254,9 +2459,9 @@ def main_app():
                 st.markdown("##### 📤 تصدير ملف الإنجاز والنسخ الاحتياطي (متعدد الصيغ)")
                 st.caption("اختر الصيغة المناسبة لتحميل نسخة كاملة من ملف إنجازك أو قاعدة بياناتك:")
 
-                docx_backup_bytes = generate_editable_docx(user_info, active_year, stds, evidences)
+                docx_backup_bytes = generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_map)
                 st.download_button(
-                    label="📄 تصدير ملف الإنجاز Word قابل للتعديل (.docx)",
+                    label="📄 تصدير ملف الإنجاز Word قابل للتعديل (شامل الصور) (.docx)",
                     data=docx_backup_bytes,
                     file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
