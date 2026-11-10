@@ -203,7 +203,6 @@ def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", vari
     clean_notes = raw_notes.strip()
     ctx = PEDAGOGICAL_CONTEXT.get(std_id, PEDAGOGICAL_CONTEXT[4])
     
-    # الوضع 1: فحص وجود مفتاح Gemini واستدعاء gemini-2.5-flash تلقائياً
     gemini_key = st.secrets.get("gemini_api_key", "") or st.session_state.get("custom_gemini_key", "")
     if gemini_key:
         try:
@@ -241,7 +240,6 @@ def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", vari
         except Exception:
             pass
 
-    # الوضع 2 (الافتراضي المدمج): محرك صياغة القوالب التربوية الذكي
     is_already_long = len(clean_notes) > 160 and ("مؤشرات" in clean_notes or "مستهدفات" in clean_notes or "انطلاقاً" in clean_notes)
     if is_already_long:
         seed_notes = st.session_state.get(f"last_raw_notes_{std_id}", "")
@@ -608,13 +606,12 @@ th = THEMES[active_theme_key]
 ZIYAD_LOGO_SVG = '<svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 7. التصميم الشامل (معالجة جذرية للحقول السوداء في الوضع الليلي للجوال)
+# 7. التصميم الشامل
 # ==========================================
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Readex+Pro:wght@400;500;600;700&display=swap');
 
-/* فرض متغيرات الألوان النهارية على جذر المتصفح و Streamlit لمنع الخلفيات السوداء في الجوال */
 :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
     --text-color: #0f172a !important;
     --background-color: {th['bg']} !important;
@@ -666,9 +663,6 @@ span[data-testid="stIconMaterial"], .material-icons, [class*="material-symbols"]
     direction: ltr !important;
 }}
 
-/* ========================================================= */
-/* الحل الجذري لمشكلة الحقول والقوائم السوداء في الوضع الليلي */
-/* ========================================================= */
 div[data-baseweb="input"],
 div[data-baseweb="input"] > div,
 div[data-baseweb="base-input"],
@@ -695,7 +689,6 @@ div[data-baseweb="select"] > div {{
     box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
 }}
 
-/* النصوص والأيقونات داخل القوائم المنسدلة (Selectbox) */
 div[data-baseweb="select"] span,
 div[data-baseweb="select"] div,
 div[data-baseweb="select"] svg {{
@@ -705,7 +698,6 @@ div[data-baseweb="select"] svg {{
     background-color: transparent !important;
 }}
 
-/* القائمة المنبثقة عند فتح الـ Selectbox في الجوال */
 div[data-baseweb="popover"],
 div[data-baseweb="popover"] > div,
 div[data-baseweb="menu"],
@@ -721,14 +713,12 @@ li[role="option"]:hover, li[role="option"][aria-selected="true"] {{
     color: {th['primary']} !important;
 }}
 
-/* النص الإرشادي (Placeholder) داخل الحقول */
 input::placeholder, textarea::placeholder {{
     color: #64748b !important;
     -webkit-text-fill-color: #64748b !important;
     opacity: 1 !important;
 }}
 
-/* إصلاح صندوق التنبيهات (st.info / st.warning) الذي كان يظهر بمربع كحلي داكن في الوضع الليلي */
 div[data-testid="stAlert"], div[data-testid="stAlert"] > div, div[role="alert"] {{
     background-color: {th['tint']} !important;
     background: {th['tint']} !important;
@@ -742,7 +732,6 @@ div[data-testid="stAlert"] p, div[data-testid="stAlert"] span, div[role="alert"]
     font-weight: 600 !important;
 }}
 
-/* إصلاح مربع رفع الملفات (File Uploader) في الوضع الليلي */
 div[data-testid="stFileUploader"] section {{
     background-color: #ffffff !important;
     border: 1.5px dashed #94a3b8 !important;
@@ -796,7 +785,6 @@ button[data-baseweb="tab"][aria-selected="true"] {{
     border-bottom-color: {th['primary']} !important;
 }}
 
-/* تنسيق الأزرار + زر الذكاء الاصطناعي المميز */
 div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {{
     background-color: #e6f4f1 !important;
     color: {th['primary']} !important;
@@ -843,7 +831,6 @@ div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSub
     font-size: 15px !important;
 }}
 
-/* شريط التنقل والفرز المتجاوب 100% */
 div[data-testid="stRadio"] {{
     width: 100% !important;
     max-width: 100% !important;
@@ -910,7 +897,6 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     -webkit-text-fill-color: #ffffff !important;
 }}
 
-/* الهيدر والبنر المدمج الاحترافي */
 .hero-wrapper {{
     background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%);
     color: white !important;
@@ -970,7 +956,6 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     font-weight: 700;
 }}
 
-/* بطاقات الإحصائيات السريعة */
 .kpi-grid {{
     display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; width: 100%; box-sizing: border-box;
 }}
@@ -981,7 +966,6 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 .kpi-val {{ font-size: 18px; font-weight: 700; color: {th['primary']} !important; text-align: center; }}
 .kpi-lbl {{ font-size: 10.5px; color: #475569 !important; margin-top: 2px; font-weight: 600; text-align: center; }}
 
-/* شريط الإنجاز */
 .progress-card {{
     background: #ffffff; padding: 12px 16px; border-radius: 14px; 
     margin-bottom: 6px; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box;
@@ -994,7 +978,6 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     height: 100%; border-radius: 5px;
 }}
 
-/* بطاقة المعيار */
 .std-card {{
     background: #ffffff; border: 1px solid #e2e8f0; border-radius: 15px;
     padding: 12px 14px; margin-bottom: 2px;
@@ -1018,7 +1001,6 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 .dot-on {{ background: {th['primary']}; }}
 .dot-off {{ background: #e2e8f0; }}
 
-/* المرفقات والصور المصغرة والروابط الخارجية */
 .thumbs-container {{
     display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px 0; align-items: center;
 }}
@@ -1046,7 +1028,6 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     color: #1d4ed8 !important; font-weight: 700; font-size: 12px; text-decoration: none;
 }}
 
-/* بطاقة الشاهد */
 .ev-box {{
     background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px;
     padding: 14px; margin-bottom: 8px; border-right: 4px solid {th['primary']};
@@ -1063,7 +1044,6 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     font-weight: 700; font-size: 13px; text-align: center;
 }}
 
-/* الفوتر الثابت */
 .ziyad-footer {{
     margin-top: 28px;
     padding: 16px 12px;
@@ -1379,7 +1359,7 @@ def main_app():
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة البنود والشواهد (مع المحرك المزدوج الآمن)
+    # 📋 2. صفحة البنود والشواهد
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         st.markdown("#### 📋 استعراض وإدارة بنود الأداء والشواهد")
@@ -1633,7 +1613,7 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة (PDF + Word قابل للتعديل)
+    # 📄 3. صفحة التقارير والطباعة (شبكة 2×2 بحد أقصى 4 صور في الصفحة + صفحات إضافية تلقائية)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
@@ -1657,17 +1637,17 @@ def main_app():
             rep_color = "#146c59"
             rep_sub = "#0f5243"
             cover_border = "6px double #146c59"
-            box_radius = "4px"
+            box_radius = "8px"
         elif report_style.startswith("2."):
             rep_color = th['primary']
             rep_sub = th['primary_dark']
             cover_border = f"3px solid {th['primary']}"
-            box_radius = "14px"
+            box_radius = "12px"
         else:
             rep_color = "#1e293b"
             rep_sub = "#334155"
             cover_border = "2px solid #1e293b"
-            box_radius = "0px"
+            box_radius = "4px"
 
         html_content = f"""
         <!DOCTYPE html>
@@ -1677,38 +1657,151 @@ def main_app():
             <title>ملف الإنجاز المهني - {user_info['full_name']}</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap');
+                * {{ box-sizing: border-box; }}
                 body {{ font-family: 'Readex Pro', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; }}
-                .page {{ background-color: white; width: 210mm; height: 296mm; padding: 10mm 15mm; margin: 0 auto 20mm auto; box-shadow: 0 10px 20px rgba(0,0,0,0.15); box-sizing: border-box; page-break-after: always; page-break-inside: avoid; display: flex; flex-direction: column; overflow: hidden; }}
-                .cover-page {{ border: {cover_border}; border-radius: {box_radius}; padding: 35px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; box-sizing: border-box; }}
+                
+                .page {{
+                    background-color: white;
+                    width: 210mm;
+                    height: 296mm;
+                    padding: 10mm 14mm;
+                    margin: 0 auto 20mm auto;
+                    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+                    page-break-after: always;
+                    page-break-inside: avoid;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                }}
+                
+                .cover-page {{ border: {cover_border}; border-radius: {box_radius}; padding: 35px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; }}
                 .cover-title {{ color: {rep_color}; font-size: 36px; font-weight: 700; margin-bottom: 10px; }}
                 .cover-subtitle {{ font-size: 19px; margin-bottom: 35px; font-weight: 600; color: #475569; }}
                 .info-table {{ width: 88%; border-collapse: collapse; margin: 0 auto; font-size: 16px; }}
                 .info-table th, .info-table td {{ border: 1px solid #cbd5e1; padding: 12px; text-align: center; }}
                 .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: 700; color: {rep_color}; }}
-                .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 8px; margin-bottom: 14px; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }}
+                
+                .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 6px; margin-bottom: 10px; font-size: 12px; font-weight: 700; flex-shrink: 0; }}
                 .header-right {{ color: {rep_color}; }}
                 .header-left {{ text-align: left; }}
+                
                 .index-title {{ color: {rep_color}; font-size: 22px; font-weight: 700; margin-bottom: 16px; }}
                 .index-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
                 .index-table th {{ background-color: #f1f5f9; color: {rep_color}; padding: 10px; text-align: center; border-bottom: 2px solid {rep_color}; }}
                 .index-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; }}
-                .content-wrapper {{ flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }}
-                .std-header {{ background-color: {rep_color}; color: white; padding: 10px 15px; font-size: 15px; font-weight: 700; border-radius: {box_radius} {box_radius} 0 0; flex-shrink: 0; }}
-                .ev-header {{ background-color: {rep_sub}; color: white; padding: 8px 15px; font-size: 13.5px; margin-bottom: 12px; border-radius: 0 0 {box_radius} {box_radius}; flex-shrink: 0; }}
-                .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; flex-shrink: 0; }}
-                .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; text-align: center; border-radius: {box_radius}; }}
-                .meta-title {{ font-size: 11.5px; color: #64748b; font-weight: 600; }}
-                .meta-value {{ font-size: 13.5px; font-weight: 700; color: #0f172a; }}
-                .desc-section {{ margin-bottom: 12px; line-height: 1.6; font-size: 13.5px; padding: 10px; background: #fafafa; border-right: 4px solid {rep_color}; border-radius: {box_radius}; flex-shrink: 0; white-space: pre-line; }}
-                .images-grid {{ flex-grow: 1; display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 0; padding: 5px 0; overflow: hidden; }}
-                .images-grid img {{ max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #cbd5e1; border-radius: {box_radius}; }}
-                .pdf-notice {{ background: #f1f5f9; padding: 8px; text-align: center; border-radius: {box_radius}; font-size: 12.5px; color: #334155; margin-bottom: 8px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
-                .signatures {{ display: flex; justify-content: space-between; margin-top: auto; border-top: 2px solid #e2e8f0; padding-top: 10px; text-align: center; flex-shrink: 0; }}
-                .sig-box {{ width: 42%; }}
-                .print-footer {{ text-align: center; font-size: 10px; color: #64748b; margin-top: 8px; padding-top: 4px; border-top: 1px dashed #e2e8f0; flex-shrink: 0; }}
+                
+                .content-wrapper {{ flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }}
+                
+                /* شريط المعيار والشاهد المدمج كما في المثال المرفق */
+                .top-ev-banner {{
+                    background-color: {rep_color};
+                    color: white;
+                    padding: 10px 16px;
+                    border-radius: {box_radius};
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 10px;
+                    flex-shrink: 0;
+                }}
+                .top-ev-title {{ font-size: 16px; font-weight: 700; }}
+                .top-std-sub {{ font-size: 12.5px; opacity: 0.92; }}
+                
+                .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; flex-shrink: 0; }}
+                .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 7px 12px; text-align: center; border-radius: {box_radius}; }}
+                .meta-title {{ font-size: 11px; color: #64748b; font-weight: 600; }}
+                .meta-value {{ font-size: 13px; font-weight: 700; color: #0f172a; }}
+                
+                .desc-header {{
+                    border-right: 4px solid {rep_color};
+                    padding-right: 8px;
+                    font-size: 13.5px;
+                    font-weight: 700;
+                    color: {rep_color};
+                    margin-bottom: 4px;
+                    flex-shrink: 0;
+                }}
+                .desc-section {{
+                    margin-bottom: 10px;
+                    line-height: 1.55;
+                    font-size: 12.5px;
+                    color: #1e293b;
+                    padding: 8px 10px;
+                    background: #fafafa;
+                    border: 1px solid #f1f5f9;
+                    border-radius: {box_radius};
+                    flex-shrink: 0;
+                    white-space: pre-line;
+                    max-height: 44mm;
+                    overflow: hidden;
+                }}
+                
+                .shawahed-bar {{
+                    background-color: #e6f2ef;
+                    color: {rep_color};
+                    text-align: center;
+                    font-weight: 700;
+                    font-size: 13px;
+                    padding: 5px;
+                    border-radius: 6px;
+                    margin-bottom: 8px;
+                    flex-shrink: 0;
+                }}
+
+                /* شبكة الصور الذكية (تمنع قص الصور نهائياً وتدعم حتى 4 صور 2×2 في الصفحة) */
+                .images-grid {{
+                    flex: 1 1 auto;
+                    display: grid;
+                    gap: 10px;
+                    width: 100%;
+                    min-height: 0;
+                    overflow: hidden;
+                    margin-bottom: 6px;
+                }}
+                .images-grid.count-1 {{
+                    grid-template-columns: 1fr;
+                    grid-template-rows: minmax(0, 1fr);
+                }}
+                .images-grid.count-2 {{
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    grid-template-rows: minmax(0, 1fr);
+                }}
+                .images-grid.count-3, .images-grid.count-4 {{
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    grid-template-rows: repeat(2, minmax(0, 1fr));
+                }}
+                .img-frame {{
+                    background-color: #f8f9fa;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 6px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 100%;
+                    height: 100%;
+                    min-width: 0;
+                    min-height: 0;
+                    overflow: hidden;
+                }}
+                .img-frame img {{
+                    width: 100%;
+                    height: 100%;
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: contain !important;
+                    display: block;
+                    border-radius: 6px;
+                }}
+
+                .pdf-notice {{ background: #f1f5f9; padding: 6px; text-align: center; border-radius: 6px; font-size: 11.5px; color: #334155; margin-bottom: 6px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
+                .signatures {{ display: flex; justify-content: space-between; margin-top: auto; border-top: 1.5px solid #e2e8f0; padding-top: 8px; text-align: center; flex-shrink: 0; }}
+                .sig-box {{ width: 42%; font-size: 12.5px; }}
+                .print-footer {{ text-align: center; font-size: 9.5px; color: #64748b; margin-top: 6px; padding-top: 4px; border-top: 1px dashed #e2e8f0; flex-shrink: 0; }}
+                
                 @media print {{
                     body {{ background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                    .page {{ width: 210mm; height: 296mm; margin: 0; padding: 10mm 15mm; box-shadow: none; border: none; }}
+                    .page {{ width: 210mm; height: 296mm; margin: 0; padding: 10mm 14mm; box-shadow: none; border: none; }}
                     @page {{ size: A4 portrait; margin: 0; }}
                 }}
             </style>
@@ -1716,6 +1809,7 @@ def main_app():
         <body>
         """
         
+        # 1. صفحة الغلاف
         html_content += f"""
         <div class="page">
             <div class="cover-page">
@@ -1742,15 +1836,16 @@ def main_app():
         <div class="header-container">
             <div class="header-right">
                 منصة زياد الذكية | أ. {user_info['full_name']}<br>
-                <span style="font-size:11px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - العام الدراسي {active_year['year_name']}هـ</span>
+                <span style="font-size:10.5px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - العام الدراسي {active_year['year_name']}هـ</span>
             </div>
             <div class="header-left">
                 المملكة العربية السعودية<br>
-                <span style="font-size:11px; font-weight:normal; color:#666;">وزارة التعليم - {user_info['school_name']}</span>
+                <span style="font-size:10.5px; font-weight:normal; color:#666;">وزارة التعليم - {user_info['school_name']}</span>
             </div>
         </div>
         """
         
+        # 2. صفحة الفهرس
         html_content += f"""
         <div class="page">
             {shared_header}
@@ -1770,11 +1865,13 @@ def main_app():
         </div>
         """
         
+        # 3. صفحات الشواهد (تقسيم الصور إلى مجموعات من 4 صور كحد أقصى لكل صفحة A4)
         for ev in all_evidences:
             std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
             exec_date = ev.get('execution_date') or ev['created_at'][:10]
             files = ev.get('evidence_files', [])
-            img_html = ""
+            
+            img_urls = []
             pdf_count = 0
             ext_links = []
             for f in files:
@@ -1785,42 +1882,83 @@ def main_app():
                 elif f_type.startswith('image/'):
                     sec_u = signed_urls_map.get(f_url, '')
                     if sec_u:
-                        img_html += f"<img src='{sec_u}'>"
+                        img_urls.append(sec_u)
                 elif f_type == 'application/pdf':
                     pdf_count += 1
-                    
+
+            # تقسيم الصور بحيث تأخذ كل صفحة 4 صور كحد أقصى (شبكة 2×2)
+            img_chunks = [img_urls[i:i + 4] for i in range(0, len(img_urls), 4)]
+            if not img_chunks:
+                img_chunks = [[]]
+
+            total_chunks = len(img_chunks)
             pdf_notice = f"<div class='pdf-notice'>📌 مرفق مستند PDF رسمي عدد ({pdf_count}) محفوظ في النظام الإلكتروني.</div>" if pdf_count > 0 else ""
             link_notice = f"<div class='pdf-notice'>🔗 رابط إلكتروني مرفق: {ext_links[0]}</div>" if ext_links else ""
-            images_section = f"<div class='images-grid'>{img_html}</div>" if img_html else ""
-            
-            html_content += f"""
-            <div class="page">
-                {shared_header}
-                <div class="content-wrapper">
-                    <div class="std-header">المعيار {ev['standard_id']}: {std['title']} (الوزن {std['weight']}%)</div>
-                    <div class="ev-header">الشاهد: {ev['title']}</div>
-                    <div class="meta-grid">
-                        <div class="meta-box"><div class="meta-title">تاريخ التنفيذ الفعلي</div><div class="meta-value">{exec_date}</div></div>
-                        <div class="meta-box"><div class="meta-title">حالة التوثيق</div><div class="meta-value">شاهد معتمد وموثق</div></div>
+
+            for chunk_idx, chunk in enumerate(img_chunks):
+                c_len = len(chunk)
+                grid_cls = f"count-{c_len}" if c_len in [1, 2, 3, 4] else "count-4"
+                frames_html = "".join([f"<div class='img-frame'><img src='{u}'></div>" for u in chunk])
+                images_section = f"<div class='shawahed-bar'>الشواهد{f' (صفحة {chunk_idx+1} من {total_chunks})' if total_chunks > 1 else ''}</div><div class='images-grid {grid_cls}'>{frames_html}</div>" if c_len > 0 else ""
+
+                if chunk_idx == 0:
+                    # الصفحة الأولى للشاهد (تحتوي على الوصف والبيانات وأول 4 صور كحد أقصى)
+                    html_content += f"""
+                    <div class="page">
+                        {shared_header}
+                        <div class="content-wrapper">
+                            <div class="top-ev-banner">
+                                <span class="top-ev-title">{ev['title']}</span>
+                                <span class="top-std-sub">البند {ev['standard_id']}: {std['title']} ({std['weight']}%)</span>
+                            </div>
+                            <div class="meta-grid">
+                                <div class="meta-box"><div class="meta-title">تاريخ التنفيذ</div><div class="meta-value">{exec_date}</div></div>
+                                <div class="meta-box"><div class="meta-title">نوع الشاهد</div><div class="meta-value">شاهد ميداني موثق</div></div>
+                            </div>
+                            <div class="desc-header">الوصف</div>
+                            <div class="desc-section">{ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'}</div>
+                            {pdf_notice}
+                            {link_notice}
+                            {images_section}
+                        </div>
+                        <div class="signatures">
+                            <div class="sig-box">
+                                <div style="color:#666; font-size:11.5px; margin-bottom:10px;">المعلم:</div>
+                                <div style="font-weight:bold;">{user_info['full_name']}</div>
+                            </div>
+                            <div class="sig-box">
+                                <div style="color:#666; font-size:11.5px; margin-bottom:10px;">مدير المدرسة:</div>
+                                <div style="font-weight:bold;">{user_info['principal_name']}</div>
+                            </div>
+                        </div>
+                        <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
                     </div>
-                    <div class="desc-section"><strong>وصف الشاهد والأثر:</strong><br>{ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'}</div>
-                    {pdf_notice}
-                    {link_notice}
-                    {images_section}
-                </div>
-                <div class="signatures">
-                    <div class="sig-box">
-                        <div style="color:#666; font-size:12px; margin-bottom:16px;">المعلم:</div>
-                        <div style="font-weight:bold;">{user_info['full_name']}</div>
+                    """
+                else:
+                    # صفحات إضافية تلقائية في حال وجود أكثر من 4 صور للشاهد الواحد
+                    html_content += f"""
+                    <div class="page">
+                        {shared_header}
+                        <div class="content-wrapper">
+                            <div class="top-ev-banner">
+                                <span class="top-ev-title">تابع: {ev['title']}</span>
+                                <span class="top-std-sub">البند {ev['standard_id']}: {std['title']} (صفحة {chunk_idx+1} من {total_chunks})</span>
+                            </div>
+                            {images_section}
+                        </div>
+                        <div class="signatures">
+                            <div class="sig-box">
+                                <div style="color:#666; font-size:11.5px; margin-bottom:10px;">المعلم:</div>
+                                <div style="font-weight:bold;">{user_info['full_name']}</div>
+                            </div>
+                            <div class="sig-box">
+                                <div style="color:#666; font-size:11.5px; margin-bottom:10px;">مدير المدرسة:</div>
+                                <div style="font-weight:bold;">{user_info['principal_name']}</div>
+                            </div>
+                        </div>
+                        <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
                     </div>
-                    <div class="sig-box">
-                        <div style="color:#666; font-size:12px; margin-bottom:16px;">مدير المدرسة:</div>
-                        <div style="font-weight:bold;">{user_info['principal_name']}</div>
-                    </div>
-                </div>
-                <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
-            </div>
-            """
+                    """
         
         html_content += "</body></html>"
         safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
@@ -1836,7 +1974,35 @@ def main_app():
                     var win = window.open('', '_blank');
                     win.document.write(`{safe_html}`);
                     win.document.close();
-                    setTimeout(function() {{ win.print(); }}, 1200);
+                    // الانتظار حتى تكتمل كافة الصور في التقرير قبل استدعاء الطباعة
+                    var imgs = Array.from(win.document.images);
+                    if (imgs.length === 0) {{
+                        setTimeout(function() {{ win.print(); }}, 600);
+                    }} else {{
+                        var loaded = 0;
+                        var printed = false;
+                        function checkDone() {{
+                            if (!printed && loaded >= imgs.length) {{
+                                printed = true;
+                                setTimeout(function() {{ win.print(); }}, 400);
+                            }}
+                        }}
+                        imgs.forEach(function(img) {{
+                            if (img.complete) {{
+                                loaded++;
+                                checkDone();
+                            }} else {{
+                                img.onload = function() {{ loaded++; checkDone(); }};
+                                img.onerror = function() {{ loaded++; checkDone(); }};
+                            }}
+                        }});
+                        setTimeout(function() {{
+                            if (!printed) {{
+                                printed = true;
+                                win.print();
+                            }}
+                        }}, 3500);
+                    }}
                 }}
             </script>
         """, height=62)
