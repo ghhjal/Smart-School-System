@@ -791,8 +791,8 @@ div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
     border: 1px solid #b7e0d6 !important;
     border-radius: 99px !important;
     font-weight: 700 !important;
-    min-height: 44px !important;
-    padding: 0.4rem 1rem !important;
+    min-height: 42px !important;
+    padding: 0.35rem 0.9rem !important;
     transition: all 0.18s ease !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
 }}
@@ -800,7 +800,7 @@ div[data-testid="stButton"] button p, div[data-testid="stDownloadButton"] button
     color: {th['primary']} !important;
     -webkit-text-fill-color: {th['primary']} !important;
     font-weight: 700 !important;
-    font-size: 13.5px !important;
+    font-size: 13px !important;
 }}
 div[data-testid="stDownloadButton"] button {{
     background-color: #ffffff !important;
@@ -1069,7 +1069,7 @@ if "visitor" in query_params and st.session_state.user is None:
         st.session_state.is_visitor = True
 
 # ==========================================
-# 8. دوال التاريخ والترحيب والفوتر وعرض المرفقات
+# 8. دوال التاريخ والترحيب والفوتر وإدارة وتعديل ونقل الشاهد
 # ==========================================
 def get_greeting_and_dates():
     tz = datetime.timezone(datetime.timedelta(hours=3))
@@ -1111,6 +1111,151 @@ def render_attachments_html(files, signed_urls_map):
                 thumbs_html += f'<a href="{sec_url}" target="_blank" class="pdf-badge">📄 ملف PDF ({i+1})</a>'
     thumbs_html += '</div>'
     return thumbs_html
+
+def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
+    """
+    مكون موحد لتعديل الشاهد، أو نقله إلى بند آخر، أو حذف أي صورة/مرفق فردي منه دون الحاجة لحذف الشاهد بالكامل
+    """
+    files = ev.get("evidence_files", [])
+    exec_date = ev.get('execution_date') or ev['created_at'][:10]
+    existing_links = [f['file_url'] for f in files if f.get('file_type') == 'external/link' or f.get('file_url', '').startswith('http')]
+    current_ext_link = existing_links[0] if existing_links else ""
+    storage_files = [f for f in files if f.get('file_type') != 'external/link' and not f.get('file_url', '').startswith('http')]
+
+    std_options_dict = {s['id']: f"البند {s['id']}: {s['title']}" for s in stds}
+    std_ids_list = list(std_options_dict.keys())
+    current_ev_std_id = ev.get('standard_id', 1)
+    default_std_idx = std_ids_list.index(current_ev_std_id) if current_ev_std_id in std_ids_list else 0
+
+    ed_col, del_col = st.columns(2)
+    with ed_col:
+        with st.expander("✏️ تعديل الشاهد / نقل البند / إدارة الصور"):
+            # 1. قسم إدارة وحذف الصور أو ملفات الـ PDF الحالية بشكل فردي ومستقل
+            if storage_files:
+                st.markdown("**🖼️ المرفقات الحالية (اضغط على حذف تحت أي صورة لإزالتها بمفردها):**")
+                att_cols = st.columns(min(len(storage_files), 3))
+                for idx_f, f_obj in enumerate(storage_files):
+                    with att_cols[idx_f % 3]:
+                        f_u = signed_urls_map.get(f_obj['file_url'], '')
+                        if f_obj.get('file_type', '').startswith('image/') and f_u:
+                            st.markdown(
+                                f'<div style="border:1px solid #cbd5e1; border-radius:10px; padding:4px; background:#f8fafc; text-align:center; margin-bottom:4px;">'
+                                f'<img src="{f_u}" style="width:100%; height:85px; object-fit:cover; border-radius:7px;">'
+                                f'</div>',
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.markdown(
+                                f'<div style="border:1px dashed #64748b; border-radius:10px; height:85px; display:flex; align-items:center; justify-content:center; background:#f8fafc; margin-bottom:4px; font-weight:700; font-size:12px;">'
+                                f'📄 ملف PDF ({idx_f+1})'
+                                f'</div>',
+                                unsafe_allow_html=True
+                            )
+                        if st.button(f"🗑️ حذف المرفق ({idx_f+1})", key=f"{key_prefix}del_att_{ev['id']}_{f_obj['id']}", use_container_width=True):
+                            try:
+                                supabase.storage.from_("private-achievements").remove([f_obj['file_url']])
+                            except Exception:
+                                pass
+                            supabase.table("evidence_files").delete().eq("id", f_obj['id']).execute()
+                            clear_app_cache()
+                            st.success("تم حذف المرفق المحدد بنجاح مع بقاء الشاهد وبقية بياناته!")
+                            time.sleep(0.3)
+                            st.rerun()
+                st.write("---")
+
+            # 2. نموذج تعديل البيانات ونقل الشاهد إلى بند آخر وإضافة مرفقات جديدة
+            with st.form(f"{key_prefix}edit_form_{ev['id']}"):
+                new_std_id = st.selectbox(
+                    "⇄ البند (المعيار) التابع له الشاهد (اختر بنداً آخر لنقله):",
+                    options=std_ids_list,
+                    format_func=lambda x: std_options_dict[x],
+                    index=default_std_idx,
+                    key=f"{key_prefix}move_std_{ev['id']}"
+                )
+                new_t = st.text_input("عنوان الشاهد:", value=ev['title'])
+                try:
+                    default_d = datetime.date.fromisoformat(str(exec_date)[:10])
+                except Exception:
+                    default_d = datetime.date.today()
+                new_exec_date = st.date_input("📅 تاريخ التنفيذ:", value=default_d)
+                new_d = st.text_area("وصف الشاهد:", value=ev.get('description', ''), height=110)
+                
+                new_files = st.file_uploader(
+                    "📎 رفع صور أو ملفات PDF جديدة (اختياري):",
+                    type=["pdf", "jpg", "jpeg", "png"],
+                    accept_multiple_files=True,
+                    key=f"{key_prefix}up_{ev['id']}"
+                )
+                upload_mode = st.selectbox(
+                    "طريقة التعامل مع المرفقات الجديدة عند رفعها:",
+                    [
+                        "➕ إضافة الملفات الجديدة إلى المرفقات الحالية",
+                        "🔄 استبدال وحذف جميع المرفقات السابقة بالملفات الجديدة"
+                    ],
+                    key=f"{key_prefix}mode_{ev['id']}"
+                )
+                new_ext_link = st.text_input("🔗 أو رابط خارجي (امسحه لحذفه أو عدله):", value=current_ext_link, placeholder="https://")
+                
+                if st.form_submit_button("حفظ التعديلات 💾", type="primary", use_container_width=True):
+                    update_payload = {
+                        "standard_id": new_std_id,
+                        "title": new_t,
+                        "description": new_d,
+                        "execution_date": str(new_exec_date)
+                    }
+                    try:
+                        supabase.table("evidences").update(update_payload).eq("id", ev['id']).execute()
+                    except Exception:
+                        update_payload.pop("execution_date", None)
+                        supabase.table("evidences").update(update_payload).eq("id", ev['id']).execute()
+                        
+                    if new_files:
+                        if upload_mode.startswith("🔄"):
+                            old_storage_paths = [f['file_url'] for f in storage_files]
+                            if old_storage_paths:
+                                try:
+                                    supabase.storage.from_("private-achievements").remove(old_storage_paths)
+                                except Exception:
+                                    pass
+                            for f in storage_files:
+                                supabase.table("evidence_files").delete().eq("id", f['id']).execute()
+                                
+                        for nf in new_files:
+                            ext = nf.name.split('.')[-1]
+                            path = f"{ev['id']}/{uuid.uuid4()}.{ext}"
+                            supabase.storage.from_("private-achievements").upload(path=path, file=nf.getvalue(), file_options={"content-type": nf.type})
+                            supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": path, "file_type": nf.type}).execute()
+
+                    if new_ext_link.strip() != current_ext_link:
+                        for f in files:
+                            if f.get('file_type') == 'external/link' or f.get('file_url', '').startswith('http'):
+                                supabase.table("evidence_files").delete().eq("id", f['id']).execute()
+                        if new_ext_link.strip():
+                            supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": new_ext_link.strip(), "file_type": "external/link"}).execute()
+
+                    clear_app_cache()
+                    if new_std_id != current_ev_std_id:
+                        st.success(f"تم حفظ التعديلات ونقل الشاهد إلى ({std_options_dict[new_std_id]}) بنجاح!")
+                    else:
+                        st.success("تم حفظ التعديلات بنجاح!")
+                    time.sleep(0.4)
+                    st.rerun()
+
+    with del_col:
+        with st.expander("🗑️ حذف الشاهد بالكامل"):
+            st.caption("سيتم حذف هذا الشاهد مع كافة مرفقاته نهائياً.")
+            if st.button("تأكيد حذف الشاهد نهائياً", key=f"{key_prefix}confirm_del_{ev['id']}", type="primary", use_container_width=True):
+                old_storage_paths = [f['file_url'] for f in storage_files]
+                if old_storage_paths:
+                    try:
+                        supabase.storage.from_("private-achievements").remove(old_storage_paths)
+                    except Exception:
+                        pass
+                supabase.table("evidences").delete().eq("id", ev['id']).execute()
+                clear_app_cache()
+                st.success("تم حذف الشاهد!")
+                time.sleep(0.3)
+                st.rerun()
 
 def render_footer():
     year_now = datetime.date.today().year
@@ -1359,7 +1504,7 @@ def main_app():
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة البنود والشواهد
+    # 📋 2. صفحة البنود والشواهد (مع التعديل وحذف الصور الفردية ونقل الشاهد لبند آخر)
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         st.markdown("#### 📋 استعراض وإدارة بنود الأداء والشواهد")
@@ -1404,7 +1549,9 @@ def main_app():
                                 f'{thumbs_html}</div>'
                             )
                             st.markdown(ev_card, unsafe_allow_html=True)
-                    if st.button(f"📂 فتح صفحة البند {s['id']} للإدارة والإضافة", key=f"jump_std_{s['id']}", type="primary", use_container_width=True):
+                            if not is_visitor:
+                                render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix="all_")
+                    if st.button(f"➕ إضافة شاهد جديد للبند {s['id']}", key=f"jump_std_{s['id']}", type="primary", use_container_width=True):
                         navigate_to('standard_view', s['id'])
 
         else:
@@ -1421,9 +1568,6 @@ def main_app():
                     exec_date = ev.get('execution_date') or ev['created_at'][:10]
                     thumbs_html = render_attachments_html(files, signed_urls_map)
 
-                    existing_links = [f['file_url'] for f in files if f.get('file_type') == 'external/link' or f.get('file_url', '').startswith('http')]
-                    current_ext_link = existing_links[0] if existing_links else ""
-
                     ev_detail_html = (
                         f'<div class="ev-box">'
                         f'<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">'
@@ -1436,61 +1580,7 @@ def main_app():
                     st.markdown(ev_detail_html, unsafe_allow_html=True)
 
                     if not is_visitor:
-                        ed_col, del_col = st.columns(2)
-                        with ed_col:
-                            with st.expander("✏️ تعديل الشاهد"):
-                                with st.form(f"edit_form_{ev['id']}"):
-                                    new_t = st.text_input("عنوان الشاهد:", value=ev['title'])
-                                    try:
-                                        default_d = datetime.date.fromisoformat(str(exec_date)[:10])
-                                    except Exception:
-                                        default_d = datetime.date.today()
-                                    new_exec_date = st.date_input("📅 تاريخ التنفيذ:", value=default_d)
-                                    new_d = st.text_area("وصف الشاهد:", value=ev.get('description', ''))
-                                    new_files = st.file_uploader("استبدال المرفقات (صور أو PDF - اختياري):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True, key=f"up_{ev['id']}")
-                                    new_ext_link = st.text_input("🔗 أو رابط (يوتيوب، مدرستي...):", value=current_ext_link, placeholder="https://")
-                                    
-                                    if st.form_submit_button("حفظ التعديل 💾", type="primary", use_container_width=True):
-                                        update_payload = {"title": new_t, "description": new_d, "execution_date": str(new_exec_date)}
-                                        try:
-                                            supabase.table("evidences").update(update_payload).eq("id", ev['id']).execute()
-                                        except Exception:
-                                            supabase.table("evidences").update({"title": new_t, "description": new_d}).eq("id", ev['id']).execute()
-                                            
-                                        if new_files:
-                                            old_storage_paths = [f['file_url'] for f in files if not f.get('file_url', '').startswith('http')]
-                                            if old_storage_paths:
-                                                supabase.storage.from_("private-achievements").remove(old_storage_paths)
-                                            supabase.table("evidence_files").delete().eq("evidence_id", ev['id']).execute()
-                                            for nf in new_files:
-                                                ext = nf.name.split('.')[-1]
-                                                path = f"{ev['id']}/{uuid.uuid4()}.{ext}"
-                                                supabase.storage.from_("private-achievements").upload(path=path, file=nf.getvalue(), file_options={"content-type": nf.type})
-                                                supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": path, "file_type": nf.type}).execute()
-                                            if new_ext_link.strip():
-                                                supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": new_ext_link.strip(), "file_type": "external/link"}).execute()
-                                        elif new_ext_link.strip() != current_ext_link:
-                                            for f in files:
-                                                if f.get('file_type') == 'external/link' or f.get('file_url', '').startswith('http'):
-                                                    supabase.table("evidence_files").delete().eq("id", f['id']).execute()
-                                            if new_ext_link.strip():
-                                                supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": new_ext_link.strip(), "file_type": "external/link"}).execute()
-
-                                        clear_app_cache()
-                                        st.success("تم التحديث بنجاح!")
-                                        time.sleep(0.3)
-                                        st.rerun()
-                        with del_col:
-                            with st.expander("🗑️ حذف الشاهد"):
-                                if st.button("تأكيد الحذف النهائي", key=f"confirm_del_{ev['id']}", type="primary", use_container_width=True):
-                                    old_storage_paths = [f['file_url'] for f in files if not f.get('file_url', '').startswith('http')]
-                                    if old_storage_paths:
-                                        supabase.storage.from_("private-achievements").remove(old_storage_paths)
-                                    supabase.table("evidences").delete().eq("id", ev['id']).execute()
-                                    clear_app_cache()
-                                    st.success("تم الحذف!")
-                                    time.sleep(0.3)
-                                    st.rerun()
+                        render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix="single_")
 
             db_subs = [item['title'] for item in all_subs if item.get('standard_id') == std_id]
             sub_options = db_subs if db_subs else DEFAULT_SUB_ITEMS.get(std_id, [])
@@ -1692,7 +1782,6 @@ def main_app():
                 
                 .content-wrapper {{ flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }}
                 
-                /* شريط المعيار والشاهد المدمج كما في المثال المرفق */
                 .top-ev-banner {{
                     background-color: {rep_color};
                     color: white;
@@ -1748,7 +1837,6 @@ def main_app():
                     flex-shrink: 0;
                 }}
 
-                /* شبكة الصور الذكية (تمنع قص الصور نهائياً وتدعم حتى 4 صور 2×2 في الصفحة) */
                 .images-grid {{
                     flex: 1 1 auto;
                     display: grid;
@@ -1809,7 +1897,6 @@ def main_app():
         <body>
         """
         
-        # 1. صفحة الغلاف
         html_content += f"""
         <div class="page">
             <div class="cover-page">
@@ -1845,7 +1932,6 @@ def main_app():
         </div>
         """
         
-        # 2. صفحة الفهرس
         html_content += f"""
         <div class="page">
             {shared_header}
@@ -1865,7 +1951,6 @@ def main_app():
         </div>
         """
         
-        # 3. صفحات الشواهد (تقسيم الصور إلى مجموعات من 4 صور كحد أقصى لكل صفحة A4)
         for ev in all_evidences:
             std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
             exec_date = ev.get('execution_date') or ev['created_at'][:10]
@@ -1886,7 +1971,6 @@ def main_app():
                 elif f_type == 'application/pdf':
                     pdf_count += 1
 
-            # تقسيم الصور بحيث تأخذ كل صفحة 4 صور كحد أقصى (شبكة 2×2)
             img_chunks = [img_urls[i:i + 4] for i in range(0, len(img_urls), 4)]
             if not img_chunks:
                 img_chunks = [[]]
@@ -1902,7 +1986,6 @@ def main_app():
                 images_section = f"<div class='shawahed-bar'>الشواهد{f' (صفحة {chunk_idx+1} من {total_chunks})' if total_chunks > 1 else ''}</div><div class='images-grid {grid_cls}'>{frames_html}</div>" if c_len > 0 else ""
 
                 if chunk_idx == 0:
-                    # الصفحة الأولى للشاهد (تحتوي على الوصف والبيانات وأول 4 صور كحد أقصى)
                     html_content += f"""
                     <div class="page">
                         {shared_header}
@@ -1935,7 +2018,6 @@ def main_app():
                     </div>
                     """
                 else:
-                    # صفحات إضافية تلقائية في حال وجود أكثر من 4 صور للشاهد الواحد
                     html_content += f"""
                     <div class="page">
                         {shared_header}
@@ -1974,7 +2056,6 @@ def main_app():
                     var win = window.open('', '_blank');
                     win.document.write(`{safe_html}`);
                     win.document.close();
-                    // الانتظار حتى تكتمل كافة الصور في التقرير قبل استدعاء الطباعة
                     var imgs = Array.from(win.document.images);
                     if (imgs.length === 0) {{
                         setTimeout(function() {{ win.print(); }}, 600);
@@ -2017,7 +2098,7 @@ def main_app():
         )
 
     # ----------------------------------------
-    # ⚙️ 4. صفحة حسابي (البيانات + الأرشيف والنسخ + مشاركة الزوار + إعداد Gemini الاختياري)
+    # ⚙️ 4. صفحة حسابي
     # ----------------------------------------
     elif st.session_state.current_page == 'settings' and not is_visitor:
         st.markdown("#### ⚙️ إعدادات الحساب والمظهر والأرشيف والنسخ الاحتياطي")
