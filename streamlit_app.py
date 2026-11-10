@@ -3,6 +3,9 @@ from supabase import create_client
 import time
 import uuid
 import json
+import re
+import html
+import base64
 import datetime
 import zipfile
 import urllib.request
@@ -296,7 +299,7 @@ def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", vari
     }
 
 # ==========================================
-# 5. الاتصال بقاعدة البيانات والفرز الزمني الذكي (الأقدم ثم الأحدث)
+# 5. الاتصال الآمن بقاعدة البيانات، ضغط الصور، والفرز الزمني الذكي
 # ==========================================
 @st.cache_resource
 def init_connection():
@@ -308,6 +311,8 @@ supabase = init_connection()
 
 if 'user' not in st.session_state:
     st.session_state.user = None
+if 'auth_tokens' not in st.session_state:
+    st.session_state.auth_tokens = None
 if 'is_visitor' not in st.session_state:
     st.session_state.is_visitor = False
 if 'current_page' not in st.session_state:
@@ -322,19 +327,68 @@ if 'custom_gemini_key' not in st.session_state:
     st.session_state.custom_gemini_key = ""
 if 'ready_docx_bytes' not in st.session_state:
     st.session_state.ready_docx_bytes = None
-if 'ready_pdf_html' not in st.session_state:
-    st.session_state.ready_pdf_html = None
+if 'ready_pdf_b64' not in st.session_state:
+    st.session_state.ready_pdf_b64 = None
+if 'auto_open_pdf' not in st.session_state:
+    st.session_state.auto_open_pdf = False
+
+# استعادة جلسة المصادقة في حال إعادة تشغيل الخادم لضمان عدم انقطاع عمل المعلم
+if st.session_state.user is not None and st.session_state.auth_tokens:
+    try:
+        curr_sess = supabase.auth.get_session()
+        if curr_sess is None:
+            supabase.auth.set_session(
+                st.session_state.auth_tokens["access_token"],
+                st.session_state.auth_tokens["refresh_token"]
+            )
+    except Exception:
+        pass
 
 def clear_app_cache():
     st.cache_data.clear()
     st.session_state.ready_docx_bytes = None
-    st.session_state.ready_pdf_html = None
+    st.session_state.ready_pdf_b64 = None
+    st.session_state.auto_open_pdf = False
 
 def navigate_to(page_name, std_id=None):
     st.session_state.current_page = page_name
     if std_id is not None:
         st.session_state.view_standard_id = std_id
     st.rerun()
+
+def optimize_uploaded_image(up_file):
+    """
+    ضغط وتحسين صور الجوال عالية الدقة تلقائياً عند الرفع لتوفير 90% من مساحة السحابة
+    ومنع بطء التصفح أو امتلاء الذاكرة عند توليد ملفات PDF و Word
+    """
+    raw_bytes = up_file.getvalue()
+    mime_type = up_file.type or ""
+    ext = up_file.name.split('.')[-1].lower() if '.' in up_file.name else "bin"
+
+    if not mime_type.startswith("image/"):
+        return raw_bytes, mime_type, ext
+
+    # إذا كانت الصورة صغيرة الحجم أصلاً (< 350KB) وصيغتها قياسية، نرفعها كما هي
+    if len(raw_bytes) < 350 * 1024 and ext in ("jpg", "jpeg", "png"):
+        return raw_bytes, mime_type, ext
+
+    try:
+        img = Image.open(BytesIO(raw_bytes))
+        if img.mode in ("RGBA", "LA", "P"):
+            bg = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "P":
+                img = img.convert("RGBA")
+            bg.paste(img, mask=img.split()[-1] if len(img.split()) == 4 else None)
+            img = bg
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+
+        img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+        out_buf = BytesIO()
+        img.save(out_buf, format="JPEG", quality=85, optimize=True)
+        return out_buf.getvalue(), "image/jpeg", "jpg"
+    except Exception:
+        return raw_bytes, mime_type, ext
 
 def sort_evidences_chronologically(ev_list):
     def _sort_key(ev):
@@ -397,12 +451,22 @@ def get_user_profile():
 
 @st.cache_data(ttl=180)
 def fetch_all_years():
-    res = supabase.table("academic_years").select("*").order("created_at", desc=True).execute()
-    return res.data if res.data else []
+    try:
+        res = supabase.table("academic_years").select("*").order("created_at", desc=True).execute()
+        if res.data:
+            return res.data
+        # إنشاء عام افتراضي تلقائياً في حال كانت قاعدة البيانات جديدة أو فارغة
+        ins = supabase.table("academic_years").insert({"year_name": "1448", "is_active": True}).execute()
+        return ins.data if ins.data else []
+    except Exception:
+        return []
 
 @st.cache_data(ttl=300)
 def fetch_standards_and_subs():
-    stds = supabase.table("standards").select("*").order("id").execute().data
+    try:
+        stds = supabase.table("standards").select("*").order("id").execute().data
+    except Exception:
+        stds = []
     try:
         subs = supabase.table("sub_items").select("*").execute().data
     except Exception:
@@ -413,17 +477,21 @@ def fetch_standards_and_subs():
 def fetch_year_evidences(year_id):
     if not year_id:
         return []
-    res = supabase.table("evidences").select("*, evidence_files(*)").eq("year_id", year_id).execute()
-    raw_data = res.data if res.data else []
-    return sort_evidences_chronologically(raw_data)
+    try:
+        res = supabase.table("evidences").select("*, evidence_files(*)").eq("year_id", year_id).execute()
+        raw_data = res.data if res.data else []
+        return sort_evidences_chronologically(raw_data)
+    except Exception:
+        return []
 
 @st.cache_data(ttl=1800)
 def get_signed_urls_batch(paths_tuple):
     if not paths_tuple:
         return {}
     url_map = {}
-    storage_paths = [p for p in paths_tuple if not p.startswith("http")]
-    for p in paths_tuple:
+    unique_paths = list(dict.fromkeys(paths_tuple))
+    storage_paths = [p for p in unique_paths if not p.startswith("http")]
+    for p in unique_paths:
         if p.startswith("http"):
             url_map[p] = p
     if storage_paths:
@@ -484,8 +552,15 @@ def fetch_and_prepare_word_image(file_path, signed_url=""):
         return None
 
 # ==========================================
-# 6. محرك توليد ملف Word قابل للتعديل (.docx) مع تضمين الصور الفعلي
+# 6. محرك توليد ملف Word قابل للتعديل (.docx) محصن ضد الرموز الخفية
 # ==========================================
+def clean_xml_text(val):
+    """إزالة أي رموز تحكم خفية غير صالحة في XML 1.0 لمنع رسائل خطأ أوفيس"""
+    if val is None:
+        return ""
+    cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', str(val))
+    return cleaned
+
 def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_map):
     stds_map = {s['id']: s for s in stds}
     sorted_evs = sort_evidences_chronologically(evidences)
@@ -499,13 +574,12 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
     def w_para(text, bold=False, size_pt=12, color="1E293B", align="right", space_after=120):
         sz = int(size_pt * 2)
         b_tag = "<w:b/><w:bCs/>" if bold else ""
-        return f"""
-        <w:p>
-            <w:pPr>
-                <w:bidi/>
-                <w:jc w:val="{align}"/>
-                <w:spacing w:after="{space_after}"/>
-            </w:pPr>
+        safe_txt = clean_xml_text(text)
+        lines = safe_txt.split('\n')
+        runs_xml = ""
+        for l_idx, line_str in enumerate(lines):
+            br_tag = "<w:br/>" if l_idx > 0 else ""
+            runs_xml += f"""
             <w:r>
                 <w:rPr>
                     <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
@@ -515,8 +589,18 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
                     <w:szCs w:val="{sz}"/>
                     <w:rtl/>
                 </w:rPr>
-                <w:t>{xml_escape(str(text))}</w:t>
+                {br_tag}
+                <w:t xml:space="preserve">{xml_escape(line_str)}</w:t>
             </w:r>
+            """
+        return f"""
+        <w:p>
+            <w:pPr>
+                <w:bidi/>
+                <w:jc w:val="{align}"/>
+                <w:spacing w:after="{space_after}"/>
+            </w:pPr>
+            {runs_xml}
         </w:p>
         """
 
@@ -688,8 +772,11 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
             (str(cnt), False),
             (str(s.get('target_evidences', 3)), False)
         ])
+    if len(index_rows) == 1:
+        index_rows.append([("-", False), ("لا توجد شواهد مرفوعة بعد", False), ("-", False), ("0", False), ("-", False)])
     body_parts.append(w_table(index_rows))
-    body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
+    if sorted_evs:
+        body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
 
     for idx, ev in enumerate(sorted_evs):
         std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
@@ -1452,7 +1539,8 @@ def render_attachments_html(files, signed_urls_map):
         f_url = f_rec.get('file_url', '')
         f_type = f_rec.get('file_type', '')
         if f_type == 'external/link' or f_url.startswith('http'):
-            thumbs_html += f'<a href="{f_url}" target="_blank" class="ext-link-badge" dir="rtl">🔗 فتح الرابط المرفق</a>'
+            safe_ext_u = html.escape(f_url, quote=True)
+            thumbs_html += f'<a href="{safe_ext_u}" target="_blank" class="ext-link-badge" dir="rtl">🔗 فتح الرابط المرفق</a>'
         else:
             sec_url = signed_urls_map.get(f_url, '')
             if not sec_url:
@@ -1582,10 +1670,10 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                                 supabase.table("evidence_files").delete().eq("id", f['id']).execute()
                                 
                         for nf in new_files:
-                            ext = nf.name.split('.')[-1]
-                            path = f"{ev['id']}/{uuid.uuid4()}.{ext}"
-                            supabase.storage.from_("private-achievements").upload(path=path, file=nf.getvalue(), file_options={"content-type": nf.type})
-                            supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": path, "file_type": nf.type}).execute()
+                            opt_bytes, opt_mime, opt_ext = optimize_uploaded_image(nf)
+                            path = f"{ev['id']}/{uuid.uuid4()}.{opt_ext}"
+                            supabase.storage.from_("private-achievements").upload(path=path, file=opt_bytes, file_options={"content-type": opt_mime})
+                            supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": path, "file_type": opt_mime}).execute()
 
                     if new_ext_link.strip() != current_ext_link:
                         for f in files:
@@ -1618,7 +1706,6 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                 st.rerun()
 
 def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, signed_urls_map, report_style, th):
-    """بناء كود HTML للتقرير عند الضغط على زر الطباعة فقط"""
     stds_map = {s['id']: s for s in stds}
     all_evidences = sort_evidences_chronologically(evidences)
     total_evidences = len(all_evidences)
@@ -1641,12 +1728,20 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
         cover_border = "2px solid #1e293b"
         box_radius = "4px"
 
+    safe_t_name = html.escape(str(user_info.get('full_name', '')))
+    safe_spec = html.escape(str(user_info.get('specialization', '')))
+    safe_school = html.escape(str(user_info.get('school_name', '')))
+    safe_stage = html.escape(str(user_info.get('education_stage', '')))
+    safe_city = html.escape(str(user_info.get('city', '')))
+    safe_prin = html.escape(str(user_info.get('principal_name', '')))
+    safe_y_name = html.escape(str(active_year.get('year_name', '')))
+
     html_content = f"""
     <!DOCTYPE html>
     <html dir="rtl" lang="ar">
     <head>
         <meta charset="UTF-8">
-        <title>ملف الإنجاز المهني - {user_info['full_name']}</title>
+        <title>ملف الإنجاز المهني - {safe_t_name}</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap');
             * {{ box-sizing: border-box; direction: rtl; }}
@@ -1812,16 +1907,16 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
             <div class="cover-title">ملف الإنجاز المهني</div>
             <div class="cover-subtitle">توثيق شواهد الأداء الوظيفي</div>
             <table class="info-table">
-                <tr><th>اسم المعلم</th><td>{user_info['full_name']}</td></tr>
-                <tr><th>التخصص</th><td>{user_info['specialization']}</td></tr>
-                <tr><th>المدرسة</th><td>{user_info['school_name']}</td></tr>
-                <tr><th>المرحلة الدراسية</th><td>{user_info['education_stage']}</td></tr>
-                <tr><th>المدينة</th><td>{user_info['city']}</td></tr>
-                <tr><th>مدير المدرسة</th><td>{user_info['principal_name']}</td></tr>
-                <tr><th>العام الدراسي</th><td>{active_year['year_name']}هـ</td></tr>
+                <tr><th>اسم المعلم</th><td>{safe_t_name}</td></tr>
+                <tr><th>التخصص</th><td>{safe_spec}</td></tr>
+                <tr><th>المدرسة</th><td>{safe_school}</td></tr>
+                <tr><th>المرحلة الدراسية</th><td>{safe_stage}</td></tr>
+                <tr><th>المدينة</th><td>{safe_city}</td></tr>
+                <tr><th>مدير المدرسة</th><td>{safe_prin}</td></tr>
+                <tr><th>العام الدراسي</th><td>{safe_y_name}هـ</td></tr>
                 <tr><th>إجمالي الشواهد الموثقة</th><td>{total_evidences} شاهد ({covered_stds} من {len(stds)} معايير)</td></tr>
             </table>
-            <div style="margin-top:35px; font-size:11px; color:#64748b;">صدر إلكترونياً عبر منصة زياد الذكية — جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
+            <div style="margin-top:35px; font-size:11px; color:#64748b;">صدر إلكترونياً عبر منصة زياد الذكية — جميع الحقوق محفوظة © أ. {safe_t_name}</div>
         </div>
     </div>
     """
@@ -1829,12 +1924,12 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
     shared_header = f"""
     <div class="header-container">
         <div class="header-right">
-            منصة زياد الذكية | أ. {user_info['full_name']}<br>
-            <span style="font-size:10.5px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - العام الدراسي {active_year['year_name']}هـ</span>
+            منصة زياد الذكية | أ. {safe_t_name}<br>
+            <span style="font-size:10.5px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - العام الدراسي {safe_y_name}هـ</span>
         </div>
         <div class="header-left">
             المملكة العربية السعودية<br>
-            <span style="font-size:10.5px; font-weight:normal; color:#666;">وزارة التعليم - {user_info['school_name']}</span>
+            <span style="font-size:10.5px; font-weight:normal; color:#666;">وزارة التعليم - {safe_school}</span>
         </div>
     </div>
     """
@@ -1851,18 +1946,22 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
         if count == 0:
             continue
         target = std.get('target_evidences', 3)
-        html_content += f"<tr><td>{std['id']}</td><td style='text-align:right; font-weight:bold;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:{rep_color}; font-weight:bold;'>{count}</td><td>{target}</td></tr>"
+        safe_s_title = html.escape(str(std['title']))
+        html_content += f"<tr><td>{std['id']}</td><td style='text-align:right; font-weight:bold;'>{safe_s_title}</td><td>{std['weight']}%</td><td style='color:{rep_color}; font-weight:bold;'>{count}</td><td>{target}</td></tr>"
     html_content += f"""
         </table>
-        <div class="print-footer" style="margin-top:auto;">منصة زياد الذكية | جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
+        <div class="print-footer" style="margin-top:auto;">منصة زياد الذكية | جميع الحقوق محفوظة © أ. {safe_t_name}</div>
     </div>
     """
     
     for ev in all_evidences:
         std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
-        exec_date = ev.get('execution_date') or ev['created_at'][:10]
+        exec_date = html.escape(str(ev.get('execution_date') or ev['created_at'][:10]))
+        safe_ev_title = html.escape(str(ev.get('title', '')))
+        safe_std_title = html.escape(str(std.get('title', '')))
+        safe_ev_desc = html.escape(str(ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'))
+
         files = ev.get('evidence_files', [])
-        
         img_urls = []
         pdf_count = 0
         ext_links = []
@@ -1870,7 +1969,7 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
             f_url = f.get('file_url', '')
             f_type = f.get('file_type', '')
             if f_type == 'external/link' or f_url.startswith('http'):
-                ext_links.append(f_url)
+                ext_links.append(html.escape(f_url))
             elif f_type.startswith('image/'):
                 sec_u = signed_urls_map.get(f_url, '')
                 if sec_u:
@@ -1898,15 +1997,15 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
                     {shared_header}
                     <div class="content-wrapper">
                         <div class="top-ev-banner">
-                            <span class="top-ev-title">{ev['title']}</span>
-                            <span class="top-std-sub">البند {ev['standard_id']}: {std['title']} ({std['weight']}%)</span>
+                            <span class="top-ev-title">{safe_ev_title}</span>
+                            <span class="top-std-sub">البند {ev['standard_id']}: {safe_std_title} ({std['weight']}%)</span>
                         </div>
                         <div class="meta-grid">
                             <div class="meta-box"><div class="meta-title">تاريخ التنفيذ</div><div class="meta-value">{exec_date}</div></div>
                             <div class="meta-box"><div class="meta-title">نوع الشاهد</div><div class="meta-value">شاهد ميداني موثق</div></div>
                         </div>
                         <div class="desc-header">الوصف</div>
-                        <div class="desc-section" dir="rtl">{ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'}</div>
+                        <div class="desc-section" dir="rtl">{safe_ev_desc}</div>
                         {pdf_notice}
                         {link_notice}
                         {images_section}
@@ -1914,14 +2013,14 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
                     <div class="signatures">
                         <div class="sig-box">
                             <div style="color:#666; font-size:11.5px; margin-bottom:10px;">المعلم:</div>
-                            <div style="font-weight:bold;">{user_info['full_name']}</div>
+                            <div style="font-weight:bold;">{safe_t_name}</div>
                         </div>
                         <div class="sig-box">
                             <div style="color:#666; font-size:11.5px; margin-bottom:10px;">مدير المدرسة:</div>
-                            <div style="font-weight:bold;">{user_info['principal_name']}</div>
+                            <div style="font-weight:bold;">{safe_prin}</div>
                         </div>
                     </div>
-                    <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
+                    <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {safe_t_name}</div>
                 </div>
                 """
             else:
@@ -1930,22 +2029,22 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
                     {shared_header}
                     <div class="content-wrapper">
                         <div class="top-ev-banner">
-                            <span class="top-ev-title">تابع: {ev['title']}</span>
-                            <span class="top-std-sub">البند {ev['standard_id']}: {std['title']} (صفحة {chunk_idx+1} من {total_chunks})</span>
+                            <span class="top-ev-title">تابع: {safe_ev_title}</span>
+                            <span class="top-std-sub">البند {ev['standard_id']}: {safe_std_title} (صفحة {chunk_idx+1} من {total_chunks})</span>
                         </div>
                         {images_section}
                     </div>
                     <div class="signatures">
                         <div class="sig-box">
                             <div style="color:#666; font-size:11.5px; margin-bottom:10px;">المعلم:</div>
-                            <div style="font-weight:bold;">{user_info['full_name']}</div>
+                            <div style="font-weight:bold;">{safe_t_name}</div>
                         </div>
                         <div class="sig-box">
                             <div style="color:#666; font-size:11.5px; margin-bottom:10px;">مدير المدرسة:</div>
-                            <div style="font-weight:bold;">{user_info['principal_name']}</div>
+                            <div style="font-weight:bold;">{safe_prin}</div>
                         </div>
                     </div>
-                    <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
+                    <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {safe_t_name}</div>
                 </div>
                 """
     
@@ -1954,10 +2053,11 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
 
 def render_footer():
     year_now = datetime.date.today().year
+    safe_name = html.escape(str(user_info.get("full_name", "")))
     footer_html = (
         f'<div class="ziyad-footer" dir="rtl">'
         f'<div class="footer-brand">🎓 منصة زياد الذكية | نظام ملف الإنجاز المهني الإلكتروني</div>'
-        f'<div class="footer-rights">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {user_info["full_name"]}</div>'
+        f'<div class="footer-rights">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {safe_name}</div>'
         f'</div>'
     )
     st.markdown(footer_html, unsafe_allow_html=True)
@@ -1966,12 +2066,14 @@ def render_footer():
 # 9. صفحة تسجيل الدخول (معلم + زائر)
 # ==========================================
 def login_page():
+    safe_name = html.escape(str(user_info.get("full_name", "")))
+    safe_school = html.escape(str(user_info.get("school_name", "")))
     login_hero = (
         f'<div class="hero-wrapper" dir="rtl" style="text-align:center;">'
         f'<div style="display:flex; justify-content:center; margin-bottom:8px;">{ZIYAD_LOGO_SVG}</div>'
         f'<div style="font-size:15px; color:#fbbf24 !important; font-weight:700; text-align:center;">منصة زياد الذكية</div>'
         f'<div style="font-size:22px; font-weight:800; margin:5px 0; color:white !important; text-align:center;">ملف الإنجاز المهني الإلكتروني</div>'
-        f'<div style="font-size:12.5px; opacity:0.95; color:white !important; text-align:center;">أ. {user_info["full_name"]} • {user_info["school_name"]}</div>'
+        f'<div style="font-size:12.5px; opacity:0.95; color:white !important; text-align:center;">أ. {safe_name} • {safe_school}</div>'
         f'</div>'
     )
     st.markdown(login_hero, unsafe_allow_html=True)
@@ -1986,8 +2088,13 @@ def login_page():
             if submit:
                 if email and password:
                     try:
-                        response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                        response = supabase.auth.sign_in_with_password({"email": email.strip(), "password": password})
                         st.session_state.user = response.user
+                        if response.session:
+                            st.session_state.auth_tokens = {
+                                "access_token": response.session.access_token,
+                                "refresh_token": response.session.refresh_token
+                            }
                         st.session_state.is_visitor = False
                         st.success("تم تسجيل الدخول بنجاح!")
                         time.sleep(0.3)
@@ -2027,13 +2134,19 @@ def main_app():
     stds, all_subs = fetch_standards_and_subs()
     evidences = fetch_year_evidences(active_year.get('id'))
 
-    all_file_paths = tuple(
+    all_file_paths = tuple(sorted(set(
         f['file_url'] for ev in evidences for f in ev.get('evidence_files', []) if f.get('file_url')
-    )
+    )))
     signed_urls_map = get_signed_urls_batch(all_file_paths)
 
     # الهيدر والبنر الاحترافي
     greeting, today_str = get_greeting_and_dates()
+    safe_name = html.escape(str(user_info.get("full_name", "")))
+    safe_school = html.escape(str(user_info.get("school_name", "")))
+    safe_spec = html.escape(str(user_info.get("specialization", "")))
+    safe_prin = html.escape(str(user_info.get("principal_name", "")))
+    safe_year = html.escape(str(active_year.get("year_name", "1448")))
+
     hero_html = (
         f'<div class="hero-wrapper" dir="rtl">'
         f'<div class="hero-top" dir="rtl">'
@@ -2045,14 +2158,14 @@ def main_app():
         f'<div class="hero-body" dir="rtl">'
         f'<div>'
         f'<div class="welcome-line">✨ {greeting}</div>'
-        f'<div class="teacher-name">أ. {user_info["full_name"]}</div>'
+        f'<div class="teacher-name">أ. {safe_name}</div>'
         f'<div class="meta-badges">'
-        f'<span class="meta-pill">🏫 {user_info["school_name"]}</span>'
-        f'<span class="meta-pill">📚 {user_info["specialization"]}</span>'
-        f'<span class="meta-pill">👔 مدير المدرسة: {user_info["principal_name"]}</span>'
+        f'<span class="meta-pill">🏫 {safe_school}</span>'
+        f'<span class="meta-pill">📚 {safe_spec}</span>'
+        f'<span class="meta-pill">👔 مدير المدرسة: {safe_prin}</span>'
         f'</div>'
         f'</div>'
-        f'<div class="year-badge">📁 ملف إنجاز عام {active_year["year_name"]}هـ</div>'
+        f'<div class="year-badge">📁 ملف إنجاز عام {safe_year}هـ</div>'
         f'</div>'
         f'</div>'
     )
@@ -2131,7 +2244,7 @@ def main_app():
             f'</div>'
             f'<div class="progress-card" dir="rtl">'
             f'<div style="display:flex; justify-content:space-between; font-weight:700; font-size:13px; color:#1e293b;">'
-            f'<span style="color:#1e293b !important;">نسبة تغطية معايير الأداء الوظيفي ({active_year["year_name"]}هـ)</span>'
+            f'<span style="color:#1e293b !important;">نسبة تغطية معايير الأداء الوظيفي ({safe_year}هـ)</span>'
             f'<span style="color:{th["primary"]} !important;">{pct}%</span>'
             f'</div>'
             f'<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:{pct}%;"></div></div>'
@@ -2182,11 +2295,12 @@ def main_app():
                 status_txt = f'<span style="color:{th["accent"]} !important; font-size:11.5px; font-weight:600;">{count} شاهد • بقي {target - count}</span>'
                 num_cls = "std-num"
 
+            safe_std_t = html.escape(str(std["title"]))
             card_html = (
                 f'<div class="std-card" dir="rtl">'
                 f'<div style="display:flex; align-items:center;">'
                 f'<div class="{num_cls}">{s_id}</div>'
-                f'<div><div class="std-title">{s_id}. {std["title"]}</div>'
+                f'<div><div class="std-title">{s_id}. {safe_std_t}</div>'
                 f'<span class="weight-badge">الوزن النسبي: {std["weight"]}%</span></div>'
                 f'</div>'
                 f'<div style="text-align:left;"><div class="dots-row">{dots_html}</div>{status_txt}</div>'
@@ -2232,15 +2346,17 @@ def main_app():
                     else:
                         for order_idx, ev in enumerate(s_evs, 1):
                             files = ev.get("evidence_files", [])
-                            exec_date = ev.get('execution_date') or ev['created_at'][:10]
+                            exec_date = html.escape(str(ev.get('execution_date') or ev['created_at'][:10]))
+                            safe_ev_t = html.escape(str(ev.get("title", "")))
+                            safe_ev_d = html.escape(str(ev.get("description") or ""))
                             thumbs_html = render_attachments_html(files, signed_urls_map)
                             ev_card = (
                                 f'<div class="ev-box" dir="rtl">'
                                 f'<div class="ev-header-row" dir="rtl">'
-                                f'<span class="ev-title-right" dir="rtl">📄 {order_idx} - {ev["title"]}</span>'
+                                f'<span class="ev-title-right" dir="rtl">📄 {order_idx} - {safe_ev_t}</span>'
                                 f'<span style="font-size:12px; color:#64748b !important;" dir="rtl">📅 {exec_date}</span>'
                                 f'</div>'
-                                f'<div class="ev-desc-rtl" dir="rtl">{ev.get("description") or ""}</div>'
+                                f'<div class="ev-desc-rtl" dir="rtl">{safe_ev_d}</div>'
                                 f'{thumbs_html}</div>'
                             )
                             st.markdown(ev_card, unsafe_allow_html=True)
@@ -2260,16 +2376,18 @@ def main_app():
             else:
                 for order_idx, ev in enumerate(std_evidences, 1):
                     files = ev.get("evidence_files", [])
-                    exec_date = ev.get('execution_date') or ev['created_at'][:10]
+                    exec_date = html.escape(str(ev.get('execution_date') or ev['created_at'][:10]))
+                    safe_ev_t = html.escape(str(ev.get("title", "")))
+                    safe_ev_d = html.escape(str(ev.get("description") or ""))
                     thumbs_html = render_attachments_html(files, signed_urls_map)
 
                     ev_detail_html = (
                         f'<div class="ev-box" dir="rtl">'
                         f'<div class="ev-header-row" dir="rtl">'
-                        f'<span class="ev-title-right" dir="rtl">📄 {order_idx} - {ev["title"]}</span>'
+                        f'<span class="ev-title-right" dir="rtl">📄 {order_idx} - {safe_ev_t}</span>'
                         f'<span style="background:{th["tint"]}; color:{th["primary_dark"]} !important; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;" dir="rtl">'
                         f'📅 تاريخ التنفيذ: {exec_date}</span></div>'
-                        f'<div class="ev-desc-rtl" dir="rtl">{ev.get("description") or ""}</div>'
+                        f'<div class="ev-desc-rtl" dir="rtl">{safe_ev_d}</div>'
                         f'{thumbs_html}</div>'
                     )
                     st.markdown(ev_detail_html, unsafe_allow_html=True)
@@ -2282,7 +2400,8 @@ def main_app():
 
             with st.expander("💡 استعراض أمثلة الشواهد المستهدفة لهذا البند", expanded=False):
                 for idea in sub_options:
-                    st.markdown(f'<div class="idea-card" dir="rtl"><span>💡 {idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
+                    safe_idea = html.escape(str(idea))
+                    st.markdown(f'<div class="idea-card" dir="rtl"><span>💡 {safe_idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
 
             if not is_visitor:
                 st.markdown("##### ➕ إضافة شاهد جديد لهذا البند")
@@ -2357,7 +2476,7 @@ def main_app():
                             full_desc_parts.append("\n".join(extra_details))
                         combined_description = "\n\n".join(full_desc_parts)
 
-                        with st.spinner("جاري حفظ الشاهد والمرفقات..."):
+                        with st.spinner("جاري ضغط الصور وحفظ الشاهد والمرفقات..."):
                             insert_payload = {
                                 "standard_id": std_id,
                                 "year_id": active_year['id'],
@@ -2374,13 +2493,13 @@ def main_app():
                             new_id = ev_data.data[0]['id']
                             if uploaded_files:
                                 for up_file in uploaded_files:
-                                    ext = up_file.name.split('.')[-1]
-                                    path = f"{new_id}/{uuid.uuid4()}.{ext}"
+                                    opt_bytes, opt_mime, opt_ext = optimize_uploaded_image(up_file)
+                                    path = f"{new_id}/{uuid.uuid4()}.{opt_ext}"
                                     supabase.storage.from_("private-achievements").upload(
-                                        path=path, file=up_file.getvalue(), file_options={"content-type": up_file.type}
+                                        path=path, file=opt_bytes, file_options={"content-type": opt_mime}
                                     )
                                     supabase.table("evidence_files").insert({
-                                        "evidence_id": new_id, "file_url": path, "file_type": up_file.type
+                                        "evidence_id": new_id, "file_url": path, "file_type": opt_mime
                                     }).execute()
                             if ext_link_input.strip():
                                 supabase.table("evidence_files").insert({
@@ -2398,7 +2517,7 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة (سريعة جداً وتعمل عند الضغط على الزر فقط)
+    # 📄 3. صفحة التقارير والطباعة (آمنة بـ Base64 وتعمل عند الطلب فقط)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
@@ -2413,17 +2532,19 @@ def main_app():
             ]
         )
 
-        # الزر الأول: تجهيز وطباعة PDF عند الطلب فقط (فوري)
+        # الزر الأول: تجهيز وطباعة PDF عند الطلب فقط (بنظام Base64 الآمن)
         if st.button("🖨️ تجهيز وطباعة ملف الإنجاز PDF", type="primary", use_container_width=True):
             with st.spinner("جاري تجهيز صفحات تقرير PDF..."):
                 html_content = build_pdf_report_html(
                     user_info, active_year, stds, evidences, ev_by_std, signed_urls_map, report_style, th
                 )
-                safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
-                st.session_state.ready_pdf_html = safe_html
+                st.session_state.ready_pdf_b64 = base64.b64encode(html_content.encode("utf-8")).decode("ascii")
+                st.session_state.auto_open_pdf = True
 
-        if st.session_state.ready_pdf_html:
-            st.success("✅ تم تجهيز تقرير PDF! ستفتح نافذة الطباعة تلقائياً، أو اضغط على الزر الأخضر بالأسفل:")
+        if st.session_state.ready_pdf_b64:
+            auto_js_call = "openPrintWindow();" if st.session_state.auto_open_pdf else ""
+            st.session_state.auto_open_pdf = False
+            st.success("✅ تم تجهيز تقرير PDF! إذا لم تفتح نافذة الطباعة تلقائياً، اضغط على الزر الأخضر بالأسفل:")
             components.html(f"""
                 <div style="text-align: center; margin: 4px 0;">
                     <button onclick="openPrintWindow()" style="width: 100%; height: 50px; background-color: #146c59; color: white; border: none; border-radius: 14px; font-size: 15.5px; font-weight: bold; cursor: pointer; font-family: 'Readex Pro', 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(20,108,89,0.2);">
@@ -2431,10 +2552,19 @@ def main_app():
                     </button>
                 </div>
                 <script>
+                    var b64Report = "{st.session_state.ready_pdf_b64}";
+                    function decodeUtf8Base64(b64) {{
+                        var binStr = atob(b64);
+                        var bytes = new Uint8Array(binStr.length);
+                        for (var i = 0; i < binStr.length; i++) {{
+                            bytes[i] = binStr.charCodeAt(i);
+                        }}
+                        return new TextDecoder('utf-8').decode(bytes);
+                    }}
                     function openPrintWindow() {{
                         var win = window.open('', '_blank');
                         if (!win) return;
-                        win.document.write(`{st.session_state.ready_pdf_html}`);
+                        win.document.write(decodeUtf8Base64(b64Report));
                         win.document.close();
                         var imgs = Array.from(win.document.images);
                         if (imgs.length === 0) {{
@@ -2465,12 +2595,12 @@ def main_app():
                             }}, 3500);
                         }}
                     }}
-                    openPrintWindow();
+                    {auto_js_call}
                 </script>
             """, height=62)
 
         st.write("")
-        # الزر الثاني: تجهيز ملف Word عند الضغط فقط (يمنع تعليق الصفحة 20 ثانية عند الدخول)
+        # الزر الثاني: تجهيز ملف Word عند الضغط فقط
         if st.button("📄 تجهيز ملف Word قابل للتعديل (شامل الصور والمرفقات)", use_container_width=True):
             with st.spinner("جاري تجهيز ملف الـ Word وتضمين صور الشواهد بداخله..."):
                 all_evidences = sort_evidences_chronologically(evidences)
@@ -2582,10 +2712,10 @@ def main_app():
                     is_act = y.get("is_active", False)
                     
                     badge_html = '<span style="background:#10b981; color:white !important; padding:4px 12px; border-radius:8px; font-size:12px;">🟢 الملف النشط</span>' if is_act else '<span style="background:#64748b; color:white !important; padding:4px 12px; border-radius:8px; font-size:12px;">📦 مؤرشف</span>'
-                    
+                    safe_yn = html.escape(str(y["year_name"]))
                     arch_card = (
                         f'<div class="std-card" dir="rtl">'
-                        f'<div><div class="std-title">📁 ملف إنجاز العام الدراسي: {y["year_name"]}هـ</div>'
+                        f'<div><div class="std-title">📁 ملف إنجاز العام الدراسي: {safe_yn}هـ</div>'
                         f'<div style="font-size:12.5px; color:#64748b !important;">عدد الشواهد الموثقة: <strong>{y_count} شاهد</strong></div></div>'
                         f'<div>{badge_html}</div>'
                         f'</div>'
@@ -2705,17 +2835,31 @@ def main_app():
 
         with t4:
             if st.button("🚪 تسجيل الخروج من الحساب", type="primary", use_container_width=True):
-                supabase.auth.sign_out()
+                try:
+                    supabase.auth.sign_out()
+                except Exception:
+                    pass
                 st.session_state.user = None
+                st.session_state.auth_tokens = None
                 st.session_state.is_visitor = False
                 st.rerun()
 
     render_footer()
 
 # ==========================================
-# 11. نقطة تشغيل التطبيق
+# 11. نقطة تشغيل التطبيق (محمية ضد أي خطأ غير متوقع)
 # ==========================================
 if st.session_state.user is None and not st.session_state.is_visitor:
     login_page()
 else:
-    main_app()
+    try:
+        main_app()
+    except Exception as err:
+        if "JWT" in str(err) or "401" in str(err) or "expired" in str(err).lower():
+            st.session_state.user = None
+            st.session_state.auth_tokens = None
+            st.warning("انتهت صلاحية جلسة الأمان، يرجى تسجيل الدخول مرة أخرى.")
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.error(f"حدث خطأ غير متوقع: {err}")
