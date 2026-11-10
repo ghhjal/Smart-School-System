@@ -606,7 +606,7 @@ th = THEMES[active_theme_key]
 ZIYAD_LOGO_SVG = '<svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 7. التصميم الشامل
+# 7. التصميم الشامل (مع إصلاح عرض القوائم المنبثقة وتناسق نافذة التعديل)
 # ==========================================
 st.markdown(f"""
 <style>
@@ -679,6 +679,8 @@ input, textarea {{
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
     caret-color: {th['primary']} !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 
 div[data-baseweb="input"],
@@ -696,8 +698,11 @@ div[data-baseweb="select"] svg {{
     -webkit-text-fill-color: #0f172a !important;
     fill: #0f172a !important;
     background-color: transparent !important;
+    white-space: normal !important;
+    line-height: 1.4 !important;
 }}
 
+/* إصلاح القوائم المنبثقة لمنع قص الجمل الطويلة على اليمين */
 div[data-baseweb="popover"],
 div[data-baseweb="popover"] > div,
 div[data-baseweb="menu"],
@@ -707,10 +712,21 @@ li[role="option"] {{
     background: #ffffff !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
+    direction: rtl !important;
+    text-align: right !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    line-height: 1.45 !important;
+    height: auto !important;
+}}
+li[role="option"] {{
+    padding: 10px 14px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
 }}
 li[role="option"]:hover, li[role="option"][aria-selected="true"] {{
     background-color: {th['tint']} !important;
     color: {th['primary']} !important;
+    font-weight: 700 !important;
 }}
 
 input::placeholder, textarea::placeholder {{
@@ -737,6 +753,7 @@ div[data-testid="stFileUploader"] section {{
     border: 1.5px dashed #94a3b8 !important;
     border-radius: 14px !important;
     color: #0f172a !important;
+    padding: 12px !important;
 }}
 div[data-testid="stFileUploader"] section span,
 div[data-testid="stFileUploader"] section small,
@@ -754,16 +771,19 @@ div[data-testid="stFileUploader"] section button {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 16px !important;
-    padding: 14px !important;
+    padding: 16px !important;
     box-shadow: 0 3px 10px rgba(0,0,0,0.03) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }}
 
 [data-testid="stExpander"] {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 14px !important;
-    margin-bottom: 6px !important;
+    margin-bottom: 10px !important;
     overflow: hidden !important;
+    width: 100% !important;
 }}
 [data-testid="stExpander"] details,
 [data-testid="stExpander"] summary,
@@ -789,18 +809,21 @@ div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
     background-color: #e6f4f1 !important;
     color: {th['primary']} !important;
     border: 1px solid #b7e0d6 !important;
-    border-radius: 99px !important;
+    border-radius: 12px !important;
     font-weight: 700 !important;
     min-height: 42px !important;
-    padding: 0.35rem 0.9rem !important;
+    padding: 0.35rem 0.75rem !important;
     transition: all 0.18s ease !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+    white-space: normal !important;
 }}
 div[data-testid="stButton"] button p, div[data-testid="stDownloadButton"] button p {{
     color: {th['primary']} !important;
     -webkit-text-fill-color: {th['primary']} !important;
     font-weight: 700 !important;
     font-size: 13px !important;
+    white-space: normal !important;
+    line-height: 1.3 !important;
 }}
 div[data-testid="stDownloadButton"] button {{
     background-color: #ffffff !important;
@@ -1029,8 +1052,8 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 }}
 
 .ev-box {{
-    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px;
-    padding: 14px; margin-bottom: 8px; border-right: 4px solid {th['primary']};
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px 14px 4px 4px;
+    padding: 14px; margin-bottom: 2px; border-right: 4px solid {th['primary']};
     width: 100%; box-sizing: border-box;
 }}
 .idea-card {{
@@ -1069,7 +1092,7 @@ if "visitor" in query_params and st.session_state.user is None:
         st.session_state.is_visitor = True
 
 # ==========================================
-# 8. دوال التاريخ والترحيب والفوتر وإدارة وتعديل ونقل الشاهد
+# 8. دوال التاريخ والترحيب والفوتر وإدارة وتعديل ونقل الشاهد (بعرض 100% متناسق)
 # ==========================================
 def get_greeting_and_dates():
     tz = datetime.timezone(datetime.timedelta(hours=3))
@@ -1114,7 +1137,7 @@ def render_attachments_html(files, signed_urls_map):
 
 def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
     """
-    مكون موحد لتعديل الشاهد، أو نقله إلى بند آخر، أو حذف أي صورة/مرفق فردي منه دون الحاجة لحذف الشاهد بالكامل
+    لوحة موحدة بعرض كامل الصفحة (100% Full-Width) لتعديل الشاهد أو نقله لبند آخر أو حذف صور فردية منه دون أي انضغاط أو فراغات جانبية
     """
     files = ev.get("evidence_files", [])
     exec_date = ev.get('execution_date') or ev['created_at'][:10]
@@ -1127,43 +1150,45 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
     current_ev_std_id = ev.get('standard_id', 1)
     default_std_idx = std_ids_list.index(current_ev_std_id) if current_ev_std_id in std_ids_list else 0
 
-    ed_col, del_col = st.columns(2)
-    with ed_col:
-        with st.expander("✏️ تعديل الشاهد / نقل البند / إدارة الصور"):
-            # 1. قسم إدارة وحذف الصور أو ملفات الـ PDF الحالية بشكل فردي ومستقل
+    with st.expander("⚙️ إدارة وتعديل الشاهد / نقل البند / التحكم بالصور والمرفقات"):
+        tab_edit, tab_del = st.tabs(["✏️ تعديل البيانات وإدارة الصور", "🗑️ حذف الشاهد بالكامل"])
+
+        with tab_edit:
+            # 1. قسم إدارة وحذف الصور الحالية بعرض كامل مريح
             if storage_files:
-                st.markdown("**🖼️ المرفقات الحالية (اضغط على حذف تحت أي صورة لإزالتها بمفردها):**")
-                att_cols = st.columns(min(len(storage_files), 3))
+                st.markdown("##### 🖼️ الصور والمرفقات الحالية (يمكنك حذف أي مرفق بمفرده):")
+                cols_count = min(len(storage_files), 3)
+                att_cols = st.columns(cols_count)
                 for idx_f, f_obj in enumerate(storage_files):
-                    with att_cols[idx_f % 3]:
+                    with att_cols[idx_f % cols_count]:
                         f_u = signed_urls_map.get(f_obj['file_url'], '')
                         if f_obj.get('file_type', '').startswith('image/') and f_u:
                             st.markdown(
-                                f'<div style="border:1px solid #cbd5e1; border-radius:10px; padding:4px; background:#f8fafc; text-align:center; margin-bottom:4px;">'
-                                f'<img src="{f_u}" style="width:100%; height:85px; object-fit:cover; border-radius:7px;">'
+                                f'<div style="border:1px solid #cbd5e1; border-radius:12px; padding:6px; background:#f8fafc; text-align:center; margin-bottom:6px;">'
+                                f'<img src="{f_u}" style="width:100%; height:110px; object-fit:contain; border-radius:8px; background:white;">'
                                 f'</div>',
                                 unsafe_allow_html=True
                             )
                         else:
                             st.markdown(
-                                f'<div style="border:1px dashed #64748b; border-radius:10px; height:85px; display:flex; align-items:center; justify-content:center; background:#f8fafc; margin-bottom:4px; font-weight:700; font-size:12px;">'
-                                f'📄 ملف PDF ({idx_f+1})'
+                                f'<div style="border:1px dashed #64748b; border-radius:12px; height:110px; display:flex; align-items:center; justify-content:center; background:#f8fafc; margin-bottom:6px; font-weight:700; font-size:13px;">'
+                                f'📄 ملف PDF رقم ({idx_f+1})'
                                 f'</div>',
                                 unsafe_allow_html=True
                             )
-                        if st.button(f"🗑️ حذف المرفق ({idx_f+1})", key=f"{key_prefix}del_att_{ev['id']}_{f_obj['id']}", use_container_width=True):
+                        if st.button(f"🗑️ حذف صورة ({idx_f+1})", key=f"{key_prefix}del_att_{ev['id']}_{f_obj['id']}", use_container_width=True):
                             try:
                                 supabase.storage.from_("private-achievements").remove([f_obj['file_url']])
                             except Exception:
                                 pass
                             supabase.table("evidence_files").delete().eq("id", f_obj['id']).execute()
                             clear_app_cache()
-                            st.success("تم حذف المرفق المحدد بنجاح مع بقاء الشاهد وبقية بياناته!")
+                            st.success("تم حذف الصورة المحددة بنجاح!")
                             time.sleep(0.3)
                             st.rerun()
                 st.write("---")
 
-            # 2. نموذج تعديل البيانات ونقل الشاهد إلى بند آخر وإضافة مرفقات جديدة
+            # 2. نموذج التعديل والنقل بعرض كامل وشبكة متوازنة
             with st.form(f"{key_prefix}edit_form_{ev['id']}"):
                 new_std_id = st.selectbox(
                     "⇄ البند (المعيار) التابع له الشاهد (اختر بنداً آخر لنقله):",
@@ -1172,31 +1197,40 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                     index=default_std_idx,
                     key=f"{key_prefix}move_std_{ev['id']}"
                 )
-                new_t = st.text_input("عنوان الشاهد:", value=ev['title'])
-                try:
-                    default_d = datetime.date.fromisoformat(str(exec_date)[:10])
-                except Exception:
-                    default_d = datetime.date.today()
-                new_exec_date = st.date_input("📅 تاريخ التنفيذ:", value=default_d)
-                new_d = st.text_area("وصف الشاهد:", value=ev.get('description', ''), height=110)
-                
-                new_files = st.file_uploader(
-                    "📎 رفع صور أو ملفات PDF جديدة (اختياري):",
-                    type=["pdf", "jpg", "jpeg", "png"],
-                    accept_multiple_files=True,
-                    key=f"{key_prefix}up_{ev['id']}"
-                )
-                upload_mode = st.selectbox(
-                    "طريقة التعامل مع المرفقات الجديدة عند رفعها:",
-                    [
-                        "➕ إضافة الملفات الجديدة إلى المرفقات الحالية",
-                        "🔄 استبدال وحذف جميع المرفقات السابقة بالملفات الجديدة"
-                    ],
-                    key=f"{key_prefix}mode_{ev['id']}"
-                )
+
+                col_t, col_d = st.columns([2, 1])
+                with col_t:
+                    new_t = st.text_input("عنوان الشاهد:", value=ev['title'])
+                with col_d:
+                    try:
+                        default_d = datetime.date.fromisoformat(str(exec_date)[:10])
+                    except Exception:
+                        default_d = datetime.date.today()
+                    new_exec_date = st.date_input("📅 تاريخ التنفيذ:", value=default_d)
+
+                new_d = st.text_area("وصف الشاهد:", value=ev.get('description', ''), height=115)
+
+                col_up, col_mode = st.columns([3, 2])
+                with col_up:
+                    new_files = st.file_uploader(
+                        "📎 إرفاق صور أو ملفات PDF جديدة (اختياري):",
+                        type=["pdf", "jpg", "jpeg", "png"],
+                        accept_multiple_files=True,
+                        key=f"{key_prefix}up_{ev['id']}"
+                    )
+                with col_mode:
+                    upload_mode = st.selectbox(
+                        "عند رفع ملفات جديدة:",
+                        [
+                            "➕ إضافتها للصور الحالية",
+                            "🔄 استبدال الصور السابقة"
+                        ],
+                        key=f"{key_prefix}mode_{ev['id']}"
+                    )
+
                 new_ext_link = st.text_input("🔗 أو رابط خارجي (امسحه لحذفه أو عدله):", value=current_ext_link, placeholder="https://")
                 
-                if st.form_submit_button("حفظ التعديلات 💾", type="primary", use_container_width=True):
+                if st.form_submit_button("حفظ كافة التعديلات 💾", type="primary", use_container_width=True):
                     update_payload = {
                         "standard_id": new_std_id,
                         "title": new_t,
@@ -1241,10 +1275,9 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                     time.sleep(0.4)
                     st.rerun()
 
-    with del_col:
-        with st.expander("🗑️ حذف الشاهد بالكامل"):
-            st.caption("سيتم حذف هذا الشاهد مع كافة مرفقاته نهائياً.")
-            if st.button("تأكيد حذف الشاهد نهائياً", key=f"{key_prefix}confirm_del_{ev['id']}", type="primary", use_container_width=True):
+        with tab_del:
+            st.warning("⚠️ تنبيه: حذف الشاهد بالكامل سيؤدي إلى إزالته مع كافة الصور والمرفقات المرتبطة به نهائياً.")
+            if st.button("🗑️ تأكيد حذف الشاهد بالكامل نهائياً", key=f"{key_prefix}confirm_del_{ev['id']}", type="primary", use_container_width=True):
                 old_storage_paths = [f['file_url'] for f in storage_files]
                 if old_storage_paths:
                     try:
@@ -1253,7 +1286,7 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                         pass
                 supabase.table("evidences").delete().eq("id", ev['id']).execute()
                 clear_app_cache()
-                st.success("تم حذف الشاهد!")
+                st.success("تم حذف الشاهد بالكامل!")
                 time.sleep(0.3)
                 st.rerun()
 
@@ -1504,7 +1537,7 @@ def main_app():
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة البنود والشواهد (مع التعديل وحذف الصور الفردية ونقل الشاهد لبند آخر)
+    # 📋 2. صفحة البنود والشواهد
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         st.markdown("#### 📋 استعراض وإدارة بنود الأداء والشواهد")
@@ -1703,7 +1736,7 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة (شبكة 2×2 بحد أقصى 4 صور في الصفحة + صفحات إضافية تلقائية)
+    # 📄 3. صفحة التقارير والطباعة
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
