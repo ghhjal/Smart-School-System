@@ -5,6 +5,7 @@ import uuid
 import json
 import datetime
 import zipfile
+import urllib.request
 from io import BytesIO
 from xml.sax.saxutils import escape as xml_escape
 from hijri_converter import Gregorian
@@ -138,7 +139,95 @@ DEFAULT_SUB_ITEMS = {
 }
 
 # ==========================================
-# 4. الاتصال بقاعدة البيانات والتخزين المؤقت السريع
+# 4. محرك الصياغة الذكي بالذكاء الاصطناعي (مدمج + Gemini اختياري)
+# ==========================================
+def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", variant=0):
+    """
+    يقوم بصياغة الوصف التربوي وتوليد (الهدف، المستهدفون، التنفيذ، الأثر)
+    بناءً على النقاط السريعة التي يكتبها المعلم أو عنوان الشاهد.
+    """
+    clean_notes = raw_notes.strip()
+    
+    # 1. محاولة استخدام Gemini API إذا كان متوفراً في secrets
+    gemini_key = st.secrets.get("gemini_api_key", "")
+    if gemini_key and clean_notes:
+        try:
+            prompt_text = (
+                f"أنت خبير تربوي في وزارة التعليم السعودية. صغ وصفاً مهنياً رسمياً موجزاً (3 إلى 4 أسطر) لشاهد أداء وظيفي بعنوان ({ev_title}) "
+                f"ضمن معيار ({std_title})، بالاعتماد على هذه النقاط: ({clean_notes}). "
+                f"اكتب الفقرة مباشرة باللغة العربية الفصحى دون مقدمات."
+            )
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
+            payload = json.dumps({"contents": [{"parts": [{"text": prompt_text}]}]}).encode("utf-8")
+            req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                res_data = json.loads(resp.read().decode("utf-8"))
+                ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if ai_text:
+                    return {
+                        "description": ai_text,
+                        "goal": f"تحقيق متطلبات معيار ({std_title}) والارتقاء بجودة الممارسات التعليمية.",
+                        "target_group": "الطلاب / المجتمع المدرسي",
+                        "implementation": f"تطبيق وتوثيق ({ev_title}) وفق الخطة المعتمدة ({clean_notes}).",
+                        "impact": "تحسن ملموس في نواتج التعلم والانضباط المدرسي."
+                    }
+        except Exception:
+            pass
+
+    # 2. المحرك التربوي الذكي المدمج (يعمل فوراً وبدون أي مفاتيح خارجية)
+    targets_by_std = {
+        1: "المجتمع المدرسي واللجان التنظيمية",
+        2: "الزملاء المعلمون والمجتمع المهني بالمدرسة",
+        3: "أولياء الأمور والطلاب",
+        4: "طلاب الصف الدراسي على اختلاف أنماط تعلمهم",
+        5: "الطلاب المستهدفون في خطط التحسين والإثراء",
+        6: "طلاب الصف ومعلمو التخصص",
+        7: "الطلاب عبر البيئة الصفية والرقمية (منصة مدرستي)",
+        8: "طلاب الفصل الدراسي",
+        9: "طلاب الفصل الدراسي",
+        10: "الطلاب وفق نتائج التقويم التشخيصي والفتري",
+        11: "طلاب الصف الدراسي"
+    }
+    target_group = targets_by_std.get(std_id, "الطلاب والمجتمع المدرسي")
+
+    if clean_notes:
+        core_action = f"تم تنفيذ وتوثيق «{ev_title}» من خلال ({clean_notes})"
+    else:
+        core_action = f"تم إعداد وتنفيذ «{ev_title}» بصورة منهجية منظمة وفق الخطة الفصلية المعتمدة"
+
+    templates = [
+        (
+            f"{core_action}، وذلك في إطار تحقيق مؤشرات معيار «{std_title}». "
+            f"وقد شمل العمل التخطيط المسبق والتطبيق الفعلي ومتابعة المستجدات، مما أسهم بشكل مباشر في تجويد الممارسات التعليمية "
+            f"وتحقيق أثر إيجابي ملموس على {target_group} ورفع كفاءة الأداء المدرسي."
+        ),
+        (
+            f"انطلاقاً من مستهدفات عنصر «{std_title}»، {core_action} وفق أسس تربوية حديثة تراعي احتياجات المستفيدين. "
+            f"وقد انعكس هذا الإجراء إيجاباً على تحسين البيئة التعليمية، وتعزيز التفاعل البنّاء لدى {target_group}، "
+            f"وتوثيق النتائج والشواهد الداعمة لتحقيق التميز المهني."
+        ),
+        (
+            f"تحقيقاً لمتطلبات الأداء الوظيفي في بند «{std_title}»، {core_action}. "
+            f"وقد جرى رصد مؤشرات التحسن وتقييم الأثر الناتج عن التنفيذ، حيث أظهر الممارسة فاعلية عالية في دعم نواتج التعلم "
+            f"وتحقيق المستهدفات التربوية المنشودة لدى {target_group}."
+        )
+    ]
+
+    chosen_desc = templates[variant % len(templates)]
+    goal_text = f"تعزيز كفاءة الأداء في معيار ({std_title}) من خلال تفعيل ({ev_title})."
+    impl_text = clean_notes if clean_notes else f"الإعداد والتنفيذ الميداني والتوثيق المرحلي لـ ({ev_title}) وفق توزيع المنهج."
+    impact_text = f"تحقيق استجابة فاعلة وتطور ملموس لدى {target_group} ورفع جودة المخرجات التربوية."
+
+    return {
+        "description": chosen_desc,
+        "goal": goal_text,
+        "target_group": target_group,
+        "implementation": impl_text,
+        "impact": impact_text
+    }
+
+# ==========================================
+# 5. الاتصال بقاعدة البيانات والتخزين المؤقت السريع
 # ==========================================
 @st.cache_resource
 def init_connection():
@@ -158,6 +247,8 @@ if 'view_standard_id' not in st.session_state:
     st.session_state.view_standard_id = 0
 if 'filter_mode' not in st.session_state:
     st.session_state.filter_mode = 'all'
+if 'ai_variant' not in st.session_state:
+    st.session_state.ai_variant = 0
 
 def clear_app_cache():
     st.cache_data.clear()
@@ -235,10 +326,9 @@ def get_signed_urls_batch(paths_tuple):
     return url_map
 
 # ==========================================
-# 5. محرك توليد ملف Word قابل للتعديل (.docx)
+# 6. محرك توليد ملف Word قابل للتعديل (.docx)
 # ==========================================
 def generate_editable_docx(user_info, active_year, stds, evidences):
-    """إنشاء ملف Word حقيقي (.docx) منسق بالكامل باللغة العربية (RTL) وقابل للتعديل"""
     stds_map = {s['id']: s for s in stds}
     sorted_evs = sorted(evidences, key=lambda x: x.get('standard_id', 0))
     total_ev = len(sorted_evs)
@@ -308,7 +398,6 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
         return tbl_xml
 
     body_parts = []
-    # 1. صفحة الغلاف
     body_parts.append(w_para("المملكة العربية السعودية - وزارة التعليم", bold=True, size_pt=14, color="0F5243", align="center", space_after=120))
     body_parts.append(w_para("منصة زياد الذكية لتوثيق الأداء المهني", bold=True, size_pt=13, color="B45309", align="center", space_after=300))
     body_parts.append(w_para("ملف الإنجاز المهني الإلكتروني", bold=True, size_pt=24, color="0F5243", align="center", space_after=120))
@@ -328,7 +417,6 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
     body_parts.append(w_table(cover_rows))
     body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
 
-    # 2. صفحة فهرس المعايير
     body_parts.append(w_para("فهرس معايير الأداء الوظيفي المنجزة", bold=True, size_pt=18, color="0F5243", align="right", space_after=240))
     index_rows = [[("م", True), ("معيار الأداء الوظيفي", True), ("الوزن النسبي", True), ("الشواهد الموثقة", True), ("المستهدف", True)]]
     for s in stds:
@@ -345,7 +433,6 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
     body_parts.append(w_table(index_rows))
     body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
 
-    # 3. صفحات الشواهد التفصيلية القابلة للتعديل
     for idx, ev in enumerate(sorted_evs):
         std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
         exec_date = ev.get('execution_date') or ev['created_at'][:10]
@@ -399,7 +486,6 @@ def generate_editable_docx(user_info, active_year, stds, evidences):
     return buf.getvalue()
 
 def generate_excel_csv(stds, evidences):
-    """تصدير سجل الشواهد بصيغة CSV UTF-8 BOM يفتح في Excel باللغة العربية مباشرة"""
     stds_map = {s['id']: s['title'] for s in stds}
     lines = ["رقم المعيار,اسم المعيار,عنوان الشاهد,تاريخ التنفيذ,الوصف,عدد المرفقات"]
     for ev in sorted(evidences, key=lambda x: x.get('standard_id', 0)):
@@ -421,13 +507,12 @@ th = THEMES[active_theme_key]
 ZIYAD_LOGO_SVG = '<svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 6. التصميم الشامل (قفل الميلان الأفقي في الجوال + دعم الأزرار الجديدة)
+# 7. التصميم الشامل
 # ==========================================
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Readex+Pro:wght@400;500;600;700&display=swap');
 
-/* قفل صارم للتمدد الأفقي والميلان يميناً ويساراً في متصفح الجوال */
 :root, html, body {{
     color-scheme: light !important;
     direction: rtl; 
@@ -456,7 +541,6 @@ header {{visibility: hidden; height: 0 !important;}}
 footer {{visibility: hidden;}}
 .stSidebar {{display: none !important;}}
 
-/* إزالة المسافات الفارغة الزائدة وتثبيت الحواف في الجوال */
 .block-container {{
     padding: 0.5rem 0.65rem 1.8rem 0.65rem !important;
     max-width: 720px !important;
@@ -472,20 +556,17 @@ div.element-container {{
     max-width: 100% !important;
 }}
 
-/* فرض وضوح جميع العناوين والنصوص في الوضع الليلي للجوال */
 h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, [data-testid="stWidgetLabel"] p, [data-testid="stMarkdownContainer"] p {{
     font-family: 'Readex Pro', 'Cairo', sans-serif;
     color: #1e293b !important;
     word-wrap: break-word !important;
 }}
 
-/* الحفاظ على خط أيقونات النظام لمنع ظهور كلمة visibility */
 span[data-testid="stIconMaterial"], .material-icons, [class*="material-symbols"] {{
     font-family: 'Material Symbols Rounded', 'Material Icons' !important;
     direction: ltr !important;
 }}
 
-/* إصلاح حقول الإدخال والقوائم المنسدلة */
 [data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"] > div {{
     background-color: #ffffff !important;
     color: #0f172a !important;
@@ -509,7 +590,6 @@ input::placeholder, textarea::placeholder {{
     box-shadow: 0 3px 10px rgba(0,0,0,0.03) !important;
 }}
 
-/* إصلاح القوائم المنسدلة (Expanders) والتبويبات (Tabs) */
 [data-testid="stExpander"] {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
@@ -519,7 +599,7 @@ input::placeholder, textarea::placeholder {{
 }}
 [data-testid="stExpander"] summary, [data-testid="stExpander"] summary p, [data-testid="stExpander"] summary span {{
     background-color: #ffffff !important;
-    color: #0f172a !important;
+    color: {th['primary']} !important;
     font-weight: 700 !important;
 }}
 button[data-baseweb="tab"] {{
@@ -532,25 +612,35 @@ button[data-baseweb="tab"][aria-selected="true"] {{
     border-bottom-color: {th['primary']} !important;
 }}
 
-/* تنسيق الأزرار وتصدير Word القابل للتعديل */
+/* تنسيق الأزرار + زر الذكاء الاصطناعي المميز */
 div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {{
-    background-color: #ffffff !important;
-    color: #0369a1 !important;
-    border: 1.5px solid #0f172a !important;
-    border-radius: 14px !important;
+    background-color: #e6f4f1 !important;
+    color: {th['primary']} !important;
+    border: 1px solid #b7e0d6 !important;
+    border-radius: 99px !important;
     font-weight: 700 !important;
-    min-height: 48px !important;
-    padding: 0.45rem 0.9rem !important;
+    min-height: 44px !important;
+    padding: 0.4rem 1rem !important;
     transition: all 0.18s ease !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
 }}
 div[data-testid="stButton"] button p, div[data-testid="stDownloadButton"] button p {{
-    color: #0369a1 !important;
+    color: {th['primary']} !important;
     font-weight: 700 !important;
+    font-size: 13.5px !important;
+}}
+div[data-testid="stDownloadButton"] button {{
+    background-color: #ffffff !important;
+    border: 1.5px solid #0f172a !important;
+    border-radius: 14px !important;
+    min-height: 48px !important;
+}}
+div[data-testid="stDownloadButton"] button p {{
+    color: #0369a1 !important;
     font-size: 14.5px !important;
 }}
-div[data-testid="stButton"] button:hover, div[data-testid="stDownloadButton"] button:hover {{
-    background-color: #f0f9ff !important;
+div[data-testid="stButton"] button:hover {{
+    background-color: #d1ebe5 !important;
 }}
 div[data-testid="stButton"] button[kind="primary"], div[data-testid="stFormSubmitButton"] button, div[data-testid="stDownloadButton"] button[kind="primary"] {{
     background: linear-gradient(135deg, {th['primary']}, {th['primary_light']}) !important;
@@ -566,7 +656,7 @@ div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSub
     font-size: 15px !important;
 }}
 
-/* شريط التنقل والفرز المتجاوب 100% مع شاشة الجوال دون أي تمرير أو ميلان جانبي */
+/* شريط التنقل والفرز المتجاوب 100% (4 تبويبات متوازنة) */
 div[data-testid="stRadio"] {{
     width: 100% !important;
     max-width: 100% !important;
@@ -583,7 +673,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] {{
     max-width: 100% !important;
     box-sizing: border-box !important;
     overflow: hidden !important;
-    gap: 4px !important;
+    gap: 5px !important;
     background: #ffffff !important;
     padding: 5px !important;
     border-radius: 14px !important;
@@ -595,7 +685,7 @@ div[data-testid="stRadio"] label {{
     flex: 1 1 0% !important;
     min-width: 0 !important;
     margin: 0 !important;
-    padding: 8px 2px !important;
+    padding: 9px 4px !important;
     border-radius: 10px !important;
     background: transparent !important;
     cursor: pointer !important;
@@ -605,7 +695,6 @@ div[data-testid="stRadio"] label {{
     text-align: center !important;
     overflow: hidden !important;
 }}
-/* إخفاء تام لدائرة الراديو التي كانت تسبب خروج الشريط عن شاشة الجوال */
 div[data-testid="stRadio"] input[type="radio"],
 div[data-testid="stRadio"] label > div:first-child,
 div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {{
@@ -616,7 +705,7 @@ div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {{
     padding: 0 !important;
 }}
 div[data-testid="stRadio"] label p {{
-    font-size: 12px !important;
+    font-size: 13px !important;
     font-weight: 700 !important;
     color: #475569 !important;
     margin: 0 !important;
@@ -811,7 +900,7 @@ if "visitor" in query_params and st.session_state.user is None:
         st.session_state.is_visitor = True
 
 # ==========================================
-# 7. دوال التاريخ والترحيب والفوتر وعرض المرفقات
+# 8. دوال التاريخ والترحيب والفوتر وعرض المرفقات
 # ==========================================
 def get_greeting_and_dates():
     tz = datetime.timezone(datetime.timedelta(hours=3))
@@ -865,7 +954,7 @@ def render_footer():
     st.markdown(footer_html, unsafe_allow_html=True)
 
 # ==========================================
-# 8. صفحة تسجيل الدخول (معلم + زائر)
+# 9. صفحة تسجيل الدخول (معلم + زائر)
 # ==========================================
 def login_page():
     login_hero = (
@@ -917,12 +1006,11 @@ def login_page():
     render_footer()
 
 # ==========================================
-# 9. التطبيق الرئيسي
+# 10. التطبيق الرئيسي
 # ==========================================
 def main_app():
     is_visitor = st.session_state.is_visitor
 
-    # 1. جلب البيانات المخزنة مؤقتاً
     all_years = fetch_all_years()
     active_years = [y for y in all_years if y.get("is_active")]
     active_year = active_years[0] if active_years else (all_years[0] if all_years else {"id": None, "year_name": "1448"})
@@ -935,7 +1023,7 @@ def main_app():
     )
     signed_urls_map = get_signed_urls_batch(all_file_paths)
 
-    # 2. الهيدر والبنر الاحترافي
+    # الهيدر والبنر الاحترافي
     greeting, today_str = get_greeting_and_dates()
     hero_html = (
         f'<div class="hero-wrapper">'
@@ -971,7 +1059,7 @@ def main_app():
                 st.query_params.clear()
                 st.rerun()
 
-    # 3. شريط التنقل الأفقي المتجاوب 100% مع شاشة الجوال
+    # شريط التنقل الرئيسي (4 تبويبات متوازنة فقط بعد نقل الأرشيف إلى داخل حسابي)
     if is_visitor:
         nav_map = {
             'home': "🏠 الرئيسية",
@@ -982,7 +1070,6 @@ def main_app():
         nav_map = {
             'home': "🏠 الرئيسية",
             'standard_view': "📋 البنود",
-            'archive': "📅 الأرشيف",
             'reports': "📄 التقرير",
             'settings': "⚙️ حسابي"
         }
@@ -1103,7 +1190,7 @@ def main_app():
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة البنود والشواهد
+    # 📋 2. صفحة البنود والشواهد (مع صياغة الوصف بالذكاء الاصطناعي وتفاصيل التقرير)
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         st.markdown("#### 📋 استعراض وإدارة بنود الأداء والشواهد")
@@ -1144,7 +1231,7 @@ def main_app():
                                 f'<span style="font-weight:700; color:{th["primary"]} !important;">📄 {ev["title"]}</span>'
                                 f'<span style="font-size:12px; color:#64748b !important;">📅 {exec_date}</span>'
                                 f'</div>'
-                                f'<div style="font-size:13.5px; color:#334155 !important;">{ev.get("description") or ""}</div>'
+                                f'<div style="font-size:13.5px; color:#334155 !important; white-space:pre-line;">{ev.get("description") or ""}</div>'
                                 f'{thumbs_html}</div>'
                             )
                             st.markdown(ev_card, unsafe_allow_html=True)
@@ -1174,7 +1261,7 @@ def main_app():
                         f'<span style="font-weight:700; font-size:15.5px; color:{th["primary"]} !important;">📄 {ev["title"]}</span>'
                         f'<span style="background:{th["tint"]}; color:{th["primary_dark"]} !important; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;">'
                         f'📅 تاريخ التنفيذ: {exec_date}</span></div>'
-                        f'<div style="font-size:13.5px; color:#334155 !important; line-height:1.6; margin-bottom:6px;">{ev.get("description") or ""}</div>'
+                        f'<div style="font-size:13.5px; color:#334155 !important; line-height:1.6; margin-bottom:6px; white-space:pre-line;">{ev.get("description") or ""}</div>'
                         f'{thumbs_html}</div>'
                     )
                     st.markdown(ev_detail_html, unsafe_allow_html=True)
@@ -1243,120 +1330,130 @@ def main_app():
                 for idea in sub_options:
                     st.markdown(f'<div class="idea-card"><span>💡 {idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
 
+            # ----------------------------------------------------
+            # نموذج إضافة شاهد جديد (مع زر صياغة الوصف بالذكاء الاصطناعي)
+            # ----------------------------------------------------
             if not is_visitor:
                 st.markdown("##### ➕ إضافة شاهد جديد لهذا البند")
-                with st.form(f"add_ev_std_{std_id}", clear_on_submit=True):
-                    chosen_idea = st.selectbox("اختر البند الفرعي:", sub_options + ["أخرى (كتابة عنوان مخصص)"])
-                    custom_title = st.text_input("عنوان مخصص للشاهد (اختياري):")
-                    exec_date_input = st.date_input("📅 تاريخ التنفيذ (حسب توزيع المنهج):", value=datetime.date.today())
-                    desc = st.text_area("وصف الشاهد (الهدف، التنفيذ، الأثر):")
-                    uploaded_files = st.file_uploader("📎 المرفقات (صور أو ملف PDF):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True)
-                    ext_link_input = st.text_input("🔗 أو رابط (يوتيوب، مدرستي، درايف... - اختياري):", placeholder="https://")
-                    
-                    if st.form_submit_button("حفظ الشاهد ورفع المرفقات 💾", type="primary", use_container_width=True):
-                        final_title = custom_title.strip() if (chosen_idea == "أخرى (كتابة عنوان مخصص)" or custom_title.strip()) else chosen_idea
-                        has_attachment = bool(uploaded_files) or bool(ext_link_input.strip())
-                        
-                        if final_title and has_attachment and active_year.get('id'):
-                            with st.spinner("جاري حفظ الشاهد والمرفقات..."):
-                                insert_payload = {
-                                    "standard_id": std_id,
-                                    "year_id": active_year['id'],
-                                    "title": final_title,
-                                    "description": desc,
-                                    "execution_date": str(exec_date_input)
-                                }
-                                try:
-                                    ev_data = supabase.table("evidences").insert(insert_payload).execute()
-                                except Exception:
-                                    insert_payload.pop("execution_date", None)
-                                    ev_data = supabase.table("evidences").insert(insert_payload).execute()
-                                    
-                                new_id = ev_data.data[0]['id']
-                                if uploaded_files:
-                                    for up_file in uploaded_files:
-                                        ext = up_file.name.split('.')[-1]
-                                        path = f"{new_id}/{uuid.uuid4()}.{ext}"
-                                        supabase.storage.from_("private-achievements").upload(
-                                            path=path, file=up_file.getvalue(), file_options={"content-type": up_file.type}
-                                        )
-                                        supabase.table("evidence_files").insert({
-                                            "evidence_id": new_id, "file_url": path, "file_type": up_file.type
-                                        }).execute()
-                                if ext_link_input.strip():
-                                    supabase.table("evidence_files").insert({
-                                        "evidence_id": new_id,
-                                        "file_url": ext_link_input.strip(),
-                                        "file_type": "external/link"
-                                    }).execute()
-                                    
-                                clear_app_cache()
-                                st.success("تم حفظ الشاهد بنجاح!")
-                                time.sleep(0.4)
-                                st.rerun()
-                        else:
-                            st.warning("يرجى اختيار العنوان وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
+                
+                # مفاتيح الجلسة لحقول الإدخال حتى يتمكن الذكاء الاصطناعي من تحديثها مباشرة
+                desc_key = f"draft_desc_{std_id}"
+                goal_key = f"draft_goal_{std_id}"
+                target_key = f"draft_target_{std_id}"
+                impl_key = f"draft_impl_{std_id}"
+                impact_key = f"draft_impact_{std_id}"
+                for k in [desc_key, goal_key, target_key, impl_key, impact_key]:
+                    if k not in st.session_state:
+                        st.session_state[k] = ""
 
-    # ----------------------------------------
-    # 📅 3. صفحة أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية
-    # ----------------------------------------
-    elif st.session_state.current_page == 'archive' and not is_visitor:
-        st.markdown("#### 📅 أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية")
-        st.write("في نهاية كل عام دراسي، يمكنك أرشفة ملف الإنجاز الحالي وبدء ملف إنجاز جديد للعام القادم دون فقدان أي شواهد سابقة.")
+                chosen_idea = st.selectbox("اختر البند الفرعي المقترح:", sub_options + ["أخرى (كتابة عنوان مخصص)"], key=f"idea_sel_{std_id}")
+                default_title_val = "" if chosen_idea == "أخرى (كتابة عنوان مخصص)" else chosen_idea
+                final_title = st.text_input("عنوان الشاهد", value=default_title_val, key=f"title_in_{std_id}")
 
-        with st.form("archive_and_new_year_form", clear_on_submit=True):
-            new_year_name = st.text_input("🆕 اسم العام الدراسي الجديد (مثال: 1449 أو 1449-1450):")
-            submit_new_year = st.form_submit_button("📦 أرشفة العام الحالي وبدء ملف الإنجاز الجديد", type="primary", use_container_width=True)
-            if submit_new_year:
-                if new_year_name.strip():
-                    for y in all_years:
-                        supabase.table("academic_years").update({"is_active": False}).eq("id", y['id']).execute()
-                    supabase.table("academic_years").insert({
-                        "year_name": new_year_name.strip(),
-                        "is_active": True
-                    }).execute()
-                    clear_app_cache()
-                    st.success(f"تمت أرشفة العام السابق، وفتح ملف إنجاز جديد لعام ({new_year_name.strip()})!")
-                    time.sleep(0.5)
-                    st.rerun()
-                else:
-                    st.warning("يرجى كتابة اسم العام الدراسي الجديد.")
+                st.text_area(
+                    "وصف مختصر (اختياري)",
+                    key=desc_key,
+                    placeholder="ماذا نفذت؟ وما الأثر؟ (اكتب نقاطاً سريعة ودع الصياغة لنا)",
+                    height=100
+                )
 
-        st.markdown("##### 🗂️ سجل ملفات الإنجاز المحفوظة")
-        for y in all_years:
-            y_ev_res = supabase.table("evidences").select("id", count="exact").eq("year_id", y['id']).execute()
-            y_count = y_ev_res.count if y_ev_res.count is not None else len(y_ev_res.data)
-            is_act = y.get("is_active", False)
-            
-            badge_html = '<span style="background:#10b981; color:white !important; padding:4px 12px; border-radius:8px; font-size:12px;">🟢 الملف النشط</span>' if is_act else '<span style="background:#64748b; color:white !important; padding:4px 12px; border-radius:8px; font-size:12px;">📦 مؤرشف</span>'
-            
-            arch_card = (
-                f'<div class="std-card">'
-                f'<div><div class="std-title">📁 ملف إنجاز العام الدراسي: {y["year_name"]}هـ</div>'
-                f'<div style="font-size:12.5px; color:#64748b !important;">عدد الشواهد الموثقة: <strong>{y_count} شاهد</strong></div></div>'
-                f'<div>{badge_html}</div>'
-                f'</div>'
-            )
-            st.markdown(arch_card, unsafe_allow_html=True)
-            
-            if not is_act:
-                col_a, col_b = st.columns([3, 1])
-                with col_a:
-                    if st.button(f"🔄 تفعيل واستعراض ملف عام {y['year_name']}هـ", key=f"act_{y['id']}", type="primary", use_container_width=True):
-                        for item_y in all_years:
-                            supabase.table("academic_years").update({"is_active": False}).eq("id", item_y['id']).execute()
-                        supabase.table("academic_years").update({"is_active": True}).eq("id", y['id']).execute()
-                        clear_app_cache()
+                # زر صياغة الوصف بالذكاء الاصطناعي (مطابق للصورة المرفقة)
+                col_ai_btn, col_ai_hint = st.columns([2, 2])
+                with col_ai_btn:
+                    if st.button("✨ صياغة الوصف بالذكاء الاصطناعي", key=f"ai_btn_{std_id}"):
+                        ai_result = generate_smart_evidence_text(
+                            std_id=std_id,
+                            std_title=std_data['title'],
+                            ev_title=final_title or chosen_idea,
+                            raw_notes=st.session_state[desc_key],
+                            variant=st.session_state.ai_variant
+                        )
+                        st.session_state.ai_variant += 1
+                        st.session_state[desc_key] = ai_result["description"]
+                        st.session_state[goal_key] = ai_result["goal"]
+                        st.session_state[target_key] = ai_result["target_group"]
+                        st.session_state[impl_key] = ai_result["implementation"]
+                        st.session_state[impact_key] = ai_result["impact"]
                         st.rerun()
-                with col_b:
-                    if y_count == 0:
-                        if st.button("🗑️ حذف", key=f"del_y_{y['id']}", use_container_width=True):
-                            supabase.table("academic_years").delete().eq("id", y['id']).execute()
+
+                # قسم تفاصيل تقرير الشاهد (اختياري: الهدف، المستهدفون، التنفيذ، الأثر)
+                with st.expander("📄 تفاصيل تقرير الشاهد (اختياري: الهدف، المستهدفون، التنفيذ، الأثر)", expanded=False):
+                    c_d1, c_d2 = st.columns(2)
+                    with c_d1:
+                        st.text_input("الهدف من الشاهد:", key=goal_key, placeholder="مثال: تعزيز الانضباط المدرسي...")
+                        st.text_input("المستهدفون:", key=target_key, placeholder="مثال: طلاب الصف الخامس...")
+                    with c_d2:
+                        st.text_input("آلية التنفيذ:", key=impl_key, placeholder="مثال: برنامج إذاعي ومتابعة يومية...")
+                        st.text_input("الأثر المتحقق:", key=impact_key, placeholder="مثال: ارتفاع نسبة الحضور...")
+
+                exec_date_input = st.date_input("📅 تاريخ التنفيذ (حسب توزيع المنهج):", value=datetime.date.today(), key=f"date_in_{std_id}")
+                uploaded_files = st.file_uploader("📎 المرفقات (صور أو ملف PDF):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True, key=f"files_in_{std_id}")
+                ext_link_input = st.text_input("🔗 أو رابط (يوتيوب، مدرستي، درايف... - اختياري):", placeholder="https://", key=f"link_in_{std_id}")
+
+                if st.button("حفظ الشاهد ورفع المرفقات 💾", type="primary", use_container_width=True, key=f"save_ev_btn_{std_id}"):
+                    has_attachment = bool(uploaded_files) or bool(ext_link_input.strip())
+                    if final_title.strip() and has_attachment and active_year.get('id'):
+                        # دمج الوصف المختصر مع تفاصيل التقرير الاختيارية إن وُجدت
+                        full_desc_parts = []
+                        if st.session_state[desc_key].strip():
+                            full_desc_parts.append(st.session_state[desc_key].strip())
+                        extra_details = []
+                        if st.session_state[goal_key].strip():
+                            extra_details.append(f"• الهدف: {st.session_state[goal_key].strip()}")
+                        if st.session_state[target_key].strip():
+                            extra_details.append(f"• المستهدفون: {st.session_state[target_key].strip()}")
+                        if st.session_state[impl_key].strip():
+                            extra_details.append(f"• التنفيذ: {st.session_state[impl_key].strip()}")
+                        if st.session_state[impact_key].strip():
+                            extra_details.append(f"• الأثر: {st.session_state[impact_key].strip()}")
+                        if extra_details:
+                            full_desc_parts.append("\n".join(extra_details))
+                        combined_description = "\n\n".join(full_desc_parts)
+
+                        with st.spinner("جاري حفظ الشاهد والمرفقات..."):
+                            insert_payload = {
+                                "standard_id": std_id,
+                                "year_id": active_year['id'],
+                                "title": final_title.strip(),
+                                "description": combined_description,
+                                "execution_date": str(exec_date_input)
+                            }
+                            try:
+                                ev_data = supabase.table("evidences").insert(insert_payload).execute()
+                            except Exception:
+                                insert_payload.pop("execution_date", None)
+                                ev_data = supabase.table("evidences").insert(insert_payload).execute()
+                                
+                            new_id = ev_data.data[0]['id']
+                            if uploaded_files:
+                                for up_file in uploaded_files:
+                                    ext = up_file.name.split('.')[-1]
+                                    path = f"{new_id}/{uuid.uuid4()}.{ext}"
+                                    supabase.storage.from_("private-achievements").upload(
+                                        path=path, file=up_file.getvalue(), file_options={"content-type": up_file.type}
+                                    )
+                                    supabase.table("evidence_files").insert({
+                                        "evidence_id": new_id, "file_url": path, "file_type": up_file.type
+                                    }).execute()
+                            if ext_link_input.strip():
+                                supabase.table("evidence_files").insert({
+                                    "evidence_id": new_id,
+                                    "file_url": ext_link_input.strip(),
+                                    "file_type": "external/link"
+                                }).execute()
+                                
+                            # تفريغ المسودة بعد الحفظ
+                            for k in [desc_key, goal_key, target_key, impl_key, impact_key]:
+                                st.session_state[k] = ""
                             clear_app_cache()
+                            st.success("تم حفظ الشاهد بنجاح!")
+                            time.sleep(0.4)
                             st.rerun()
+                    else:
+                        st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 4. صفحة التقارير والطباعة (PDF + Word قابل للتعديل مطابق للصورة)
+    # 📄 3. صفحة التقارير والطباعة (PDF + Word قابل للتعديل)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
@@ -1422,7 +1519,7 @@ def main_app():
                 .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; text-align: center; border-radius: {box_radius}; }}
                 .meta-title {{ font-size: 11.5px; color: #64748b; font-weight: 600; }}
                 .meta-value {{ font-size: 13.5px; font-weight: 700; color: #0f172a; }}
-                .desc-section {{ margin-bottom: 12px; line-height: 1.6; font-size: 13.5px; padding: 10px; background: #fafafa; border-right: 4px solid {rep_color}; border-radius: {box_radius}; flex-shrink: 0; }}
+                .desc-section {{ margin-bottom: 12px; line-height: 1.6; font-size: 13.5px; padding: 10px; background: #fafafa; border-right: 4px solid {rep_color}; border-radius: {box_radius}; flex-shrink: 0; white-space: pre-line; }}
                 .images-grid {{ flex-grow: 1; display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 0; padding: 5px 0; overflow: hidden; }}
                 .images-grid img {{ max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #cbd5e1; border-radius: {box_radius}; }}
                 .pdf-notice {{ background: #f1f5f9; padding: 8px; text-align: center; border-radius: {box_radius}; font-size: 12.5px; color: #334155; margin-bottom: 8px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
@@ -1548,7 +1645,6 @@ def main_app():
         html_content += "</body></html>"
         safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
         
-        # الزر الأول: تصدير ملف الإنجاز PDF (باللون الأخضر الوزاري)
         components.html(f"""
             <div style="text-align: center; margin: 4px 0;">
                 <button onclick="openPrintWindow()" style="width: 100%; height: 52px; background-color: #146c59; color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: 'Readex Pro', 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(20,108,89,0.2);">
@@ -1565,7 +1661,6 @@ def main_app():
             </script>
         """, height=62)
 
-        # الزر الثاني: تصدير Word قابل للتعديل (مطابق للصورة المرفقة)
         docx_bytes = generate_editable_docx(user_info, active_year, stds, evidences)
         st.download_button(
             label="📄 تصدير Word قابل للتعديل",
@@ -1576,11 +1671,11 @@ def main_app():
         )
 
     # ----------------------------------------
-    # ⚙️ 5. صفحة حسابي (البيانات + المظاهر + مشاركة الزائر + النسخ الاحتياطي المطور)
+    # ⚙️ 4. صفحة حسابي (البيانات + الزوار + تبويب ذكي مقسم للأرشيف والنسخ الاحتياطي)
     # ----------------------------------------
     elif st.session_state.current_page == 'settings' and not is_visitor:
-        st.markdown("#### ⚙️ إعدادات الحساب والمظهر والنسخ الاحتياطي")
-        t1, t2, t3, t4 = st.tabs(["👤 البيانات والمظهر", "🔗 مشاركة للزوار", "💾 النسخ والتصدير", "🚪 الخروج"])
+        st.markdown("#### ⚙️ إعدادات الحساب والمظهر والأرشيف والنسخ الاحتياطي")
+        t1, t2, t3, t4 = st.tabs(["👤 البيانات والمظهر", "📅 الأرشيف والنسخ", "🔗 مشاركة للزوار", "🚪 الخروج"])
         
         with t1:
             with st.form("profile_form"):
@@ -1624,6 +1719,140 @@ def main_app():
                     st.rerun()
 
         with t2:
+            # تبويب ذكي قابل للانقسام بين (أرشفة الأعوام الدراسية) و(النسخ الاحتياطي والتصدير)
+            sub_section = st.radio(
+                "archive_backup_split",
+                options=["archive_sec", "backup_sec"],
+                format_func=lambda k: "📅 أرشفة الأعوام الدراسية" if k == "archive_sec" else "💾 التصدير والنسخ الاحتياطي",
+                horizontal=True,
+                label_visibility="collapsed"
+            )
+
+            if sub_section == "archive_sec":
+                st.markdown("##### 📅 أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية")
+                st.caption("في نهاية العام الدراسي، يمكنك أرشفة الملف الحالي وفتح ملف إنجاز جديد للعام القادم مع بقاء جميع شواهدك السابقة محفوظة.")
+                
+                with st.form("archive_and_new_year_form", clear_on_submit=True):
+                    new_year_name = st.text_input("🆕 اسم العام الدراسي الجديد (مثال: 1449 أو 1449-1450):")
+                    submit_new_year = st.form_submit_button("📦 أرشفة العام الحالي وبدء ملف الإنجاز الجديد", type="primary", use_container_width=True)
+                    if submit_new_year:
+                        if new_year_name.strip():
+                            for y in all_years:
+                                supabase.table("academic_years").update({"is_active": False}).eq("id", y['id']).execute()
+                            supabase.table("academic_years").insert({
+                                "year_name": new_year_name.strip(),
+                                "is_active": True
+                            }).execute()
+                            clear_app_cache()
+                            st.success(f"تمت أرشفة العام السابق، وفتح ملف إنجاز جديد لعام ({new_year_name.strip()})!")
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.warning("يرجى كتابة اسم العام الدراسي الجديد.")
+
+                st.markdown("##### 🗂️ سجل ملفات الإنجاز المحفوظة")
+                for y in all_years:
+                    y_ev_res = supabase.table("evidences").select("id", count="exact").eq("year_id", y['id']).execute()
+                    y_count = y_ev_res.count if y_ev_res.count is not None else len(y_ev_res.data)
+                    is_act = y.get("is_active", False)
+                    
+                    badge_html = '<span style="background:#10b981; color:white !important; padding:4px 12px; border-radius:8px; font-size:12px;">🟢 الملف النشط</span>' if is_act else '<span style="background:#64748b; color:white !important; padding:4px 12px; border-radius:8px; font-size:12px;">📦 مؤرشف</span>'
+                    
+                    arch_card = (
+                        f'<div class="std-card">'
+                        f'<div><div class="std-title">📁 ملف إنجاز العام الدراسي: {y["year_name"]}هـ</div>'
+                        f'<div style="font-size:12.5px; color:#64748b !important;">عدد الشواهد الموثقة: <strong>{y_count} شاهد</strong></div></div>'
+                        f'<div>{badge_html}</div>'
+                        f'</div>'
+                    )
+                    st.markdown(arch_card, unsafe_allow_html=True)
+                    
+                    if not is_act:
+                        col_a, col_b = st.columns([3, 1])
+                        with col_a:
+                            if st.button(f"🔄 تفعيل واستعراض ملف عام {y['year_name']}هـ", key=f"act_{y['id']}", type="primary", use_container_width=True):
+                                for item_y in all_years:
+                                    supabase.table("academic_years").update({"is_active": False}).eq("id", item_y['id']).execute()
+                                supabase.table("academic_years").update({"is_active": True}).eq("id", y['id']).execute()
+                                clear_app_cache()
+                                st.rerun()
+                        with col_b:
+                            if y_count == 0:
+                                if st.button("🗑️ حذف", key=f"del_y_{y['id']}", use_container_width=True):
+                                    supabase.table("academic_years").delete().eq("id", y['id']).execute()
+                                    clear_app_cache()
+                                    st.rerun()
+
+            else:
+                st.markdown("##### 📤 تصدير ملف الإنجاز والنسخ الاحتياطي (متعدد الصيغ)")
+                st.caption("اختر الصيغة المناسبة لتحميل نسخة كاملة من ملف إنجازك أو قاعدة بياناتك:")
+
+                docx_backup_bytes = generate_editable_docx(user_info, active_year, stds, evidences)
+                st.download_button(
+                    label="📄 تصدير ملف الإنجاز Word قابل للتعديل (.docx)",
+                    data=docx_backup_bytes,
+                    file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True
+                )
+
+                csv_data = generate_excel_csv(stds, evidences)
+                st.download_button(
+                    label="📊 تصدير سجل الشواهد لبرنامج Excel (.csv)",
+                    data=csv_data.encode("utf-8"),
+                    file_name=f"سجل_الشواهد_{active_year['year_name']}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+
+                full_backup = {
+                    "user_profile": user_info,
+                    "academic_years": all_years,
+                    "standards": stds,
+                    "sub_items": all_subs,
+                    "evidences": evidences
+                }
+                st.download_button(
+                    label="📦 تحميل النسخة الاحتياطية الشاملة للنظام (.json)",
+                    data=json.dumps(full_backup, ensure_ascii=False, indent=4),
+                    file_name=f"ziyad_full_backup_{datetime.date.today()}.json",
+                    mime="application/json",
+                    type="primary",
+                    use_container_width=True
+                )
+
+                st.write("---")
+                st.markdown("##### 📥 استعادة نسخة احتياطية سابقة (Restore)")
+                uploaded_backup = st.file_uploader("ارفع ملف النسخة الاحتياطية (.json) لاستعادة الشواهد والبيانات:", type=["json"])
+                if uploaded_backup is not None:
+                    if st.button("🔄 بدء استعادة البيانات الآن", type="primary", use_container_width=True):
+                        try:
+                            b_data = json.loads(uploaded_backup.getvalue().decode("utf-8"))
+                            restored_count = 0
+                            existing_ids = {e['id'] for e in evidences}
+                            for ev_item in b_data.get("evidences", []):
+                                if ev_item.get("id") not in existing_ids and active_year.get("id"):
+                                    ins_ev = {
+                                        "standard_id": ev_item.get("standard_id", 1),
+                                        "year_id": active_year["id"],
+                                        "title": ev_item.get("title", "شاهد مستعاد"),
+                                        "description": ev_item.get("description", ""),
+                                        "execution_date": ev_item.get("execution_date") or ev_item.get("created_at", "")[:10]
+                                    }
+                                    try:
+                                        supabase.table("evidences").insert(ins_ev).execute()
+                                    except Exception:
+                                        ins_ev.pop("execution_date", None)
+                                        supabase.table("evidences").insert(ins_ev).execute()
+                                    restored_count += 1
+                            clear_app_cache()
+                            st.success(f"تمت استعادة ({restored_count}) شاهد جديد بنجاح إلى العام الحالي!")
+                            time.sleep(0.5)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"تعذر قراءة ملف النسخة الاحتياطية: {e}")
+
+        with t3:
             st.markdown("##### 🔗 التحكم في وصول الزوار (قراءة ومشاهدة فقط)")
             with st.form("visitor_settings_form"):
                 allow_v = st.checkbox("تفعيل السماح بدخول الزوار عبر الرمز السري", value=user_info.get("allow_visitor", True))
@@ -1644,78 +1873,6 @@ def main_app():
             curr_code = user_info.get("visitor_code", "1448")
             st.info(f"💡 **رابط المشاركة السريعة للزائر:** أضف `?visitor={curr_code}` لنهاية رابط موقعك، أو أعطِ الرمز `{curr_code}` للزائر ليدخله في تبويب (دخول زائر).")
 
-        with t3:
-            st.markdown("##### 📤 تصدير ملف الإنجاز والنسخ الاحتياطي (متعدد الصيغ)")
-            st.write("اختر الصيغة المناسبة لتحميل نسخة كاملة من ملف إنجازك أو قاعدة بياناتك:")
-
-            # 1. تصدير Word قابل للتعديل
-            docx_backup_bytes = generate_editable_docx(user_info, active_year, stds, evidences)
-            st.download_button(
-                label="📄 تصدير ملف الإنجاز Word قابل للتعديل (.docx)",
-                data=docx_backup_bytes,
-                file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True
-            )
-
-            # 2. تصدير سجل الشواهد لبرنامج Excel (CSV)
-            csv_data = generate_excel_csv(stds, evidences)
-            st.download_button(
-                label="📊 تصدير سجل الشواهد لبرنامج Excel (.csv)",
-                data=csv_data.encode("utf-8"),
-                file_name=f"سجل_الشواهد_{active_year['year_name']}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-
-            # 3. تصدير النسخة الاحتياطية الشاملة للنظام (JSON)
-            full_backup = {
-                "user_profile": user_info,
-                "academic_years": all_years,
-                "standards": stds,
-                "sub_items": all_subs,
-                "evidences": evidences
-            }
-            st.download_button(
-                label="📦 تحميل النسخة الاحتياطية الشاملة للنظام (.json)",
-                data=json.dumps(full_backup, ensure_ascii=False, indent=4),
-                file_name=f"ziyad_full_backup_{datetime.date.today()}.json",
-                mime="application/json",
-                type="primary",
-                use_container_width=True
-            )
-
-            st.write("---")
-            st.markdown("##### 📥 استعادة نسخة احتياطية سابقة (Restore)")
-            uploaded_backup = st.file_uploader("ارفع ملف النسخة الاحتياطية (.json) لاستعادة الشواهد والبيانات:", type=["json"])
-            if uploaded_backup is not None:
-                if st.button("🔄 بدء استعادة البيانات الآن", type="primary", use_container_width=True):
-                    try:
-                        b_data = json.loads(uploaded_backup.getvalue().decode("utf-8"))
-                        restored_count = 0
-                        existing_ids = {e['id'] for e in evidences}
-                        for ev_item in b_data.get("evidences", []):
-                            if ev_item.get("id") not in existing_ids and active_year.get("id"):
-                                ins_ev = {
-                                    "standard_id": ev_item.get("standard_id", 1),
-                                    "year_id": active_year["id"],
-                                    "title": ev_item.get("title", "شاهد مستعاد"),
-                                    "description": ev_item.get("description", ""),
-                                    "execution_date": ev_item.get("execution_date") or ev_item.get("created_at", "")[:10]
-                                }
-                                try:
-                                    supabase.table("evidences").insert(ins_ev).execute()
-                                except Exception:
-                                    ins_ev.pop("execution_date", None)
-                                    supabase.table("evidences").insert(ins_ev).execute()
-                                restored_count += 1
-                        clear_app_cache()
-                        st.success(f"تمت استعادة ({restored_count}) شاهد جديد بنجاح إلى العام الحالي!")
-                        time.sleep(0.5)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"تعذر قراءة ملف النسخة الاحتياطية: {e}")
-
         with t4:
             if st.button("🚪 تسجيل الخروج من الحساب", type="primary", use_container_width=True):
                 supabase.auth.sign_out()
@@ -1726,7 +1883,7 @@ def main_app():
     render_footer()
 
 # ==========================================
-# 10. نقطة تشغيل التطبيق
+# 11. نقطة تشغيل التطبيق
 # ==========================================
 if st.session_state.user is None and not st.session_state.is_visitor:
     login_page()
