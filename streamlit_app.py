@@ -320,9 +320,15 @@ if 'ai_variant' not in st.session_state:
     st.session_state.ai_variant = 0
 if 'custom_gemini_key' not in st.session_state:
     st.session_state.custom_gemini_key = ""
+if 'ready_docx_bytes' not in st.session_state:
+    st.session_state.ready_docx_bytes = None
+if 'ready_pdf_html' not in st.session_state:
+    st.session_state.ready_pdf_html = None
 
 def clear_app_cache():
     st.cache_data.clear()
+    st.session_state.ready_docx_bytes = None
+    st.session_state.ready_pdf_html = None
 
 def navigate_to(page_name, std_id=None):
     st.session_state.current_page = page_name
@@ -803,7 +809,7 @@ th = THEMES[active_theme_key]
 ZIYAD_LOGO_SVG = '<svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 7. التصميم الشامل (مع فرض اتجاه RTL الصارم على جميع القوائم المنبثقة والوصف)
+# 7. التصميم الشامل + حقن مراقب RTL للقوائم المنسدلة المنبثقة خارج .stApp
 # ==========================================
 st.markdown(f"""
 <style>
@@ -908,51 +914,6 @@ div[data-baseweb="select"] svg {{
     line-height: 1.4 !important;
 }}
 
-/* ========================================================= */
-/* فرض المحاذاة من اليمين إلى اليسار (RTL) على جميع القوائم المنبثقة */
-/* ========================================================= */
-div[data-baseweb="popover"],
-div[data-baseweb="popover"] *,
-div[data-baseweb="menu"],
-div[data-baseweb="menu"] *,
-ul[role="listbox"],
-ul[role="listbox"] *,
-li[role="option"],
-li[role="option"] * {{
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-    direction: rtl !important;
-    text-align: right !important;
-    font-family: 'Readex Pro', 'Cairo', sans-serif !important;
-    white-space: normal !important;
-    word-break: break-word !important;
-    line-height: 1.5 !important;
-}}
-li[role="option"] {{
-    display: flex !important;
-    flex-direction: row !important;
-    justify-content: flex-start !important;
-    align-items: center !important;
-    padding: 10px 16px !important;
-    border-bottom: 1px solid #f1f5f9 !important;
-    height: auto !important;
-}}
-li[role="option"] > div {{
-    width: 100% !important;
-    text-align: right !important;
-    direction: rtl !important;
-}}
-li[role="option"]:hover,
-li[role="option"]:hover *,
-li[role="option"][aria-selected="true"],
-li[role="option"][aria-selected="true"] * {{
-    background-color: {th['tint']} !important;
-    color: {th['primary']} !important;
-    -webkit-text-fill-color: {th['primary']} !important;
-    font-weight: 700 !important;
-}}
-
 input::placeholder, textarea::placeholder {{
     color: #64748b !important;
     -webkit-text-fill-color: #64748b !important;
@@ -1048,8 +1009,8 @@ div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
     border: 1px solid #b7e0d6 !important;
     border-radius: 12px !important;
     font-weight: 700 !important;
-    min-height: 42px !important;
-    padding: 0.35rem 0.75rem !important;
+    min-height: 44px !important;
+    padding: 0.4rem 0.85rem !important;
     transition: all 0.18s ease !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
     white-space: normal !important;
@@ -1059,7 +1020,7 @@ div[data-testid="stButton"] button p, div[data-testid="stDownloadButton"] button
     color: {th['primary']} !important;
     -webkit-text-fill-color: {th['primary']} !important;
     font-weight: 700 !important;
-    font-size: 13px !important;
+    font-size: 13.5px !important;
     white-space: normal !important;
     line-height: 1.3 !important;
     text-align: center !important;
@@ -1272,9 +1233,6 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 .dot-on {{ background: {th['primary']}; }}
 .dot-off {{ background: #e2e8f0; }}
 
-/* ========================================================= */
-/* بطاقة الشاهد والوصف والمرفقات (محاذاة يمينية RTL صارمة 100%) */
-/* ========================================================= */
 .ev-box {{
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -1380,6 +1338,82 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 .footer-rights {{ font-size: 11px; color: #64748b !important; text-align: center !important; }}
 </style>
 """, unsafe_allow_html=True)
+
+# حقن مباشر في head الصفحة الأم + MutationObserver لإجبار القوائم المنسدلة المنبثقة (Portals) على الاتجاه من اليمين لليسار RTL
+components.html(f"""
+<script>
+(function() {{
+    try {{
+        var pDoc = window.parent.document;
+        pDoc.documentElement.setAttribute('dir', 'rtl');
+        pDoc.body.setAttribute('dir', 'rtl');
+
+        var styleId = 'ziyad-global-portal-rtl';
+        var existingStyle = pDoc.getElementById(styleId);
+        if (!existingStyle) {{
+            existingStyle = pDoc.createElement('style');
+            existingStyle.id = styleId;
+            pDoc.head.appendChild(existingStyle);
+        }}
+        existingStyle.innerHTML = `
+            div[data-baseweb="popover"],
+            div[data-baseweb="popover"] *,
+            div[data-baseweb="menu"],
+            div[data-baseweb="menu"] *,
+            ul[data-testid="stSelectboxVirtualDropdown"],
+            ul[data-testid="stSelectboxVirtualDropdown"] *,
+            ul[role="listbox"],
+            ul[role="listbox"] *,
+            li[role="option"],
+            li[role="option"] * {{
+                direction: rtl !important;
+                text-align: right !important;
+                font-family: 'Readex Pro', 'Cairo', sans-serif !important;
+            }}
+            li[role="option"] {{
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: flex-start !important;
+                align-items: center !important;
+                padding: 10px 14px !important;
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+            }}
+            li[role="option"]:hover,
+            li[role="option"][aria-selected="true"] {{
+                background-color: {th['tint']} !important;
+                color: {th['primary']} !important;
+                font-weight: 700 !important;
+            }}
+        `;
+
+        function enforcePortalRTL() {{
+            var nodes = pDoc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], ul[role="listbox"], li[role="option"]');
+            nodes.forEach(function(el) {{
+                el.setAttribute('dir', 'rtl');
+                el.style.setProperty('direction', 'rtl', 'important');
+                el.style.setProperty('text-align', 'right', 'important');
+                var children = el.querySelectorAll('div, span');
+                children.forEach(function(ch) {{
+                    ch.setAttribute('dir', 'rtl');
+                    ch.style.setProperty('direction', 'rtl', 'important');
+                    ch.style.setProperty('text-align', 'right', 'important');
+                }});
+            }});
+        }}
+
+        enforcePortalRTL();
+        if (!window.parent.__ziyadRtlObserverAttached) {{
+            var obs = new MutationObserver(function() {{
+                enforcePortalRTL();
+            }});
+            obs.observe(pDoc.body, {{ childList: true, subtree: true }});
+            window.parent.__ziyadRtlObserverAttached = true;
+        }}
+    }} catch (e) {{}}
+}})();
+</script>
+""", height=0)
 
 # التحقق التلقائي من رابط الزائر (?visitor=CODE)
 query_params = st.query_params
@@ -1582,6 +1616,341 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                 st.success("تم حذف الشاهد بالكامل!")
                 time.sleep(0.3)
                 st.rerun()
+
+def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, signed_urls_map, report_style, th):
+    """بناء كود HTML للتقرير عند الضغط على زر الطباعة فقط"""
+    stds_map = {s['id']: s for s in stds}
+    all_evidences = sort_evidences_chronologically(evidences)
+    total_evidences = len(all_evidences)
+    active_stds = [s for s in stds if len([e for e in all_evidences if e['standard_id'] == s['id']]) > 0]
+    covered_stds = len(active_stds)
+
+    if report_style.startswith("1."):
+        rep_color = "#146c59"
+        rep_sub = "#0f5243"
+        cover_border = "6px double #146c59"
+        box_radius = "8px"
+    elif report_style.startswith("2."):
+        rep_color = th['primary']
+        rep_sub = th['primary_dark']
+        cover_border = f"3px solid {th['primary']}"
+        box_radius = "12px"
+    else:
+        rep_color = "#1e293b"
+        rep_sub = "#334155"
+        cover_border = "2px solid #1e293b"
+        box_radius = "4px"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <meta charset="UTF-8">
+        <title>ملف الإنجاز المهني - {user_info['full_name']}</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap');
+            * {{ box-sizing: border-box; direction: rtl; }}
+            body {{ font-family: 'Readex Pro', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; direction: rtl; text-align: right; }}
+            
+            .page {{
+                background-color: white;
+                width: 210mm;
+                height: 296mm;
+                padding: 10mm 14mm;
+                margin: 0 auto 20mm auto;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+                page-break-after: always;
+                page-break-inside: avoid;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                direction: rtl;
+                text-align: right;
+            }}
+            
+            .cover-page {{ border: {cover_border}; border-radius: {box_radius}; padding: 35px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; }}
+            .cover-title {{ color: {rep_color}; font-size: 36px; font-weight: 700; margin-bottom: 10px; }}
+            .cover-subtitle {{ font-size: 19px; margin-bottom: 35px; font-weight: 600; color: #475569; }}
+            .info-table {{ width: 88%; border-collapse: collapse; margin: 0 auto; font-size: 16px; }}
+            .info-table th, .info-table td {{ border: 1px solid #cbd5e1; padding: 12px; text-align: center; }}
+            .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: 700; color: {rep_color}; }}
+            
+            .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 6px; margin-bottom: 10px; font-size: 12px; font-weight: 700; flex-shrink: 0; }}
+            .header-right {{ color: {rep_color}; text-align: right; }}
+            .header-left {{ text-align: left; }}
+            
+            .index-title {{ color: {rep_color}; font-size: 22px; font-weight: 700; margin-bottom: 16px; text-align: right; }}
+            .index-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
+            .index-table th {{ background-color: #f1f5f9; color: {rep_color}; padding: 10px; text-align: center; border-bottom: 2px solid {rep_color}; }}
+            .index-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; }}
+            
+            .content-wrapper {{ flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }}
+            
+            .top-ev-banner {{
+                background-color: {rep_color};
+                color: white;
+                padding: 10px 16px;
+                border-radius: {box_radius};
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+                flex-shrink: 0;
+            }}
+            .top-ev-title {{ font-size: 16px; font-weight: 700; text-align: right; }}
+            .top-std-sub {{ font-size: 12.5px; opacity: 0.92; text-align: left; }}
+            
+            .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; flex-shrink: 0; }}
+            .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 7px 12px; text-align: center; border-radius: {box_radius}; }}
+            .meta-title {{ font-size: 11px; color: #64748b; font-weight: 600; }}
+            .meta-value {{ font-size: 13px; font-weight: 700; color: #0f172a; }}
+            
+            .desc-header {{
+                border-right: 4px solid {rep_color};
+                padding-right: 8px;
+                font-size: 13.5px;
+                font-weight: 700;
+                color: {rep_color};
+                margin-bottom: 4px;
+                flex-shrink: 0;
+                text-align: right;
+            }}
+            .desc-section {{
+                margin-bottom: 10px;
+                line-height: 1.6;
+                font-size: 12.5px;
+                color: #1e293b;
+                padding: 8px 10px;
+                background: #fafafa;
+                border: 1px solid #f1f5f9;
+                border-radius: {box_radius};
+                flex-shrink: 0;
+                white-space: pre-line;
+                max-height: 44mm;
+                overflow: hidden;
+                direction: rtl;
+                text-align: right;
+            }}
+            
+            .shawahed-bar {{
+                background-color: #e6f2ef;
+                color: {rep_color};
+                text-align: center;
+                font-weight: 700;
+                font-size: 13px;
+                padding: 5px;
+                border-radius: 6px;
+                margin-bottom: 8px;
+                flex-shrink: 0;
+            }}
+
+            .images-grid {{
+                flex: 1 1 auto;
+                display: grid;
+                gap: 10px;
+                width: 100%;
+                min-height: 0;
+                overflow: hidden;
+                margin-bottom: 6px;
+            }}
+            .images-grid.count-1 {{
+                grid-template-columns: 1fr;
+                grid-template-rows: minmax(0, 1fr);
+            }}
+            .images-grid.count-2 {{
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-rows: minmax(0, 1fr);
+            }}
+            .images-grid.count-3, .images-grid.count-4 {{
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-rows: repeat(2, minmax(0, 1fr));
+            }}
+            .img-frame {{
+                background-color: #f8f9fa;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                padding: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                min-width: 0;
+                min-height: 0;
+                overflow: hidden;
+            }}
+            .img-frame img {{
+                width: 100%;
+                height: 100%;
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain !important;
+                display: block;
+                border-radius: 6px;
+            }}
+
+            .pdf-notice {{ background: #f1f5f9; padding: 6px; text-align: center; border-radius: 6px; font-size: 11.5px; color: #334155; margin-bottom: 6px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
+            .signatures {{ display: flex; justify-content: space-between; margin-top: auto; border-top: 1.5px solid #e2e8f0; padding-top: 8px; text-align: center; flex-shrink: 0; }}
+            .sig-box {{ width: 42%; font-size: 12.5px; }}
+            .print-footer {{ text-align: center; font-size: 9.5px; color: #64748b; margin-top: 6px; padding-top: 4px; border-top: 1px dashed #e2e8f0; flex-shrink: 0; }}
+            
+            @media print {{
+                body {{ background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                .page {{ width: 210mm; height: 296mm; margin: 0; padding: 10mm 14mm; box-shadow: none; border: none; }}
+                @page {{ size: A4 portrait; margin: 0; }}
+            }}
+        </style>
+    </head>
+    <body>
+    """
+    
+    html_content += f"""
+    <div class="page">
+        <div class="cover-page">
+            <div style="font-size:15px; font-weight:700; color:{rep_color}; margin-bottom:8px;">المملكة العربية السعودية • وزارة التعليم</div>
+            <div style="font-size:13px; color:#b45309; font-weight:700; margin-bottom:12px;">🎓 منصة زياد الذكية لتوثيق الأداء المهني</div>
+            <div class="cover-title">ملف الإنجاز المهني</div>
+            <div class="cover-subtitle">توثيق شواهد الأداء الوظيفي</div>
+            <table class="info-table">
+                <tr><th>اسم المعلم</th><td>{user_info['full_name']}</td></tr>
+                <tr><th>التخصص</th><td>{user_info['specialization']}</td></tr>
+                <tr><th>المدرسة</th><td>{user_info['school_name']}</td></tr>
+                <tr><th>المرحلة الدراسية</th><td>{user_info['education_stage']}</td></tr>
+                <tr><th>المدينة</th><td>{user_info['city']}</td></tr>
+                <tr><th>مدير المدرسة</th><td>{user_info['principal_name']}</td></tr>
+                <tr><th>العام الدراسي</th><td>{active_year['year_name']}هـ</td></tr>
+                <tr><th>إجمالي الشواهد الموثقة</th><td>{total_evidences} شاهد ({covered_stds} من {len(stds)} معايير)</td></tr>
+            </table>
+            <div style="margin-top:35px; font-size:11px; color:#64748b;">صدر إلكترونياً عبر منصة زياد الذكية — جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
+        </div>
+    </div>
+    """
+    
+    shared_header = f"""
+    <div class="header-container">
+        <div class="header-right">
+            منصة زياد الذكية | أ. {user_info['full_name']}<br>
+            <span style="font-size:10.5px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - العام الدراسي {active_year['year_name']}هـ</span>
+        </div>
+        <div class="header-left">
+            المملكة العربية السعودية<br>
+            <span style="font-size:10.5px; font-weight:normal; color:#666;">وزارة التعليم - {user_info['school_name']}</span>
+        </div>
+    </div>
+    """
+    
+    html_content += f"""
+    <div class="page">
+        {shared_header}
+        <div class="index-title">فهرس معايير الأداء المنجزة</div>
+        <table class="index-table">
+            <tr><th>م</th><th>المعيار</th><th>الوزن النسبي</th><th>الشواهد الموثقة</th><th>المستهدف</th></tr>
+    """
+    for std in stds:
+        count = ev_by_std[std['id']]
+        if count == 0:
+            continue
+        target = std.get('target_evidences', 3)
+        html_content += f"<tr><td>{std['id']}</td><td style='text-align:right; font-weight:bold;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:{rep_color}; font-weight:bold;'>{count}</td><td>{target}</td></tr>"
+    html_content += f"""
+        </table>
+        <div class="print-footer" style="margin-top:auto;">منصة زياد الذكية | جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
+    </div>
+    """
+    
+    for ev in all_evidences:
+        std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
+        exec_date = ev.get('execution_date') or ev['created_at'][:10]
+        files = ev.get('evidence_files', [])
+        
+        img_urls = []
+        pdf_count = 0
+        ext_links = []
+        for f in files:
+            f_url = f.get('file_url', '')
+            f_type = f.get('file_type', '')
+            if f_type == 'external/link' or f_url.startswith('http'):
+                ext_links.append(f_url)
+            elif f_type.startswith('image/'):
+                sec_u = signed_urls_map.get(f_url, '')
+                if sec_u:
+                    img_urls.append(sec_u)
+            elif f_type == 'application/pdf':
+                pdf_count += 1
+
+        img_chunks = [img_urls[i:i + 4] for i in range(0, len(img_urls), 4)]
+        if not img_chunks:
+            img_chunks = [[]]
+
+        total_chunks = len(img_chunks)
+        pdf_notice = f"<div class='pdf-notice'>📌 مرفق مستند PDF رسمي عدد ({pdf_count}) محفوظ في النظام الإلكتروني.</div>" if pdf_count > 0 else ""
+        link_notice = f"<div class='pdf-notice'>🔗 رابط إلكتروني مرفق: {ext_links[0]}</div>" if ext_links else ""
+
+        for chunk_idx, chunk in enumerate(img_chunks):
+            c_len = len(chunk)
+            grid_cls = f"count-{c_len}" if c_len in [1, 2, 3, 4] else "count-4"
+            frames_html = "".join([f"<div class='img-frame'><img src='{u}'></div>" for u in chunk])
+            images_section = f"<div class='shawahed-bar'>الشواهد{f' (صفحة {chunk_idx+1} من {total_chunks})' if total_chunks > 1 else ''}</div><div class='images-grid {grid_cls}'>{frames_html}</div>" if c_len > 0 else ""
+
+            if chunk_idx == 0:
+                html_content += f"""
+                <div class="page">
+                    {shared_header}
+                    <div class="content-wrapper">
+                        <div class="top-ev-banner">
+                            <span class="top-ev-title">{ev['title']}</span>
+                            <span class="top-std-sub">البند {ev['standard_id']}: {std['title']} ({std['weight']}%)</span>
+                        </div>
+                        <div class="meta-grid">
+                            <div class="meta-box"><div class="meta-title">تاريخ التنفيذ</div><div class="meta-value">{exec_date}</div></div>
+                            <div class="meta-box"><div class="meta-title">نوع الشاهد</div><div class="meta-value">شاهد ميداني موثق</div></div>
+                        </div>
+                        <div class="desc-header">الوصف</div>
+                        <div class="desc-section" dir="rtl">{ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'}</div>
+                        {pdf_notice}
+                        {link_notice}
+                        {images_section}
+                    </div>
+                    <div class="signatures">
+                        <div class="sig-box">
+                            <div style="color:#666; font-size:11.5px; margin-bottom:10px;">المعلم:</div>
+                            <div style="font-weight:bold;">{user_info['full_name']}</div>
+                        </div>
+                        <div class="sig-box">
+                            <div style="color:#666; font-size:11.5px; margin-bottom:10px;">مدير المدرسة:</div>
+                            <div style="font-weight:bold;">{user_info['principal_name']}</div>
+                        </div>
+                    </div>
+                    <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
+                </div>
+                """
+            else:
+                html_content += f"""
+                <div class="page">
+                    {shared_header}
+                    <div class="content-wrapper">
+                        <div class="top-ev-banner">
+                            <span class="top-ev-title">تابع: {ev['title']}</span>
+                            <span class="top-std-sub">البند {ev['standard_id']}: {std['title']} (صفحة {chunk_idx+1} من {total_chunks})</span>
+                        </div>
+                        {images_section}
+                    </div>
+                    <div class="signatures">
+                        <div class="sig-box">
+                            <div style="color:#666; font-size:11.5px; margin-bottom:10px;">المعلم:</div>
+                            <div style="font-weight:bold;">{user_info['full_name']}</div>
+                        </div>
+                        <div class="sig-box">
+                            <div style="color:#666; font-size:11.5px; margin-bottom:10px;">مدير المدرسة:</div>
+                            <div style="font-weight:bold;">{user_info['principal_name']}</div>
+                        </div>
+                    </div>
+                    <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
+                </div>
+                """
+    
+    html_content += "</body></html>"
+    return html_content
 
 def render_footer():
     year_now = datetime.date.today().year
@@ -1830,7 +2199,7 @@ def main_app():
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة البنود والشواهد (محاذاة RTL كاملة للقوائم والوصف + ترتيب زمني تصاعدي)
+    # 📋 2. صفحة البنود والشواهد
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         st.markdown("#### 📋 استعراض وإدارة بنود الأداء والشواهد")
@@ -2029,10 +2398,11 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة
+    # 📄 3. صفحة التقارير والطباعة (سريعة جداً وتعمل عند الضغط على الزر فقط)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
+        st.info(f"📊 الملف جاهز للتصدير ويحتوي على ({total_ev_count}) شاهد موزعة على ({stds_with_ev}) من أصل ({total_stds}) معايير. اختر التصميم ثم اضغط على الزر المطلوب:")
         
         report_style = st.selectbox(
             "🎨 اختر تصميم التقرير قبل التصدير:",
@@ -2043,391 +2413,80 @@ def main_app():
             ]
         )
 
-        stds_map = {s['id']: s for s in stds}
-        all_evidences = sort_evidences_chronologically(evidences)
-        total_evidences = len(all_evidences)
-        active_stds = [s for s in stds if len([e for e in all_evidences if e['standard_id'] == s['id']]) > 0]
-        covered_stds = len(active_stds)
+        # الزر الأول: تجهيز وطباعة PDF عند الطلب فقط (فوري)
+        if st.button("🖨️ تجهيز وطباعة ملف الإنجاز PDF", type="primary", use_container_width=True):
+            with st.spinner("جاري تجهيز صفحات تقرير PDF..."):
+                html_content = build_pdf_report_html(
+                    user_info, active_year, stds, evidences, ev_by_std, signed_urls_map, report_style, th
+                )
+                safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+                st.session_state.ready_pdf_html = safe_html
 
-        if report_style.startswith("1."):
-            rep_color = "#146c59"
-            rep_sub = "#0f5243"
-            cover_border = "6px double #146c59"
-            box_radius = "8px"
-        elif report_style.startswith("2."):
-            rep_color = th['primary']
-            rep_sub = th['primary_dark']
-            cover_border = f"3px solid {th['primary']}"
-            box_radius = "12px"
-        else:
-            rep_color = "#1e293b"
-            rep_sub = "#334155"
-            cover_border = "2px solid #1e293b"
-            box_radius = "4px"
-
-        html_content = f"""
-        <!DOCTYPE html>
-        <html dir="rtl" lang="ar">
-        <head>
-            <meta charset="UTF-8">
-            <title>ملف الإنجاز المهني - {user_info['full_name']}</title>
-            <style>
-                @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap');
-                * {{ box-sizing: border-box; direction: rtl; }}
-                body {{ font-family: 'Readex Pro', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; direction: rtl; text-align: right; }}
-                
-                .page {{
-                    background-color: white;
-                    width: 210mm;
-                    height: 296mm;
-                    padding: 10mm 14mm;
-                    margin: 0 auto 20mm auto;
-                    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-                    page-break-after: always;
-                    page-break-inside: avoid;
-                    display: flex;
-                    flex-direction: column;
-                    overflow: hidden;
-                    direction: rtl;
-                    text-align: right;
-                }}
-                
-                .cover-page {{ border: {cover_border}; border-radius: {box_radius}; padding: 35px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; }}
-                .cover-title {{ color: {rep_color}; font-size: 36px; font-weight: 700; margin-bottom: 10px; }}
-                .cover-subtitle {{ font-size: 19px; margin-bottom: 35px; font-weight: 600; color: #475569; }}
-                .info-table {{ width: 88%; border-collapse: collapse; margin: 0 auto; font-size: 16px; }}
-                .info-table th, .info-table td {{ border: 1px solid #cbd5e1; padding: 12px; text-align: center; }}
-                .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: 700; color: {rep_color}; }}
-                
-                .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 6px; margin-bottom: 10px; font-size: 12px; font-weight: 700; flex-shrink: 0; }}
-                .header-right {{ color: {rep_color}; text-align: right; }}
-                .header-left {{ text-align: left; }}
-                
-                .index-title {{ color: {rep_color}; font-size: 22px; font-weight: 700; margin-bottom: 16px; text-align: right; }}
-                .index-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
-                .index-table th {{ background-color: #f1f5f9; color: {rep_color}; padding: 10px; text-align: center; border-bottom: 2px solid {rep_color}; }}
-                .index-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; }}
-                
-                .content-wrapper {{ flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }}
-                
-                .top-ev-banner {{
-                    background-color: {rep_color};
-                    color: white;
-                    padding: 10px 16px;
-                    border-radius: {box_radius};
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 10px;
-                    flex-shrink: 0;
-                }}
-                .top-ev-title {{ font-size: 16px; font-weight: 700; text-align: right; }}
-                .top-std-sub {{ font-size: 12.5px; opacity: 0.92; text-align: left; }}
-                
-                .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; flex-shrink: 0; }}
-                .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 7px 12px; text-align: center; border-radius: {box_radius}; }}
-                .meta-title {{ font-size: 11px; color: #64748b; font-weight: 600; }}
-                .meta-value {{ font-size: 13px; font-weight: 700; color: #0f172a; }}
-                
-                .desc-header {{
-                    border-right: 4px solid {rep_color};
-                    padding-right: 8px;
-                    font-size: 13.5px;
-                    font-weight: 700;
-                    color: {rep_color};
-                    margin-bottom: 4px;
-                    flex-shrink: 0;
-                    text-align: right;
-                }}
-                .desc-section {{
-                    margin-bottom: 10px;
-                    line-height: 1.6;
-                    font-size: 12.5px;
-                    color: #1e293b;
-                    padding: 8px 10px;
-                    background: #fafafa;
-                    border: 1px solid #f1f5f9;
-                    border-radius: {box_radius};
-                    flex-shrink: 0;
-                    white-space: pre-line;
-                    max-height: 44mm;
-                    overflow: hidden;
-                    direction: rtl;
-                    text-align: right;
-                }}
-                
-                .shawahed-bar {{
-                    background-color: #e6f2ef;
-                    color: {rep_color};
-                    text-align: center;
-                    font-weight: 700;
-                    font-size: 13px;
-                    padding: 5px;
-                    border-radius: 6px;
-                    margin-bottom: 8px;
-                    flex-shrink: 0;
-                }}
-
-                .images-grid {{
-                    flex: 1 1 auto;
-                    display: grid;
-                    gap: 10px;
-                    width: 100%;
-                    min-height: 0;
-                    overflow: hidden;
-                    margin-bottom: 6px;
-                }}
-                .images-grid.count-1 {{
-                    grid-template-columns: 1fr;
-                    grid-template-rows: minmax(0, 1fr);
-                }}
-                .images-grid.count-2 {{
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                    grid-template-rows: minmax(0, 1fr);
-                }}
-                .images-grid.count-3, .images-grid.count-4 {{
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                    grid-template-rows: repeat(2, minmax(0, 1fr));
-                }}
-                .img-frame {{
-                    background-color: #f8f9fa;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 10px;
-                    padding: 6px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 100%;
-                    height: 100%;
-                    min-width: 0;
-                    min-height: 0;
-                    overflow: hidden;
-                }}
-                .img-frame img {{
-                    width: 100%;
-                    height: 100%;
-                    max-width: 100%;
-                    max-height: 100%;
-                    object-fit: contain !important;
-                    display: block;
-                    border-radius: 6px;
-                }}
-
-                .pdf-notice {{ background: #f1f5f9; padding: 6px; text-align: center; border-radius: 6px; font-size: 11.5px; color: #334155; margin-bottom: 6px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
-                .signatures {{ display: flex; justify-content: space-between; margin-top: auto; border-top: 1.5px solid #e2e8f0; padding-top: 8px; text-align: center; flex-shrink: 0; }}
-                .sig-box {{ width: 42%; font-size: 12.5px; }}
-                .print-footer {{ text-align: center; font-size: 9.5px; color: #64748b; margin-top: 6px; padding-top: 4px; border-top: 1px dashed #e2e8f0; flex-shrink: 0; }}
-                
-                @media print {{
-                    body {{ background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                    .page {{ width: 210mm; height: 296mm; margin: 0; padding: 10mm 14mm; box-shadow: none; border: none; }}
-                    @page {{ size: A4 portrait; margin: 0; }}
-                }}
-            </style>
-        </head>
-        <body>
-        """
-        
-        html_content += f"""
-        <div class="page">
-            <div class="cover-page">
-                <div style="font-size:15px; font-weight:700; color:{rep_color}; margin-bottom:8px;">المملكة العربية السعودية • وزارة التعليم</div>
-                <div style="font-size:13px; color:#b45309; font-weight:700; margin-bottom:12px;">🎓 منصة زياد الذكية لتوثيق الأداء المهني</div>
-                <div class="cover-title">ملف الإنجاز المهني</div>
-                <div class="cover-subtitle">توثيق شواهد الأداء الوظيفي</div>
-                <table class="info-table">
-                    <tr><th>اسم المعلم</th><td>{user_info['full_name']}</td></tr>
-                    <tr><th>التخصص</th><td>{user_info['specialization']}</td></tr>
-                    <tr><th>المدرسة</th><td>{user_info['school_name']}</td></tr>
-                    <tr><th>المرحلة الدراسية</th><td>{user_info['education_stage']}</td></tr>
-                    <tr><th>المدينة</th><td>{user_info['city']}</td></tr>
-                    <tr><th>مدير المدرسة</th><td>{user_info['principal_name']}</td></tr>
-                    <tr><th>العام الدراسي</th><td>{active_year['year_name']}هـ</td></tr>
-                    <tr><th>إجمالي الشواهد الموثقة</th><td>{total_evidences} شاهد ({covered_stds} من {len(stds)} معايير)</td></tr>
-                </table>
-                <div style="margin-top:35px; font-size:11px; color:#64748b;">صدر إلكترونياً عبر منصة زياد الذكية — جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
-            </div>
-        </div>
-        """
-        
-        shared_header = f"""
-        <div class="header-container">
-            <div class="header-right">
-                منصة زياد الذكية | أ. {user_info['full_name']}<br>
-                <span style="font-size:10.5px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - العام الدراسي {active_year['year_name']}هـ</span>
-            </div>
-            <div class="header-left">
-                المملكة العربية السعودية<br>
-                <span style="font-size:10.5px; font-weight:normal; color:#666;">وزارة التعليم - {user_info['school_name']}</span>
-            </div>
-        </div>
-        """
-        
-        html_content += f"""
-        <div class="page">
-            {shared_header}
-            <div class="index-title">فهرس معايير الأداء المنجزة</div>
-            <table class="index-table">
-                <tr><th>م</th><th>المعيار</th><th>الوزن النسبي</th><th>الشواهد الموثقة</th><th>المستهدف</th></tr>
-        """
-        for std in stds:
-            count = ev_by_std[std['id']]
-            if count == 0:
-                continue
-            target = std.get('target_evidences', 3)
-            html_content += f"<tr><td>{std['id']}</td><td style='text-align:right; font-weight:bold;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:{rep_color}; font-weight:bold;'>{count}</td><td>{target}</td></tr>"
-        html_content += f"""
-            </table>
-            <div class="print-footer" style="margin-top:auto;">منصة زياد الذكية | جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
-        </div>
-        """
-        
-        for ev in all_evidences:
-            std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
-            exec_date = ev.get('execution_date') or ev['created_at'][:10]
-            files = ev.get('evidence_files', [])
-            
-            img_urls = []
-            pdf_count = 0
-            ext_links = []
-            for f in files:
-                f_url = f.get('file_url', '')
-                f_type = f.get('file_type', '')
-                if f_type == 'external/link' or f_url.startswith('http'):
-                    ext_links.append(f_url)
-                elif f_type.startswith('image/'):
-                    sec_u = signed_urls_map.get(f_url, '')
-                    if sec_u:
-                        img_urls.append(sec_u)
-                elif f_type == 'application/pdf':
-                    pdf_count += 1
-
-            img_chunks = [img_urls[i:i + 4] for i in range(0, len(img_urls), 4)]
-            if not img_chunks:
-                img_chunks = [[]]
-
-            total_chunks = len(img_chunks)
-            pdf_notice = f"<div class='pdf-notice'>📌 مرفق مستند PDF رسمي عدد ({pdf_count}) محفوظ في النظام الإلكتروني.</div>" if pdf_count > 0 else ""
-            link_notice = f"<div class='pdf-notice'>🔗 رابط إلكتروني مرفق: {ext_links[0]}</div>" if ext_links else ""
-
-            for chunk_idx, chunk in enumerate(img_chunks):
-                c_len = len(chunk)
-                grid_cls = f"count-{c_len}" if c_len in [1, 2, 3, 4] else "count-4"
-                frames_html = "".join([f"<div class='img-frame'><img src='{u}'></div>" for u in chunk])
-                images_section = f"<div class='shawahed-bar'>الشواهد{f' (صفحة {chunk_idx+1} من {total_chunks})' if total_chunks > 1 else ''}</div><div class='images-grid {grid_cls}'>{frames_html}</div>" if c_len > 0 else ""
-
-                if chunk_idx == 0:
-                    html_content += f"""
-                    <div class="page">
-                        {shared_header}
-                        <div class="content-wrapper">
-                            <div class="top-ev-banner">
-                                <span class="top-ev-title">{ev['title']}</span>
-                                <span class="top-std-sub">البند {ev['standard_id']}: {std['title']} ({std['weight']}%)</span>
-                            </div>
-                            <div class="meta-grid">
-                                <div class="meta-box"><div class="meta-title">تاريخ التنفيذ</div><div class="meta-value">{exec_date}</div></div>
-                                <div class="meta-box"><div class="meta-title">نوع الشاهد</div><div class="meta-value">شاهد ميداني موثق</div></div>
-                            </div>
-                            <div class="desc-header">الوصف</div>
-                            <div class="desc-section" dir="rtl">{ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'}</div>
-                            {pdf_notice}
-                            {link_notice}
-                            {images_section}
-                        </div>
-                        <div class="signatures">
-                            <div class="sig-box">
-                                <div style="color:#666; font-size:11.5px; margin-bottom:10px;">المعلم:</div>
-                                <div style="font-weight:bold;">{user_info['full_name']}</div>
-                            </div>
-                            <div class="sig-box">
-                                <div style="color:#666; font-size:11.5px; margin-bottom:10px;">مدير المدرسة:</div>
-                                <div style="font-weight:bold;">{user_info['principal_name']}</div>
-                            </div>
-                        </div>
-                        <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
-                    </div>
-                    """
-                else:
-                    html_content += f"""
-                    <div class="page">
-                        {shared_header}
-                        <div class="content-wrapper">
-                            <div class="top-ev-banner">
-                                <span class="top-ev-title">تابع: {ev['title']}</span>
-                                <span class="top-std-sub">البند {ev['standard_id']}: {std['title']} (صفحة {chunk_idx+1} من {total_chunks})</span>
-                            </div>
-                            {images_section}
-                        </div>
-                        <div class="signatures">
-                            <div class="sig-box">
-                                <div style="color:#666; font-size:11.5px; margin-bottom:10px;">المعلم:</div>
-                                <div style="font-weight:bold;">{user_info['full_name']}</div>
-                            </div>
-                            <div class="sig-box">
-                                <div style="color:#666; font-size:11.5px; margin-bottom:10px;">مدير المدرسة:</div>
-                                <div style="font-weight:bold;">{user_info['principal_name']}</div>
-                            </div>
-                        </div>
-                        <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
-                    </div>
-                    """
-        
-        html_content += "</body></html>"
-        safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
-        
-        components.html(f"""
-            <div style="text-align: center; margin: 4px 0;">
-                <button onclick="openPrintWindow()" style="width: 100%; height: 52px; background-color: #146c59; color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: 'Readex Pro', 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(20,108,89,0.2);">
-                    تصدير ملف الإنجاز PDF
-                </button>
-            </div>
-            <script>
-                function openPrintWindow() {{
-                    var win = window.open('', '_blank');
-                    win.document.write(`{safe_html}`);
-                    win.document.close();
-                    var imgs = Array.from(win.document.images);
-                    if (imgs.length === 0) {{
-                        setTimeout(function() {{ win.print(); }}, 600);
-                    }} else {{
-                        var loaded = 0;
-                        var printed = false;
-                        function checkDone() {{
-                            if (!printed && loaded >= imgs.length) {{
-                                printed = true;
-                                setTimeout(function() {{ win.print(); }}, 400);
+        if st.session_state.ready_pdf_html:
+            st.success("✅ تم تجهيز تقرير PDF! ستفتح نافذة الطباعة تلقائياً، أو اضغط على الزر الأخضر بالأسفل:")
+            components.html(f"""
+                <div style="text-align: center; margin: 4px 0;">
+                    <button onclick="openPrintWindow()" style="width: 100%; height: 50px; background-color: #146c59; color: white; border: none; border-radius: 14px; font-size: 15.5px; font-weight: bold; cursor: pointer; font-family: 'Readex Pro', 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(20,108,89,0.2);">
+                        🖨️ فتح نافذة الطباعة وحفظ PDF الآن
+                    </button>
+                </div>
+                <script>
+                    function openPrintWindow() {{
+                        var win = window.open('', '_blank');
+                        if (!win) return;
+                        win.document.write(`{st.session_state.ready_pdf_html}`);
+                        win.document.close();
+                        var imgs = Array.from(win.document.images);
+                        if (imgs.length === 0) {{
+                            setTimeout(function() {{ win.print(); }}, 600);
+                        }} else {{
+                            var loaded = 0;
+                            var printed = false;
+                            function checkDone() {{
+                                if (!printed && loaded >= imgs.length) {{
+                                    printed = true;
+                                    setTimeout(function() {{ win.print(); }}, 400);
+                                }}
                             }}
+                            imgs.forEach(function(img) {{
+                                if (img.complete) {{
+                                    loaded++;
+                                    checkDone();
+                                }} else {{
+                                    img.onload = function() {{ loaded++; checkDone(); }};
+                                    img.onerror = function() {{ loaded++; checkDone(); }};
+                                }}
+                            }});
+                            setTimeout(function() {{
+                                if (!printed) {{
+                                    printed = true;
+                                    win.print();
+                                }}
+                            }}, 3500);
                         }}
-                        imgs.forEach(function(img) {{
-                            if (img.complete) {{
-                                loaded++;
-                                checkDone();
-                            }} else {{
-                                img.onload = function() {{ loaded++; checkDone(); }};
-                                img.onerror = function() {{ loaded++; checkDone(); }};
-                            }}
-                        }});
-                        setTimeout(function() {{
-                            if (!printed) {{
-                                printed = true;
-                                win.print();
-                            }}
-                        }}, 3500);
                     }}
-                }}
-            </script>
-        """, height=62)
+                    openPrintWindow();
+                </script>
+            """, height=62)
 
-        with st.spinner("جاري تجهيز ملف الـ Word وتضمين صور الشواهد بداخله..."):
-            docx_bytes = generate_editable_docx(user_info, active_year, stds, all_evidences, signed_urls_map)
-        st.download_button(
-            label="📄 تصدير Word قابل للتعديل (شامل الصور والمرفقات)",
-            data=docx_bytes,
-            file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            use_container_width=True
-        )
+        st.write("")
+        # الزر الثاني: تجهيز ملف Word عند الضغط فقط (يمنع تعليق الصفحة 20 ثانية عند الدخول)
+        if st.button("📄 تجهيز ملف Word قابل للتعديل (شامل الصور والمرفقات)", use_container_width=True):
+            with st.spinner("جاري تجهيز ملف الـ Word وتضمين صور الشواهد بداخله..."):
+                all_evidences = sort_evidences_chronologically(evidences)
+                st.session_state.ready_docx_bytes = generate_editable_docx(
+                    user_info, active_year, stds, all_evidences, signed_urls_map
+                )
+
+        if st.session_state.ready_docx_bytes:
+            st.download_button(
+                label="⬇️ اضغط هنا لتحميل ملف الـ Word الجاهز (.docx)",
+                data=st.session_state.ready_docx_bytes,
+                file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                type="primary",
+                use_container_width=True
+            )
 
     # ----------------------------------------
     # ⚙️ 4. صفحة حسابي
@@ -2553,14 +2612,19 @@ def main_app():
                 st.markdown("##### 📤 تصدير ملف الإنجاز والنسخ الاحتياطي (متعدد الصيغ)")
                 st.caption("اختر الصيغة المناسبة لتحميل نسخة كاملة من ملف إنجازك أو قاعدة بياناتك:")
 
-                docx_backup_bytes = generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_map)
-                st.download_button(
-                    label="📄 تصدير ملف الإنجاز Word قابل للتعديل (شامل الصور) (.docx)",
-                    data=docx_backup_bytes,
-                    file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True
-                )
+                if st.button("📄 تجهيز نسخة Word قابلة للتعديل (شاملة الصور)", use_container_width=True):
+                    with st.spinner("جاري تجهيز ملف الـ Word وتضمين الصور..."):
+                        st.session_state.ready_docx_bytes = generate_editable_docx(
+                            user_info, active_year, stds, evidences, signed_urls_map
+                        )
+                if st.session_state.ready_docx_bytes:
+                    st.download_button(
+                        label="⬇️ تحميل ملف الـ Word الجاهز (.docx)",
+                        data=st.session_state.ready_docx_bytes,
+                        file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True
+                    )
 
                 csv_data = generate_excel_csv(stds, evidences)
                 st.download_button(
