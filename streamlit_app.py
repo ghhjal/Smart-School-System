@@ -3,6 +3,7 @@ from supabase import create_client
 import time
 import uuid
 import json
+import random
 import datetime
 import zipfile
 import urllib.request
@@ -139,91 +140,171 @@ DEFAULT_SUB_ITEMS = {
 }
 
 # ==========================================
-# 4. محرك الصياغة الذكي بالذكاء الاصطناعي (مدمج + Gemini اختياري)
+# 4. محرك الصياغة المزدوج (Gemini 2.5 Flash + محرك القوالب التربوية الذكي)
 # ==========================================
+ PEDAGOGICAL_CONTEXT = {
+    1: {
+        "target": "المجتمع المدرسي واللجان التنظيمية والطلاب",
+        "verbs": ["الالتزام التام بتطبيق", "توثيق وتفعيل", "المبادرة بتنفيذ"],
+        "outcomes": ["تعزيز الانضباط المدرسي واستقرار سير العملية التعليمية", "ترسيخ القيم الوطنية والمهنية داخل البيئة المدرسية", "رفع كفاءة العمل التنظيمي والتكامل مع إدارة المدرسة"]
+    },
+    2: {
+        "target": "الزملاء المعلمون ومجتمعات التعلم المهنية",
+        "verbs": ["المشاركة الفاعلة في", "نقل الخبرة وتطبيق", "تفعيل التطوير المهني عبر"],
+        "outcomes": ["تبادل الخبرات التربوية وتجويد الممارسات التدريسية", "تطوير الكفايات المهنية وتطبيق المستجدات التربوية داخل الصف", "إثراء مجتمع التعلم المهني بالمدرسة"]
+    },
+    3: {
+        "target": "أولياء أمور الطلاب والأسرة",
+        "verbs": ["مد جسور التواصل التربوي عبر", "تفعيل الشراكة الأسرية من خلال", "تنظيم وتوثيق"],
+        "outcomes": ["تعزيز الشراكة الفاعلة بين المدرسة والمنزل لدعم تعلم الطلاب", "إطلاع أولياء الأمور بشكل دوري ومنظم على تقدم أبنائهم", "توحيد الجهود التربوية لرفع المستوى التحصيلي والسلوكي"]
+    },
+    4: {
+        "target": "طلاب الصف الدراسي بمختلف أنماط تعلمهم (السمعي، البصري، الحركي)",
+        "verbs": ["توظيف وتطبيق", "تنويع طرائق التدريس باستخدام", "تصميم وتنفيذ موقف تعليمي قائم على"],
+        "outcomes": ["مراعاة الفروق الفردية ورفع دافعية المتعلمين نحو المشاركة الفاعلة", "تحويل المتعلم إلى محور أساسي في العملية التعليمية وتنمية مهارات التفكير", "تحسين جودة الفهم والاستيعاب لدى جميع فئات الطلاب"]
+    },
+    5: {
+        "target": "الطلاب المستهدفون في خطط المعالجة التعليمية والإثراء",
+        "verbs": ["إعداد وتطبيق", "بناء وتنفيذ", "متابعة تقدم الطلاب عبر"],
+        "outcomes": ["ردم الفجوات المهارية ومعالجة الفاقد التعليمي بصورة منهجية", "الارتقاء بمستوى التحصيل الدراسي ورفع نسب الإتقان في المهارات الأساسية", "تنمية قدرات الطلاب المتميزين وتحفيزهم نحو الإبداع"]
+    },
+    6: {
+        "target": "المنهج الدراسي وطلاب الصف الدراسي",
+        "verbs": ["التخطيط المنهجي المسبق عبر", "تنظيم وتنفيذ", "بناء ومواءمة"],
+        "outcomes": ["ضمان تسلسل الخبرات التعليمية وتغطية المقررات وفق الإطار الزمني المعتمد", "تصميم أنشطة تعلم متمايزة تلائم مستويات الطلاب وقدراتهم", "تحقيق الترابط الوثيق بين أهداف التعلم وأدوات التقويم"]
+    },
+    7: {
+        "target": "الطلاب عبر البيئة الصفية والمنصات الرقمية",
+        "verbs": ["دمج التقنية الحديثة وتوظيف", "تصميم وتفعيل", "إثراء الموقف التعليمي باستخدام"],
+        "outcomes": ["تسهيل استيعاب المفاهيم المجردة وتحويلها إلى خبرات تفاعلية مشوقة", "تفعيل أدوات التعلم الرقمي ومنصة مدرستي بكفاءة عالية", "تنمية المهارات الرقمية وزيادة التفاعل الصفي"]
+    },
+    8: {
+        "target": "البيئة الصفية وطلاب الفصل",
+        "verbs": ["تهيئة وتنظيم", "تصميم وتفعيل", "ابتكار وتجهيز"],
+        "outcomes": ["توفير بيئة تعليمية آمنة وجاذبة ومحفزة على التعلم والإبداع", "تعزيز الدافعية الإيجابية والانتماء الصفي لدى المتعلمين", "تلبية الاحتياجات النفسية والتربوية للطلاب"]
+    },
+    9: {
+        "target": "طلاب الفصل الدراسي",
+        "verbs": ["إرساء وتطبيق", "تنظيم وإدارة", "متابعة وضبط"],
+        "outcomes": ["تحقيق بيئة صفية منظمة يسودها الاحترام المتبادل والانضباط الذاتي", "استثمار زمن الحصة الدراسية بفاعلية قصوى لصالح تعلم الطلاب", "تعزيز السلوكيات الإيجابية وتوزيع الأدوار القيادية والتعاونية"]
+    },
+    10: {
+        "target": "الطلاب وفق نتائج الاختبارات التشخيصية والفترية",
+        "verbs": ["إجراء التحليل الإحصائي والتربوي لـ", "تشخيص مستويات الطلاب عبر", "قراءة وتفسير مؤشرات"],
+        "outcomes": ["التحديد الدقيق لنقاط القوة وأولويات التحسين في المهارات المستهدفة", "اتخاذ قرارات تدريسية مبنية على البيانات والنتائج الفعلية", "توجيه الخطط العلاجية والإثرائية بدقة وموضوعية"]
+    },
+    11: {
+        "target": "طلاب الصف الدراسي",
+        "verbs": ["تنويع أدوات وأساليب القياس عبر", "تصميم وتطبيق", "تقييم أداء المتعلمين باستخدام"],
+        "outcomes": ["قياس مدى تحقق نواتج التعلم بموضوعية وشمولية", "تفعيل التقويم من أجل التعلم وتقديم تغذية راجعة فورية وبنّاءة", "تمكين الطلاب من ممارسة التقويم الذاتي وتقويم الأقران"]
+    }
+}
+
 def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", variant=0):
     """
-    يقوم بصياغة الوصف التربوي وتوليد (الهدف، المستهدفون، التنفيذ، الأثر)
-    بناءً على النقاط السريعة التي يكتبها المعلم أو عنوان الشاهد.
+    محرك مزدوج:
+    1) يفحص وجود مفتاح Gemini تلقائياً، وإذا وجده يمرر المدخلات إلى gemini-2.5-flash.
+    2) الوضع الافتراضي المدمج: محرك صياغة قوالب تربوية ذكي غني بالمصطلحات الرسمية وتوليد متنوع للأساليب.
     """
     clean_notes = raw_notes.strip()
+    ctx = PEDAGOGICAL_CONTEXT.get(std_id, PEDAGOGICAL_CONTEXT[4])
     
-    # 1. محاولة استخدام Gemini API إذا كان متوفراً في secrets
-    gemini_key = st.secrets.get("gemini_api_key", "")
-    if gemini_key and clean_notes:
+    # ----------------------------------------------------
+    # الوضع 1: فحص وجود مفتاح Gemini واستدعاء gemini-2.5-flash تلقائياً
+    # ----------------------------------------------------
+    gemini_key = st.secrets.get("gemini_api_key", "") or st.session_state.get("custom_gemini_key", "")
+    if gemini_key:
         try:
             prompt_text = (
-                f"أنت خبير تربوي في وزارة التعليم السعودية. صغ وصفاً مهنياً رسمياً موجزاً (3 إلى 4 أسطر) لشاهد أداء وظيفي بعنوان ({ev_title}) "
-                f"ضمن معيار ({std_title})، بالاعتماد على هذه النقاط: ({clean_notes}). "
-                f"اكتب الفقرة مباشرة باللغة العربية الفصحى دون مقدمات."
+                f"أنت خبير تربوي في وزارة التعليم السعودية. قم بصياغة توثيق احترافي لشاهد أداء وظيفي للمعلم.\n"
+                f"المعيار: {std_id}. {std_title}\n"
+                f"عنوان الشاهد: {ev_title}\n"
+                f"الكلمات المفتاحية أو النقاط المدخلة من المعلم: {clean_notes if clean_notes else 'تنفيذ الشاهد وفق الخطة المعتمدة'}\n\n"
+                f"أرجع النتيجة بصيغة JSON فقط يحتوي على المفاتيح التالية باللغة العربية الفصحى:\n"
+                f'{{"description": "فقرة وصفية رسمية من 3 إلى 4 أسطر تدمج النقاط المدخلة وتربطها بالمعيار وأثرها على المتعلمين", '
+                f'"goal": "هدف تربوي مركز في سطر واحد", '
+                f'"target_group": "الفئة المستهدفة بدقة", '
+                f'"implementation": "آلية التنفيذ الميداني في سطر واحد", '
+                f'"impact": "الأثر التربوي المتحقق في سطر واحد"}}'
             )
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
-            payload = json.dumps({"contents": [{"parts": [{"text": prompt_text}]}]}).encode("utf-8")
+            payload = json.dumps({
+                "contents": [{"parts": [{"text": prompt_text}]}],
+                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.7}
+            }).encode("utf-8")
             req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=6) as resp:
+            with urllib.request.urlopen(req, timeout=8) as resp:
                 res_data = json.loads(resp.read().decode("utf-8"))
-                ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                if ai_text:
+                raw_json = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                parsed = json.loads(raw_json)
+                if parsed.get("description"):
                     return {
-                        "description": ai_text,
-                        "goal": f"تحقيق متطلبات معيار ({std_title}) والارتقاء بجودة الممارسات التعليمية.",
-                        "target_group": "الطلاب / المجتمع المدرسي",
-                        "implementation": f"تطبيق وتوثيق ({ev_title}) وفق الخطة المعتمدة ({clean_notes}).",
-                        "impact": "تحسن ملموس في نواتج التعلم والانضباط المدرسي."
+                        "description": parsed.get("description", ""),
+                        "goal": parsed.get("goal", f"تحقيق مستهدفات معيار ({std_title}) عبر ({ev_title})."),
+                        "target_group": parsed.get("target_group", ctx["target"]),
+                        "implementation": parsed.get("implementation", clean_notes or ev_title),
+                        "impact": parsed.get("impact", ctx["outcomes"][0]),
+                        "engine": "gemini-2.5-flash"
                     }
         except Exception:
             pass
 
-    # 2. المحرك التربوي الذكي المدمج (يعمل فوراً وبدون أي مفاتيح خارجية)
-    targets_by_std = {
-        1: "المجتمع المدرسي واللجان التنظيمية",
-        2: "الزملاء المعلمون والمجتمع المهني بالمدرسة",
-        3: "أولياء الأمور والطلاب",
-        4: "طلاب الصف الدراسي على اختلاف أنماط تعلمهم",
-        5: "الطلاب المستهدفون في خطط التحسين والإثراء",
-        6: "طلاب الصف ومعلمو التخصص",
-        7: "الطلاب عبر البيئة الصفية والرقمية (منصة مدرستي)",
-        8: "طلاب الفصل الدراسي",
-        9: "طلاب الفصل الدراسي",
-        10: "الطلاب وفق نتائج التقويم التشخيصي والفتري",
-        11: "طلاب الصف الدراسي"
-    }
-    target_group = targets_by_std.get(std_id, "الطلاب والمجتمع المدرسي")
-
-    if clean_notes:
-        core_action = f"تم تنفيذ وتوثيق «{ev_title}» من خلال ({clean_notes})"
+    # ----------------------------------------------------
+    # الوضع 2 (الافتراضي المدمج): محرك صياغة القوالب التربوية الذكي (مجاني وفوري)
+    # ----------------------------------------------------
+    # تجنب تكرار النص إذا ضغط المعلم على الزر مرة ثانية لتحسين الصياغة
+    is_already_long = len(clean_notes) > 160 and ("مؤشرات" in clean_notes or "مستهدفات" in clean_notes or "انطلاقاً" in clean_notes)
+    if is_already_long:
+        seed_notes = st.session_state.get(f"last_raw_notes_{std_id}", "")
     else:
-        core_action = f"تم إعداد وتنفيذ «{ev_title}» بصورة منهجية منظمة وفق الخطة الفصلية المعتمدة"
+        seed_notes = clean_notes
+        st.session_state[f"last_raw_notes_{std_id}"] = seed_notes
 
-    templates = [
+    verb = ctx["verbs"][variant % len(ctx["verbs"])]
+    outcome = ctx["outcomes"][variant % len(ctx["outcomes"])]
+    outcome_alt = ctx["outcomes"][(variant + 1) % len(ctx["outcomes"])]
+    target_group = ctx["target"]
+
+    if seed_notes:
+        focus_phrase = f"مع التركيز التطبيقي على ({seed_notes})"
+        impl_detail = f"تطبيق ({ev_title}) ميدانياً من خلال ({seed_notes}) وتوثيق الشواهد المرتبطة به."
+    else:
+        focus_phrase = "وفق الأسس التربوية الحديثة والخطة الفصلية المعتمدة"
+        impl_detail = f"الإعداد المنهجي والتنفيذ الميداني لـ ({ev_title}) ومتابعة أثره بشكل دوري."
+
+    style_templates = [
         (
-            f"{core_action}، وذلك في إطار تحقيق مؤشرات معيار «{std_title}». "
-            f"وقد شمل العمل التخطيط المسبق والتطبيق الفعلي ومتابعة المستجدات، مما أسهم بشكل مباشر في تجويد الممارسات التعليمية "
-            f"وتحقيق أثر إيجابي ملموس على {target_group} ورفع كفاءة الأداء المدرسي."
+            f"انطلاقاً من مستهدفات معيار «{std_title}»، تم {verb} «{ev_title}» {focus_phrase}، "
+            f"حيث جرى تهيئة المتطلبات اللازمة وتنفيذ الإجراءات بصورة منظمة تضمن جودة التطبيق. "
+            f"وقد أسهمت هذه الممارسة بفاعلية في {outcome}، وانعكس أثرها إيجاباً على {target_group}."
         ),
         (
-            f"انطلاقاً من مستهدفات عنصر «{std_title}»، {core_action} وفق أسس تربوية حديثة تراعي احتياجات المستفيدين. "
-            f"وقد انعكس هذا الإجراء إيجاباً على تحسين البيئة التعليمية، وتعزيز التفاعل البنّاء لدى {target_group}، "
-            f"وتوثيق النتائج والشواهد الداعمة لتحقيق التميز المهني."
+            f"تحقيقاً لمؤشرات الأداء المهني في بند «{std_title}»، قمت بـ{verb} «{ev_title}» {focus_phrase}. "
+            f"وقد تضمن العمل التخطيط المسبق والتنفيذ المرحلي والتقويم المستمر للمخرجات، "
+            f"مما أثمر عن {outcome_alt}، ورفع مستوى التفاعل والإنجاز لدى {target_group}."
         ),
         (
-            f"تحقيقاً لمتطلبات الأداء الوظيفي في بند «{std_title}»، {core_action}. "
-            f"وقد جرى رصد مؤشرات التحسن وتقييم الأثر الناتج عن التنفيذ، حيث أظهر الممارسة فاعلية عالية في دعم نواتج التعلم "
-            f"وتحقيق المستهدفات التربوية المنشودة لدى {target_group}."
+            f"في إطار تجويد الممارسات التعليمية والتربوية ضمن عنصر «{std_title}»، تم {verb} «{ev_title}» {focus_phrase}. "
+            f"وقد أظهرت نتائج المتابعة والتوثيق فاعلية هذا الإجراء في {outcome}، "
+            f"بما يلبي الاحتياجات الفعلية لـ{target_group} ويحقق غايات التميز المدرسي."
+        ),
+        (
+            f"توثيقاً للممارسات المهنية الداعمة لمعيار «{std_title}»، جرى العمل على {verb} «{ev_title}» {focus_phrase}، "
+            f"وفق منهجية تكاملية تراعي الدقة والجودة في الأداء. "
+            f"وقد نتج عن ذلك {outcome_alt}، وتحقيق أثر تربوي مستدام لدى {target_group}."
         )
     ]
 
-    chosen_desc = templates[variant % len(templates)]
-    goal_text = f"تعزيز كفاءة الأداء في معيار ({std_title}) من خلال تفعيل ({ev_title})."
-    impl_text = clean_notes if clean_notes else f"الإعداد والتنفيذ الميداني والتوثيق المرحلي لـ ({ev_title}) وفق توزيع المنهج."
-    impact_text = f"تحقيق استجابة فاعلة وتطور ملموس لدى {target_group} ورفع جودة المخرجات التربوية."
+    chosen_description = style_templates[variant % len(style_templates)]
+    goal_text = f"تحقيق مؤشرات معيار ({std_title}) والارتقاء بجودة الأداء عبر ({ev_title})."
 
     return {
-        "description": chosen_desc,
+        "description": chosen_description,
         "goal": goal_text,
         "target_group": target_group,
-        "implementation": impl_text,
-        "impact": impact_text
+        "implementation": impl_detail,
+        "impact": outcome,
+        "engine": "smart-template"
     }
 
 # ==========================================
@@ -249,6 +330,8 @@ if 'filter_mode' not in st.session_state:
     st.session_state.filter_mode = 'all'
 if 'ai_variant' not in st.session_state:
     st.session_state.ai_variant = 0
+if 'custom_gemini_key' not in st.session_state:
+    st.session_state.custom_gemini_key = ""
 
 def clear_app_cache():
     st.cache_data.clear()
@@ -258,6 +341,36 @@ def navigate_to(page_name, std_id=None):
     if std_id is not None:
         st.session_state.view_standard_id = std_id
     st.rerun()
+
+# دالة الـ Callback الآمنة لزر الذكاء الاصطناعي (تمنع خطأ StreamlitWidgetAlreadyInstantiatedError نهائياً)
+def run_ai_draft_callback(std_id, std_title, sub_options):
+    desc_key = f"draft_desc_{std_id}"
+    goal_key = f"draft_goal_{std_id}"
+    target_key = f"draft_target_{std_id}"
+    impl_key = f"draft_impl_{std_id}"
+    impact_key = f"draft_impact_{std_id}"
+    title_key = f"title_in_{std_id}"
+    idea_key = f"idea_sel_{std_id}"
+
+    chosen_idea = st.session_state.get(idea_key, sub_options[0] if sub_options else "")
+    typed_title = st.session_state.get(title_key, "").strip()
+    ev_title = typed_title if typed_title else chosen_idea
+    current_notes = st.session_state.get(desc_key, "")
+
+    ai_res = generate_smart_evidence_text(
+        std_id=std_id,
+        std_title=std_title,
+        ev_title=ev_title,
+        raw_notes=current_notes,
+        variant=st.session_state.ai_variant
+    )
+    st.session_state.ai_variant += 1
+    st.session_state[desc_key] = ai_res["description"]
+    st.session_state[goal_key] = ai_res["goal"]
+    st.session_state[target_key] = ai_res["target_group"]
+    st.session_state[impl_key] = ai_res["implementation"]
+    st.session_state[impact_key] = ai_res["impact"]
+    st.session_state[f"ai_status_{std_id}"] = ai_res["engine"]
 
 @st.cache_data(ttl=180)
 def get_user_profile():
@@ -656,7 +769,7 @@ div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSub
     font-size: 15px !important;
 }}
 
-/* شريط التنقل والفرز المتجاوب 100% (4 تبويبات متوازنة) */
+/* شريط التنقل والفرز المتجاوب 100% */
 div[data-testid="stRadio"] {{
     width: 100% !important;
     max-width: 100% !important;
@@ -1059,7 +1172,7 @@ def main_app():
                 st.query_params.clear()
                 st.rerun()
 
-    # شريط التنقل الرئيسي (4 تبويبات متوازنة فقط بعد نقل الأرشيف إلى داخل حسابي)
+    # شريط التنقل الرئيسي (4 تبويبات متوازنة)
     if is_visitor:
         nav_map = {
             'home': "🏠 الرئيسية",
@@ -1190,7 +1303,7 @@ def main_app():
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة البنود والشواهد (مع صياغة الوصف بالذكاء الاصطناعي وتفاصيل التقرير)
+    # 📋 2. صفحة البنود والشواهد (مع المحرك المزدوج الآمن)
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         st.markdown("#### 📋 استعراض وإدارة بنود الأداء والشواهد")
@@ -1331,50 +1444,50 @@ def main_app():
                     st.markdown(f'<div class="idea-card"><span>💡 {idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
 
             # ----------------------------------------------------
-            # نموذج إضافة شاهد جديد (مع زر صياغة الوصف بالذكاء الاصطناعي)
+            # نموذج إضافة شاهد جديد (مع Callback آمن يمنع StreamlitWidgetAlreadyInstantiatedError)
             # ----------------------------------------------------
             if not is_visitor:
                 st.markdown("##### ➕ إضافة شاهد جديد لهذا البند")
                 
-                # مفاتيح الجلسة لحقول الإدخال حتى يتمكن الذكاء الاصطناعي من تحديثها مباشرة
                 desc_key = f"draft_desc_{std_id}"
                 goal_key = f"draft_goal_{std_id}"
                 target_key = f"draft_target_{std_id}"
                 impl_key = f"draft_impl_{std_id}"
                 impact_key = f"draft_impact_{std_id}"
+                clear_flag_key = f"clear_draft_flag_{std_id}"
+
+                # تفريغ الحقول بأمان قبل رسمها إذا تم الحفظ في الدورة السابقة
+                if st.session_state.get(clear_flag_key, False):
+                    for k in [desc_key, goal_key, target_key, impl_key, impact_key]:
+                        st.session_state[k] = ""
+                    st.session_state[clear_flag_key] = False
+
                 for k in [desc_key, goal_key, target_key, impl_key, impact_key]:
                     if k not in st.session_state:
                         st.session_state[k] = ""
 
-                chosen_idea = st.selectbox("اختر البند الفرعي المقترح:", sub_options + ["أخرى (كتابة عنوان مخصص)"], key=f"idea_sel_{std_id}")
+                chosen_idea = st.selectbox(
+                    "اختر البند الفرعي المقترح:",
+                    sub_options + ["أخرى (كتابة عنوان مخصص)"],
+                    key=f"idea_sel_{std_id}"
+                )
                 default_title_val = "" if chosen_idea == "أخرى (كتابة عنوان مخصص)" else chosen_idea
                 final_title = st.text_input("عنوان الشاهد", value=default_title_val, key=f"title_in_{std_id}")
 
                 st.text_area(
                     "وصف مختصر (اختياري)",
                     key=desc_key,
-                    placeholder="ماذا نفذت؟ وما الأثر؟ (اكتب نقاطاً سريعة ودع الصياغة لنا)",
-                    height=100
+                    placeholder="ماذا نفذت؟ وما الأثر؟ (اكتب نقاطاً سريعة مثل: التعلم النشط، أو اتركه فارغاً ودع الصياغة لنا)",
+                    height=110
                 )
 
-                # زر صياغة الوصف بالذكاء الاصطناعي (مطابق للصورة المرفقة)
-                col_ai_btn, col_ai_hint = st.columns([2, 2])
-                with col_ai_btn:
-                    if st.button("✨ صياغة الوصف بالذكاء الاصطناعي", key=f"ai_btn_{std_id}"):
-                        ai_result = generate_smart_evidence_text(
-                            std_id=std_id,
-                            std_title=std_data['title'],
-                            ev_title=final_title or chosen_idea,
-                            raw_notes=st.session_state[desc_key],
-                            variant=st.session_state.ai_variant
-                        )
-                        st.session_state.ai_variant += 1
-                        st.session_state[desc_key] = ai_result["description"]
-                        st.session_state[goal_key] = ai_result["goal"]
-                        st.session_state[target_key] = ai_result["target_group"]
-                        st.session_state[impl_key] = ai_result["implementation"]
-                        st.session_state[impact_key] = ai_result["impact"]
-                        st.rerun()
+                # زر صياغة الوصف بالذكاء الاصطناعي مربوط بـ on_click لتحديث الحقول قبل رسمها بدون أي خطأ
+                st.button(
+                    "✨ صياغة الوصف بالذكاء الاصطناعي",
+                    key=f"ai_btn_{std_id}",
+                    on_click=run_ai_draft_callback,
+                    args=(std_id, std_data['title'], sub_options)
+                )
 
                 # قسم تفاصيل تقرير الشاهد (اختياري: الهدف، المستهدفون، التنفيذ، الأثر)
                 with st.expander("📄 تفاصيل تقرير الشاهد (اختياري: الهدف، المستهدفون، التنفيذ، الأثر)", expanded=False):
@@ -1384,7 +1497,7 @@ def main_app():
                         st.text_input("المستهدفون:", key=target_key, placeholder="مثال: طلاب الصف الخامس...")
                     with c_d2:
                         st.text_input("آلية التنفيذ:", key=impl_key, placeholder="مثال: برنامج إذاعي ومتابعة يومية...")
-                        st.text_input("الأثر المتحقق:", key=impact_key, placeholder="مثال: ارتفاع نسبة الحضور...")
+                        st.text_input("الأثر المتحقق:", key=impact_key, placeholder="مثال: ارتفاع نسبة التفاعل...")
 
                 exec_date_input = st.date_input("📅 تاريخ التنفيذ (حسب توزيع المنهج):", value=datetime.date.today(), key=f"date_in_{std_id}")
                 uploaded_files = st.file_uploader("📎 المرفقات (صور أو ملف PDF):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True, key=f"files_in_{std_id}")
@@ -1393,7 +1506,6 @@ def main_app():
                 if st.button("حفظ الشاهد ورفع المرفقات 💾", type="primary", use_container_width=True, key=f"save_ev_btn_{std_id}"):
                     has_attachment = bool(uploaded_files) or bool(ext_link_input.strip())
                     if final_title.strip() and has_attachment and active_year.get('id'):
-                        # دمج الوصف المختصر مع تفاصيل التقرير الاختيارية إن وُجدت
                         full_desc_parts = []
                         if st.session_state[desc_key].strip():
                             full_desc_parts.append(st.session_state[desc_key].strip())
@@ -1442,9 +1554,8 @@ def main_app():
                                     "file_type": "external/link"
                                 }).execute()
                                 
-                            # تفريغ المسودة بعد الحفظ
-                            for k in [desc_key, goal_key, target_key, impl_key, impact_key]:
-                                st.session_state[k] = ""
+                            # تفعيل علم التفريغ الآمن للدورة القادمة
+                            st.session_state[clear_flag_key] = True
                             clear_app_cache()
                             st.success("تم حفظ الشاهد بنجاح!")
                             time.sleep(0.4)
@@ -1671,7 +1782,7 @@ def main_app():
         )
 
     # ----------------------------------------
-    # ⚙️ 4. صفحة حسابي (البيانات + الزوار + تبويب ذكي مقسم للأرشيف والنسخ الاحتياطي)
+    # ⚙️ 4. صفحة حسابي (البيانات + الأرشيف والنسخ + مشاركة الزوار + إعداد Gemini الاختياري)
     # ----------------------------------------
     elif st.session_state.current_page == 'settings' and not is_visitor:
         st.markdown("#### ⚙️ إعدادات الحساب والمظهر والأرشيف والنسخ الاحتياطي")
@@ -1696,8 +1807,16 @@ def main_app():
                     n_school = st.text_input("اسم المدرسة:", value=user_info['school_name'])
                     n_stage = st.text_input("المرحلة الدراسية:", value=user_info['education_stage'])
                     n_prin = st.text_input("اسم مدير المدرسة:", value=user_info['principal_name'])
+
+                st.markdown("##### ✨ إعداد الذكاء الاصطناعي (اختياري)")
+                g_key_in = st.text_input(
+                    "مفتاح Gemini API (اختياري - في حال تركه فارغاً يعمل محرك القوالب التربوية الذكي المدمج مجاناً):",
+                    value=st.session_state.custom_gemini_key,
+                    type="password"
+                )
                 
                 if st.form_submit_button("حفظ البيانات والمظهر 💾", type="primary", use_container_width=True):
+                    st.session_state.custom_gemini_key = g_key_in.strip()
                     payload = {
                         "id": 1,
                         "full_name": n_name,
@@ -1719,7 +1838,6 @@ def main_app():
                     st.rerun()
 
         with t2:
-            # تبويب ذكي قابل للانقسام بين (أرشفة الأعوام الدراسية) و(النسخ الاحتياطي والتصدير)
             sub_section = st.radio(
                 "archive_backup_split",
                 options=["archive_sec", "backup_sec"],
