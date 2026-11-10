@@ -331,10 +331,6 @@ def navigate_to(page_name, std_id=None):
     st.rerun()
 
 def sort_evidences_chronologically(ev_list):
-    """
-    ترتيب الشواهد ذكياً حسب رقم البند ثم حسب تاريخ التنفيذ الفعلي (من الأقدم إلى الأحدث)
-    بحيث يظهر مثلاً الاختبار التشخيصي (29/9) قبل الخطة أو الأوراق العلاجية (1/10) تلقائياً
-    """
     def _sort_key(ev):
         std_id = ev.get('standard_id', 0)
         exec_d = str(ev.get('execution_date') or ev.get('created_at', '')[:10] or '9999-12-31')
@@ -441,10 +437,6 @@ def get_signed_urls_batch(paths_tuple):
 
 @st.cache_data(ttl=1800)
 def fetch_and_prepare_word_image(file_path, signed_url=""):
-    """
-    تحميل صورة الشاهد من السحابة وتحويلها إلى JPEG متوافق 100% مع برنامج Microsoft Word
-    مع حساب أبعادها التناسبية بدقة (EMUs) لمنع أي تشوه أو مط للصورة داخل ملف الوورد
-    """
     raw_bytes = None
     try:
         raw_bytes = supabase.storage.from_("private-achievements").download(file_path)
@@ -476,9 +468,8 @@ def fetch_and_prepare_word_image(file_path, signed_url=""):
         img.save(out_buf, format="JPEG", quality=85)
         jpeg_bytes = out_buf.getvalue()
 
-        # حساب الأبعاد بوحدة EMU الخاصة بـ Word (بحيث تتسع صورتان في الصف أو 4 صور في الصفحة دون خروج عن الهامش)
-        max_w_emu = 2650000  # قرابة 2.9 بوصة للعمود الواحد
-        max_h_emu = 2250000  # قرابة 2.46 بوصة للارتفاع
+        max_w_emu = 2650000
+        max_h_emu = 2250000
         ratio = min(max_w_emu / max(w_px, 1), max_h_emu / max(h_px, 1))
         cx = int(w_px * ratio)
         cy = int(h_px * ratio)
@@ -495,8 +486,8 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
     total_ev = len(sorted_evs)
     covered_stds = len(set(e['standard_id'] for e in sorted_evs))
 
-    media_files = {}  # filename -> bytes
-    rels_entries = []  # list of XML <Relationship .../>
+    media_files = {}
+    rels_entries = []
     img_counter = 1
 
     def w_para(text, bold=False, size_pt=12, color="1E293B", align="right", space_after=120):
@@ -570,7 +561,6 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
         """
 
     def w_images_grid_table(img_drawings_list):
-        """جدول شبكي من عمودين لعرض صور الشاهد المرفقة بشكل أنيق داخل ملف الوورد"""
         tbl_xml = """
         <w:tbl>
             <w:tblPr>
@@ -640,6 +630,7 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
             for c_text, is_header in row:
                 fill = header_bg if is_header else ("F8FAFC" if r_idx % 2 == 1 else "FFFFFF")
                 txt_color = "FFFFFF" if is_header else "0F172A"
+                align_val = "center" if is_header else "right"
                 tbl_xml += f"""
                 <w:tc>
                     <w:tcPr>
@@ -651,7 +642,7 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
                             <w:right w:w="140" w:type="dxa"/>
                         </w:tcMar>
                     </w:tcPr>
-                    {w_para(c_text, bold=is_header, size_pt=11, color=txt_color, align="center", space_after=0)}
+                    {w_para(c_text, bold=is_header, size_pt=11, color=txt_color, align=align_val, space_after=0)}
                 </w:tc>
                 """
             tbl_xml += "</w:tr>"
@@ -659,7 +650,6 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
         return tbl_xml
 
     body_parts = []
-    # 1. صفحة الغلاف
     body_parts.append(w_para("المملكة العربية السعودية - وزارة التعليم", bold=True, size_pt=14, color="0F5243", align="center", space_after=120))
     body_parts.append(w_para("منصة زياد الذكية لتوثيق الأداء المهني", bold=True, size_pt=13, color="B45309", align="center", space_after=300))
     body_parts.append(w_para("ملف الإنجاز المهني الإلكتروني", bold=True, size_pt=24, color="0F5243", align="center", space_after=120))
@@ -679,7 +669,6 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
     body_parts.append(w_table(cover_rows))
     body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
 
-    # 2. صفحة الفهرس
     body_parts.append(w_para("فهرس معايير الأداء الوظيفي المنجزة", bold=True, size_pt=18, color="0F5243", align="right", space_after=240))
     index_rows = [[("م", True), ("معيار الأداء الوظيفي", True), ("الوزن النسبي", True), ("الشواهد الموثقة", True), ("المستهدف", True)]]
     for s in stds:
@@ -696,7 +685,6 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
     body_parts.append(w_table(index_rows))
     body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
 
-    # 3. صفحات الشواهد (مرتبة زمنياً من الأقدم للأحدث مع تضمين الصور فعلياً)
     for idx, ev in enumerate(sorted_evs):
         std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
         exec_date = ev.get('execution_date') or ev['created_at'][:10]
@@ -722,7 +710,6 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
         ]
         body_parts.append(w_table(ev_rows))
 
-        # تحميل وتضمين الصور المرفقة لهذا الشاهد داخل صفحة الوورد
         ev_img_drawings = []
         for f in files:
             f_url = f.get('file_url', '')
@@ -816,7 +803,7 @@ th = THEMES[active_theme_key]
 ZIYAD_LOGO_SVG = '<svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 7. التصميم الشامل
+# 7. التصميم الشامل (مع فرض اتجاه RTL الصارم على جميع القوائم المنبثقة والوصف)
 # ==========================================
 st.markdown(f"""
 <style>
@@ -828,8 +815,8 @@ st.markdown(f"""
     --secondary-background-color: #ffffff !important;
     --primary-color: {th['primary']} !important;
     color-scheme: light only !important;
-    direction: rtl; 
-    text-align: right; 
+    direction: rtl !important; 
+    text-align: right !important; 
     font-family: 'Readex Pro', 'Cairo', sans-serif;
     background-color: {th['bg']} !important;
     color: #0f172a !important;
@@ -853,18 +840,25 @@ footer {{visibility: hidden;}}
     width: 100% !important;
     box-sizing: border-box !important;
     overflow-x: hidden !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 [data-testid="stVerticalBlock"] {{
     gap: 0.45rem !important;
     max-width: 100% !important;
+    direction: rtl !important;
 }}
-div.element-container {{
+div.element-container, [data-testid="stMarkdownContainer"] {{
     max-width: 100% !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 
-h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, [data-testid="stWidgetLabel"] p, [data-testid="stMarkdownContainer"] p {{
+h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p, [data-testid="stMarkdownContainer"] p {{
     font-family: 'Readex Pro', 'Cairo', sans-serif;
     color: #0f172a !important;
+    direction: rtl !important;
+    text-align: right !important;
     word-wrap: break-word !important;
 }}
 
@@ -908,33 +902,54 @@ div[data-baseweb="select"] svg {{
     -webkit-text-fill-color: #0f172a !important;
     fill: #0f172a !important;
     background-color: transparent !important;
+    direction: rtl !important;
+    text-align: right !important;
     white-space: normal !important;
     line-height: 1.4 !important;
 }}
 
+/* ========================================================= */
+/* فرض المحاذاة من اليمين إلى اليسار (RTL) على جميع القوائم المنبثقة */
+/* ========================================================= */
 div[data-baseweb="popover"],
-div[data-baseweb="popover"] > div,
+div[data-baseweb="popover"] *,
 div[data-baseweb="menu"],
+div[data-baseweb="menu"] *,
 ul[role="listbox"],
-li[role="option"] {{
+ul[role="listbox"] *,
+li[role="option"],
+li[role="option"] * {{
     background-color: #ffffff !important;
-    background: #ffffff !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
     direction: rtl !important;
     text-align: right !important;
+    font-family: 'Readex Pro', 'Cairo', sans-serif !important;
     white-space: normal !important;
     word-break: break-word !important;
-    line-height: 1.45 !important;
-    height: auto !important;
+    line-height: 1.5 !important;
 }}
 li[role="option"] {{
-    padding: 10px 14px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    padding: 10px 16px !important;
     border-bottom: 1px solid #f1f5f9 !important;
+    height: auto !important;
 }}
-li[role="option"]:hover, li[role="option"][aria-selected="true"] {{
+li[role="option"] > div {{
+    width: 100% !important;
+    text-align: right !important;
+    direction: rtl !important;
+}}
+li[role="option"]:hover,
+li[role="option"]:hover *,
+li[role="option"][aria-selected="true"],
+li[role="option"][aria-selected="true"] * {{
     background-color: {th['tint']} !important;
     color: {th['primary']} !important;
+    -webkit-text-fill-color: {th['primary']} !important;
     font-weight: 700 !important;
 }}
 
@@ -942,6 +957,8 @@ input::placeholder, textarea::placeholder {{
     color: #64748b !important;
     -webkit-text-fill-color: #64748b !important;
     opacity: 1 !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 
 div[data-testid="stAlert"], div[data-testid="stAlert"] > div, div[role="alert"] {{
@@ -950,11 +967,15 @@ div[data-testid="stAlert"], div[data-testid="stAlert"] > div, div[role="alert"] 
     color: {th['primary_dark']} !important;
     border: 1px solid {th['primary']} !important;
     border-radius: 14px !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 div[data-testid="stAlert"] p, div[data-testid="stAlert"] span, div[role="alert"] p {{
     color: {th['primary_dark']} !important;
     -webkit-text-fill-color: {th['primary_dark']} !important;
     font-weight: 600 !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 
 div[data-testid="stFileUploader"] section {{
@@ -963,6 +984,7 @@ div[data-testid="stFileUploader"] section {{
     border-radius: 14px !important;
     color: #0f172a !important;
     padding: 12px !important;
+    direction: rtl !important;
 }}
 div[data-testid="stFileUploader"] section span,
 div[data-testid="stFileUploader"] section small,
@@ -984,6 +1006,8 @@ div[data-testid="stFileUploader"] section button {{
     box-shadow: 0 3px 10px rgba(0,0,0,0.03) !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 
 [data-testid="stExpander"] {{
@@ -993,6 +1017,8 @@ div[data-testid="stFileUploader"] section button {{
     margin-bottom: 10px !important;
     overflow: hidden !important;
     width: 100% !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 [data-testid="stExpander"] details,
 [data-testid="stExpander"] summary,
@@ -1002,6 +1028,8 @@ div[data-testid="stFileUploader"] section button {{
     background-color: #ffffff !important;
     color: {th['primary']} !important;
     font-weight: 700 !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 
 button[data-baseweb="tab"] {{
@@ -1025,6 +1053,7 @@ div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
     transition: all 0.18s ease !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
     white-space: normal !important;
+    direction: rtl !important;
 }}
 div[data-testid="stButton"] button p, div[data-testid="stDownloadButton"] button p {{
     color: {th['primary']} !important;
@@ -1033,6 +1062,7 @@ div[data-testid="stButton"] button p, div[data-testid="stDownloadButton"] button
     font-size: 13px !important;
     white-space: normal !important;
     line-height: 1.3 !important;
+    text-align: center !important;
 }}
 div[data-testid="stDownloadButton"] button {{
     background-color: #ffffff !important;
@@ -1061,6 +1091,7 @@ div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSub
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     font-size: 15px !important;
+    text-align: center !important;
 }}
 
 div[data-testid="stRadio"] {{
@@ -1086,6 +1117,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] {{
     border: 1px solid #e2e8f0 !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
     justify-content: space-between !important;
+    direction: rtl !important;
 }}
 div[data-testid="stRadio"] label {{
     flex: 1 1 0% !important;
@@ -1119,6 +1151,7 @@ div[data-testid="stRadio"] label p {{
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+    text-align: center !important;
 }}
 div[data-testid="stRadio"] label:has(input:checked) {{
     background: {th['primary']} !important;
@@ -1139,6 +1172,8 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     border: 1px solid rgba(255,255,255,0.12);
     box-sizing: border-box;
     width: 100%;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 .hero-top {{
     display: flex;
@@ -1149,10 +1184,11 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     margin-bottom: 12px;
     flex-wrap: wrap;
     gap: 6px;
+    direction: rtl !important;
 }}
-.brand-box {{ display: flex; align-items: center; gap: 10px; }}
-.brand-title {{ font-size: 15.5px; font-weight: 700; color: #fbbf24 !important; margin: 0; }}
-.brand-sub {{ font-size: 10.5px; color: rgba(255,255,255,0.88) !important; margin: 2px 0 0 0; }}
+.brand-box {{ display: flex; align-items: center; gap: 10px; direction: rtl !important; }}
+.brand-title {{ font-size: 15.5px; font-weight: 700; color: #fbbf24 !important; margin: 0; text-align: right !important; }}
+.brand-sub {{ font-size: 10.5px; color: rgba(255,255,255,0.88) !important; margin: 2px 0 0 0; text-align: right !important; }}
 .date-pill {{
     background: rgba(255,255,255,0.14);
     padding: 4px 10px;
@@ -1160,6 +1196,7 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     font-size: 11px;
     color: #ffffff !important;
     border: 1px solid rgba(255,255,255,0.2);
+    direction: rtl !important;
 }}
 .hero-body {{
     display: flex;
@@ -1167,10 +1204,11 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     align-items: flex-end;
     flex-wrap: wrap;
     gap: 10px;
+    direction: rtl !important;
 }}
-.welcome-line {{ font-size: 13px; color: #fde68a !important; font-weight: 600; margin-bottom: 2px; }}
-.teacher-name {{ font-size: 21px; font-weight: 800; color: #ffffff !important; margin: 0 0 8px 0; }}
-.meta-badges {{ display: flex; flex-wrap: wrap; gap: 5px; }}
+.welcome-line {{ font-size: 13px; color: #fde68a !important; font-weight: 600; margin-bottom: 2px; text-align: right !important; }}
+.teacher-name {{ font-size: 21px; font-weight: 800; color: #ffffff !important; margin: 0 0 8px 0; text-align: right !important; }}
+.meta-badges {{ display: flex; flex-wrap: wrap; gap: 5px; direction: rtl !important; }}
 .meta-pill {{
     background: rgba(0,0,0,0.25);
     color: #ffffff !important;
@@ -1189,21 +1227,21 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 }}
 
 .kpi-grid {{
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; width: 100%; box-sizing: border-box;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; width: 100%; box-sizing: border-box; direction: rtl !important;
 }}
 .kpi-card {{
-    background: #ffffff; border-radius: 14px; padding: 10px 4px; text-align: center;
+    background: #ffffff; border-radius: 14px; padding: 10px 4px; text-align: center !important;
     border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
 }}
-.kpi-val {{ font-size: 18px; font-weight: 700; color: {th['primary']} !important; text-align: center; }}
-.kpi-lbl {{ font-size: 10.5px; color: #475569 !important; margin-top: 2px; font-weight: 600; text-align: center; }}
+.kpi-val {{ font-size: 18px; font-weight: 700; color: {th['primary']} !important; text-align: center !important; }}
+.kpi-lbl {{ font-size: 10.5px; color: #475569 !important; margin-top: 2px; font-weight: 600; text-align: center !important; }}
 
 .progress-card {{
     background: #ffffff; padding: 12px 16px; border-radius: 14px; 
-    margin-bottom: 6px; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box;
+    margin-bottom: 6px; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box; direction: rtl !important;
 }}
 .progress-bar-bg {{
-    background: #e2e8f0; height: 9px; border-radius: 5px; width: 100%; overflow: hidden; margin-top: 6px;
+    background: #e2e8f0; height: 9px; border-radius: 5px; width: 100%; overflow: hidden; margin-top: 6px; direction: rtl !important;
 }}
 .progress-bar-fill {{
     background: linear-gradient(90deg, {th['primary']}, {th['primary_light']});
@@ -1215,6 +1253,7 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     padding: 12px 14px; margin-bottom: 2px;
     display: flex; justify-content: space-between; align-items: center;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02); width: 100%; box-sizing: border-box;
+    direction: rtl !important; text-align: right !important;
 }}
 .std-num {{
     width: 38px; height: 38px; border-radius: 11px;
@@ -1223,7 +1262,7 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     font-weight: 700; font-size: 16px; margin-left: 10px; flex-shrink: 0;
 }}
 .std-num-empty {{ background: #fee2e2; color: #dc2626 !important; }}
-.std-title {{ font-size: 14.5px; font-weight: 700; color: #0f172a !important; margin-bottom: 3px; }}
+.std-title {{ font-size: 14.5px; font-weight: 700; color: #0f172a !important; margin-bottom: 3px; text-align: right !important; direction: rtl !important; }}
 .weight-badge {{
     background: #f1f5f9; color: #475569 !important; font-size: 11px; padding: 2px 8px;
     border-radius: 7px; display: inline-block; font-weight: 600;
@@ -1233,8 +1272,62 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 .dot-on {{ background: {th['primary']}; }}
 .dot-off {{ background: #e2e8f0; }}
 
+/* ========================================================= */
+/* بطاقة الشاهد والوصف والمرفقات (محاذاة يمينية RTL صارمة 100%) */
+/* ========================================================= */
+.ev-box {{
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px 14px 4px 4px;
+    padding: 14px 16px;
+    margin-bottom: 2px;
+    border-right: 4px solid {th['primary']};
+    width: 100%;
+    box-sizing: border-box;
+    direction: rtl !important;
+    text-align: right !important;
+}}
+.ev-box * {{
+    direction: rtl !important;
+}}
+.ev-header-row {{
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+    direction: rtl !important;
+    text-align: right !important;
+}}
+.ev-title-right {{
+    font-weight: 700 !important;
+    font-size: 15.5px !important;
+    color: {th['primary']} !important;
+    direction: rtl !important;
+    text-align: right !important;
+    unicode-bidi: isolate !important;
+}}
+.ev-desc-rtl {{
+    font-size: 13.5px !important;
+    color: #334155 !important;
+    line-height: 1.75 !important;
+    margin-bottom: 8px !important;
+    white-space: pre-line !important;
+    direction: rtl !important;
+    text-align: right !important;
+    unicode-bidi: plaintext !important;
+}}
 .thumbs-container {{
-    display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px 0; align-items: center;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin: 8px 0 4px 0 !important;
+    align-items: center !important;
+    direction: rtl !important;
 }}
 .thumb-link {{
     position: relative; display: inline-block; width: 90px; height: 90px;
@@ -1245,7 +1338,7 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 .thumb-overlay {{
     position: absolute; bottom: 0; left: 0; right: 0;
     background: rgba(0,0,0,0.65); color: #ffffff !important; font-size: 9.5px;
-    text-align: center; padding: 2px 0;
+    text-align: center !important; padding: 2px 0;
 }}
 .pdf-badge {{
     display: inline-flex; align-items: center; justify-content: center;
@@ -1260,20 +1353,16 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     color: #1d4ed8 !important; font-weight: 700; font-size: 12px; text-decoration: none;
 }}
 
-.ev-box {{
-    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px 14px 4px 4px;
-    padding: 14px; margin-bottom: 2px; border-right: 4px solid {th['primary']};
-    width: 100%; box-sizing: border-box;
-}}
 .idea-card {{
     background: #ffffff; border: 1px solid #e2e8f0; padding: 9px 12px;
     border-radius: 10px; margin-bottom: 5px; font-size: 12.5px; color: #1e293b !important;
     display: flex; justify-content: space-between; align-items: center;
+    direction: rtl !important; text-align: right !important;
 }}
 .visitor-banner {{
     background: #fef3c7; color: #92400e !important; border: 1px solid #f59e0b;
     padding: 8px 14px; border-radius: 11px; margin-bottom: 8px;
-    font-weight: 700; font-size: 13px; text-align: center;
+    font-weight: 700; font-size: 13px; text-align: center !important;
 }}
 
 .ziyad-footer {{
@@ -1282,13 +1371,13 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     background: #ffffff;
     border-top: 3px solid {th['primary']};
     border-radius: 14px 14px 8px 8px;
-    text-align: center;
+    text-align: center !important;
     border: 1px solid #e2e8f0;
     width: 100%;
     box-sizing: border-box;
 }}
-.footer-brand {{ font-size: 13.5px; font-weight: 700; color: {th['primary']} !important; margin-bottom: 3px; text-align: center; }}
-.footer-rights {{ font-size: 11px; color: #64748b !important; text-align: center; }}
+.footer-brand {{ font-size: 13.5px; font-weight: 700; color: {th['primary']} !important; margin-bottom: 3px; text-align: center !important; }}
+.footer-rights {{ font-size: 11px; color: #64748b !important; text-align: center !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1324,12 +1413,12 @@ def get_greeting_and_dates():
 def render_attachments_html(files, signed_urls_map):
     if not files:
         return ""
-    thumbs_html = '<div class="thumbs-container">'
+    thumbs_html = '<div class="thumbs-container" dir="rtl">'
     for i, f_rec in enumerate(files):
         f_url = f_rec.get('file_url', '')
         f_type = f_rec.get('file_type', '')
         if f_type == 'external/link' or f_url.startswith('http'):
-            thumbs_html += f'<a href="{f_url}" target="_blank" class="ext-link-badge">🔗 فتح الرابط المرفق</a>'
+            thumbs_html += f'<a href="{f_url}" target="_blank" class="ext-link-badge" dir="rtl">🔗 فتح الرابط المرفق</a>'
         else:
             sec_url = signed_urls_map.get(f_url, '')
             if not sec_url:
@@ -1340,7 +1429,7 @@ def render_attachments_html(files, signed_urls_map):
                     f'<img src="{sec_url}" alt="شاهد"><div class="thumb-overlay">🔍 تكبير</div></a>'
                 )
             else:
-                thumbs_html += f'<a href="{sec_url}" target="_blank" class="pdf-badge">📄 ملف PDF ({i+1})</a>'
+                thumbs_html += f'<a href="{sec_url}" target="_blank" class="pdf-badge" dir="rtl">📄 ملف PDF ({i+1})</a>'
     thumbs_html += '</div>'
     return thumbs_html
 
@@ -1369,14 +1458,14 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                         f_u = signed_urls_map.get(f_obj['file_url'], '')
                         if f_obj.get('file_type', '').startswith('image/') and f_u:
                             st.markdown(
-                                f'<div style="border:1px solid #cbd5e1; border-radius:12px; padding:6px; background:#f8fafc; text-align:center; margin-bottom:6px;">'
+                                f'<div dir="rtl" style="border:1px solid #cbd5e1; border-radius:12px; padding:6px; background:#f8fafc; text-align:center; margin-bottom:6px;">'
                                 f'<img src="{f_u}" style="width:100%; height:110px; object-fit:contain; border-radius:8px; background:white;">'
                                 f'</div>',
                                 unsafe_allow_html=True
                             )
                         else:
                             st.markdown(
-                                f'<div style="border:1px dashed #64748b; border-radius:12px; height:110px; display:flex; align-items:center; justify-content:center; background:#f8fafc; margin-bottom:6px; font-weight:700; font-size:13px;">'
+                                f'<div dir="rtl" style="border:1px dashed #64748b; border-radius:12px; height:110px; display:flex; align-items:center; justify-content:center; background:#f8fafc; margin-bottom:6px; font-weight:700; font-size:13px;">'
                                 f'📄 ملف PDF رقم ({idx_f+1})'
                                 f'</div>',
                                 unsafe_allow_html=True
@@ -1497,7 +1586,7 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
 def render_footer():
     year_now = datetime.date.today().year
     footer_html = (
-        f'<div class="ziyad-footer">'
+        f'<div class="ziyad-footer" dir="rtl">'
         f'<div class="footer-brand">🎓 منصة زياد الذكية | نظام ملف الإنجاز المهني الإلكتروني</div>'
         f'<div class="footer-rights">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {user_info["full_name"]}</div>'
         f'</div>'
@@ -1509,7 +1598,7 @@ def render_footer():
 # ==========================================
 def login_page():
     login_hero = (
-        f'<div class="hero-wrapper" style="text-align:center;">'
+        f'<div class="hero-wrapper" dir="rtl" style="text-align:center;">'
         f'<div style="display:flex; justify-content:center; margin-bottom:8px;">{ZIYAD_LOGO_SVG}</div>'
         f'<div style="font-size:15px; color:#fbbf24 !important; font-weight:700; text-align:center;">منصة زياد الذكية</div>'
         f'<div style="font-size:22px; font-weight:800; margin:5px 0; color:white !important; text-align:center;">ملف الإنجاز المهني الإلكتروني</div>'
@@ -1577,14 +1666,14 @@ def main_app():
     # الهيدر والبنر الاحترافي
     greeting, today_str = get_greeting_and_dates()
     hero_html = (
-        f'<div class="hero-wrapper">'
-        f'<div class="hero-top">'
+        f'<div class="hero-wrapper" dir="rtl">'
+        f'<div class="hero-top" dir="rtl">'
         f'<div class="brand-box">{ZIYAD_LOGO_SVG}'
         f'<div><div class="brand-title">منصة زياد الذكية</div>'
         f'<div class="brand-sub">نظام إدارة وتوثيق شواهد الأداء الوظيفي</div></div></div>'
         f'<div class="date-pill">🗓️ {today_str}</div>'
         f'</div>'
-        f'<div class="hero-body">'
+        f'<div class="hero-body" dir="rtl">'
         f'<div>'
         f'<div class="welcome-line">✨ {greeting}</div>'
         f'<div class="teacher-name">أ. {user_info["full_name"]}</div>'
@@ -1603,7 +1692,7 @@ def main_app():
     if is_visitor:
         col_v1, col_v2 = st.columns([4, 1])
         with col_v1:
-            st.markdown('<div class="visitor-banner">👁️ تتصفح الملف بوضع الزائر (مشاهدة فقط)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="visitor-banner" dir="rtl">👁️ تتصفح الملف بوضع الزائر (مشاهدة فقط)</div>', unsafe_allow_html=True)
         with col_v2:
             if st.button("🚪 خروج", use_container_width=True):
                 st.session_state.is_visitor = False
@@ -1665,13 +1754,13 @@ def main_app():
     # ----------------------------------------
     if st.session_state.current_page == 'home':
         kpi_html = (
-            f'<div class="kpi-grid">'
+            f'<div class="kpi-grid" dir="rtl">'
             f'<div class="kpi-card"><div class="kpi-val">{total_ev_count}</div><div class="kpi-lbl">إجمالي الشواهد</div></div>'
             f'<div class="kpi-card"><div class="kpi-val">{stds_with_ev}/{total_stds}</div><div class="kpi-lbl">البنود المغطاة</div></div>'
             f'<div class="kpi-card"><div class="kpi-val">{stds_reached_target}</div><div class="kpi-lbl">حققت المستهدف</div></div>'
             f'<div class="kpi-card"><div class="kpi-val" style="color:#dc2626 !important;">{empty_stds}</div><div class="kpi-lbl">بنود فارغة</div></div>'
             f'</div>'
-            f'<div class="progress-card">'
+            f'<div class="progress-card" dir="rtl">'
             f'<div style="display:flex; justify-content:space-between; font-weight:700; font-size:13px; color:#1e293b;">'
             f'<span style="color:#1e293b !important;">نسبة تغطية معايير الأداء الوظيفي ({active_year["year_name"]}هـ)</span>'
             f'<span style="color:{th["primary"]} !important;">{pct}%</span>'
@@ -1725,7 +1814,7 @@ def main_app():
                 num_cls = "std-num"
 
             card_html = (
-                f'<div class="std-card">'
+                f'<div class="std-card" dir="rtl">'
                 f'<div style="display:flex; align-items:center;">'
                 f'<div class="{num_cls}">{s_id}</div>'
                 f'<div><div class="std-title">{s_id}. {std["title"]}</div>'
@@ -1741,7 +1830,7 @@ def main_app():
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة البنود والشواهد (مرتبة زمنياً من الأقدم إلى الأحدث)
+    # 📋 2. صفحة البنود والشواهد (محاذاة RTL كاملة للقوائم والوصف + ترتيب زمني تصاعدي)
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         st.markdown("#### 📋 استعراض وإدارة بنود الأداء والشواهد")
@@ -1777,12 +1866,12 @@ def main_app():
                             exec_date = ev.get('execution_date') or ev['created_at'][:10]
                             thumbs_html = render_attachments_html(files, signed_urls_map)
                             ev_card = (
-                                f'<div class="ev-box">'
-                                f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">'
-                                f'<span style="font-weight:700; color:{th["primary"]} !important;">{order_idx}. 📄 {ev["title"]}</span>'
-                                f'<span style="font-size:12px; color:#64748b !important;">📅 {exec_date}</span>'
+                                f'<div class="ev-box" dir="rtl">'
+                                f'<div class="ev-header-row" dir="rtl">'
+                                f'<span class="ev-title-right" dir="rtl">📄 {order_idx} - {ev["title"]}</span>'
+                                f'<span style="font-size:12px; color:#64748b !important;" dir="rtl">📅 {exec_date}</span>'
                                 f'</div>'
-                                f'<div style="font-size:13.5px; color:#334155 !important; white-space:pre-line;">{ev.get("description") or ""}</div>'
+                                f'<div class="ev-desc-rtl" dir="rtl">{ev.get("description") or ""}</div>'
                                 f'{thumbs_html}</div>'
                             )
                             st.markdown(ev_card, unsafe_allow_html=True)
@@ -1806,12 +1895,12 @@ def main_app():
                     thumbs_html = render_attachments_html(files, signed_urls_map)
 
                     ev_detail_html = (
-                        f'<div class="ev-box">'
-                        f'<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">'
-                        f'<span style="font-weight:700; font-size:15.5px; color:{th["primary"]} !important;">{order_idx}. 📄 {ev["title"]}</span>'
-                        f'<span style="background:{th["tint"]}; color:{th["primary_dark"]} !important; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;">'
+                        f'<div class="ev-box" dir="rtl">'
+                        f'<div class="ev-header-row" dir="rtl">'
+                        f'<span class="ev-title-right" dir="rtl">📄 {order_idx} - {ev["title"]}</span>'
+                        f'<span style="background:{th["tint"]}; color:{th["primary_dark"]} !important; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;" dir="rtl">'
                         f'📅 تاريخ التنفيذ: {exec_date}</span></div>'
-                        f'<div style="font-size:13.5px; color:#334155 !important; line-height:1.6; margin-bottom:6px; white-space:pre-line;">{ev.get("description") or ""}</div>'
+                        f'<div class="ev-desc-rtl" dir="rtl">{ev.get("description") or ""}</div>'
                         f'{thumbs_html}</div>'
                     )
                     st.markdown(ev_detail_html, unsafe_allow_html=True)
@@ -1824,7 +1913,7 @@ def main_app():
 
             with st.expander("💡 استعراض أمثلة الشواهد المستهدفة لهذا البند", expanded=False):
                 for idea in sub_options:
-                    st.markdown(f'<div class="idea-card"><span>💡 {idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="idea-card" dir="rtl"><span>💡 {idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
 
             if not is_visitor:
                 st.markdown("##### ➕ إضافة شاهد جديد لهذا البند")
@@ -1940,7 +2029,7 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة (ترتيب زمني ذكي من الأقدم للأحدث + تضمين الصور في Word و PDF)
+    # 📄 3. صفحة التقارير والطباعة
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
@@ -1984,8 +2073,8 @@ def main_app():
             <title>ملف الإنجاز المهني - {user_info['full_name']}</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap');
-                * {{ box-sizing: border-box; }}
-                body {{ font-family: 'Readex Pro', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; }}
+                * {{ box-sizing: border-box; direction: rtl; }}
+                body {{ font-family: 'Readex Pro', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; direction: rtl; text-align: right; }}
                 
                 .page {{
                     background-color: white;
@@ -1999,6 +2088,8 @@ def main_app():
                     display: flex;
                     flex-direction: column;
                     overflow: hidden;
+                    direction: rtl;
+                    text-align: right;
                 }}
                 
                 .cover-page {{ border: {cover_border}; border-radius: {box_radius}; padding: 35px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; }}
@@ -2009,10 +2100,10 @@ def main_app():
                 .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: 700; color: {rep_color}; }}
                 
                 .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 6px; margin-bottom: 10px; font-size: 12px; font-weight: 700; flex-shrink: 0; }}
-                .header-right {{ color: {rep_color}; }}
+                .header-right {{ color: {rep_color}; text-align: right; }}
                 .header-left {{ text-align: left; }}
                 
-                .index-title {{ color: {rep_color}; font-size: 22px; font-weight: 700; margin-bottom: 16px; }}
+                .index-title {{ color: {rep_color}; font-size: 22px; font-weight: 700; margin-bottom: 16px; text-align: right; }}
                 .index-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
                 .index-table th {{ background-color: #f1f5f9; color: {rep_color}; padding: 10px; text-align: center; border-bottom: 2px solid {rep_color}; }}
                 .index-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; }}
@@ -2030,8 +2121,8 @@ def main_app():
                     margin-bottom: 10px;
                     flex-shrink: 0;
                 }}
-                .top-ev-title {{ font-size: 16px; font-weight: 700; }}
-                .top-std-sub {{ font-size: 12.5px; opacity: 0.92; }}
+                .top-ev-title {{ font-size: 16px; font-weight: 700; text-align: right; }}
+                .top-std-sub {{ font-size: 12.5px; opacity: 0.92; text-align: left; }}
                 
                 .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; flex-shrink: 0; }}
                 .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 7px 12px; text-align: center; border-radius: {box_radius}; }}
@@ -2046,10 +2137,11 @@ def main_app():
                     color: {rep_color};
                     margin-bottom: 4px;
                     flex-shrink: 0;
+                    text-align: right;
                 }}
                 .desc-section {{
                     margin-bottom: 10px;
-                    line-height: 1.55;
+                    line-height: 1.6;
                     font-size: 12.5px;
                     color: #1e293b;
                     padding: 8px 10px;
@@ -2060,6 +2152,8 @@ def main_app():
                     white-space: pre-line;
                     max-height: 44mm;
                     overflow: hidden;
+                    direction: rtl;
+                    text-align: right;
                 }}
                 
                 .shawahed-bar {{
@@ -2236,7 +2330,7 @@ def main_app():
                                 <div class="meta-box"><div class="meta-title">نوع الشاهد</div><div class="meta-value">شاهد ميداني موثق</div></div>
                             </div>
                             <div class="desc-header">الوصف</div>
-                            <div class="desc-section">{ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'}</div>
+                            <div class="desc-section" dir="rtl">{ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'}</div>
                             {pdf_notice}
                             {link_notice}
                             {images_section}
@@ -2431,7 +2525,7 @@ def main_app():
                     badge_html = '<span style="background:#10b981; color:white !important; padding:4px 12px; border-radius:8px; font-size:12px;">🟢 الملف النشط</span>' if is_act else '<span style="background:#64748b; color:white !important; padding:4px 12px; border-radius:8px; font-size:12px;">📦 مؤرشف</span>'
                     
                     arch_card = (
-                        f'<div class="std-card">'
+                        f'<div class="std-card" dir="rtl">'
                         f'<div><div class="std-title">📁 ملف إنجاز العام الدراسي: {y["year_name"]}هـ</div>'
                         f'<div style="font-size:12.5px; color:#64748b !important;">عدد الشواهد الموثقة: <strong>{y_count} شاهد</strong></div></div>'
                         f'<div>{badge_html}</div>'
