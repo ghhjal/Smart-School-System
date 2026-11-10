@@ -3,7 +3,6 @@ from supabase import create_client
 import time
 import uuid
 import json
-import random
 import datetime
 import zipfile
 import urllib.request
@@ -142,7 +141,7 @@ DEFAULT_SUB_ITEMS = {
 # ==========================================
 # 4. محرك الصياغة المزدوج (Gemini 2.5 Flash + محرك القوالب التربوية الذكي)
 # ==========================================
- PEDAGOGICAL_CONTEXT = {
+PEDAGOGICAL_CONTEXT = {
     1: {
         "target": "المجتمع المدرسي واللجان التنظيمية والطلاب",
         "verbs": ["الالتزام التام بتطبيق", "توثيق وتفعيل", "المبادرة بتنفيذ"],
@@ -201,17 +200,10 @@ DEFAULT_SUB_ITEMS = {
 }
 
 def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", variant=0):
-    """
-    محرك مزدوج:
-    1) يفحص وجود مفتاح Gemini تلقائياً، وإذا وجده يمرر المدخلات إلى gemini-2.5-flash.
-    2) الوضع الافتراضي المدمج: محرك صياغة قوالب تربوية ذكي غني بالمصطلحات الرسمية وتوليد متنوع للأساليب.
-    """
     clean_notes = raw_notes.strip()
     ctx = PEDAGOGICAL_CONTEXT.get(std_id, PEDAGOGICAL_CONTEXT[4])
     
-    # ----------------------------------------------------
     # الوضع 1: فحص وجود مفتاح Gemini واستدعاء gemini-2.5-flash تلقائياً
-    # ----------------------------------------------------
     gemini_key = st.secrets.get("gemini_api_key", "") or st.session_state.get("custom_gemini_key", "")
     if gemini_key:
         try:
@@ -249,10 +241,7 @@ def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", vari
         except Exception:
             pass
 
-    # ----------------------------------------------------
-    # الوضع 2 (الافتراضي المدمج): محرك صياغة القوالب التربوية الذكي (مجاني وفوري)
-    # ----------------------------------------------------
-    # تجنب تكرار النص إذا ضغط المعلم على الزر مرة ثانية لتحسين الصياغة
+    # الوضع 2 (الافتراضي المدمج): محرك صياغة القوالب التربوية الذكي
     is_already_long = len(clean_notes) > 160 and ("مؤشرات" in clean_notes or "مستهدفات" in clean_notes or "انطلاقاً" in clean_notes)
     if is_already_long:
         seed_notes = st.session_state.get(f"last_raw_notes_{std_id}", "")
@@ -342,7 +331,6 @@ def navigate_to(page_name, std_id=None):
         st.session_state.view_standard_id = std_id
     st.rerun()
 
-# دالة الـ Callback الآمنة لزر الذكاء الاصطناعي (تمنع خطأ StreamlitWidgetAlreadyInstantiatedError نهائياً)
 def run_ai_draft_callback(std_id, std_title, sub_options):
     desc_key = f"draft_desc_{std_id}"
     goal_key = f"draft_goal_{std_id}"
@@ -620,19 +608,24 @@ th = THEMES[active_theme_key]
 ZIYAD_LOGO_SVG = '<svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 7. التصميم الشامل
+# 7. التصميم الشامل (معالجة جذرية للحقول السوداء في الوضع الليلي للجوال)
 # ==========================================
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Readex+Pro:wght@400;500;600;700&display=swap');
 
-:root, html, body {{
-    color-scheme: light !important;
+/* فرض متغيرات الألوان النهارية على جذر المتصفح و Streamlit لمنع الخلفيات السوداء في الجوال */
+:root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+    --text-color: #0f172a !important;
+    --background-color: {th['bg']} !important;
+    --secondary-background-color: #ffffff !important;
+    --primary-color: {th['primary']} !important;
+    color-scheme: light only !important;
     direction: rtl; 
     text-align: right; 
     font-family: 'Readex Pro', 'Cairo', sans-serif;
     background-color: {th['bg']} !important;
-    color: #1e293b !important;
+    color: #0f172a !important;
     overflow-x: hidden !important;
     max-width: 100% !important;
     width: 100% !important;
@@ -640,13 +633,6 @@ st.markdown(f"""
     padding: 0 !important;
     overscroll-behavior-x: none !important;
     touch-action: pan-y !important;
-}}
-
-.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
-    background-color: {th['bg']} !important;
-    overflow-x: hidden !important;
-    max-width: 100% !important;
-    width: 100% !important;
 }}
 
 header {{visibility: hidden; height: 0 !important;}}
@@ -671,7 +657,7 @@ div.element-container {{
 
 h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, [data-testid="stWidgetLabel"] p, [data-testid="stMarkdownContainer"] p {{
     font-family: 'Readex Pro', 'Cairo', sans-serif;
-    color: #1e293b !important;
+    color: #0f172a !important;
     word-wrap: break-word !important;
 }}
 
@@ -680,21 +666,101 @@ span[data-testid="stIconMaterial"], .material-icons, [class*="material-symbols"]
     direction: ltr !important;
 }}
 
-[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"] > div {{
+/* ========================================================= */
+/* الحل الجذري لمشكلة الحقول والقوائم السوداء في الوضع الليلي */
+/* ========================================================= */
+div[data-baseweb="input"],
+div[data-baseweb="input"] > div,
+div[data-baseweb="base-input"],
+div[data-baseweb="textarea"],
+div[data-baseweb="textarea"] > div,
+div[data-baseweb="select"],
+div[data-baseweb="select"] > div,
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextArea"] textarea,
+div[data-testid="stDateInput"] input,
+input, textarea {{
     background-color: #ffffff !important;
-    color: #0f172a !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 12px !important;
-}}
-input, textarea, [data-baseweb="select"] span, [data-baseweb="select"] div {{
+    background: #ffffff !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
+    caret-color: {th['primary']} !important;
+}}
+
+div[data-baseweb="input"],
+div[data-baseweb="textarea"],
+div[data-baseweb="select"] > div {{
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+}}
+
+/* النصوص والأيقونات داخل القوائم المنسدلة (Selectbox) */
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] div,
+div[data-baseweb="select"] svg {{
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    fill: #0f172a !important;
     background-color: transparent !important;
 }}
-input::placeholder, textarea::placeholder {{
-    color: #94a3b8 !important;
-    -webkit-text-fill-color: #94a3b8 !important;
+
+/* القائمة المنبثقة عند فتح الـ Selectbox في الجوال */
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] > div,
+div[data-baseweb="menu"],
+ul[role="listbox"],
+li[role="option"] {{
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
 }}
+li[role="option"]:hover, li[role="option"][aria-selected="true"] {{
+    background-color: {th['tint']} !important;
+    color: {th['primary']} !important;
+}}
+
+/* النص الإرشادي (Placeholder) داخل الحقول */
+input::placeholder, textarea::placeholder {{
+    color: #64748b !important;
+    -webkit-text-fill-color: #64748b !important;
+    opacity: 1 !important;
+}}
+
+/* إصلاح صندوق التنبيهات (st.info / st.warning) الذي كان يظهر بمربع كحلي داكن في الوضع الليلي */
+div[data-testid="stAlert"], div[data-testid="stAlert"] > div, div[role="alert"] {{
+    background-color: {th['tint']} !important;
+    background: {th['tint']} !important;
+    color: {th['primary_dark']} !important;
+    border: 1px solid {th['primary']} !important;
+    border-radius: 14px !important;
+}}
+div[data-testid="stAlert"] p, div[data-testid="stAlert"] span, div[role="alert"] p {{
+    color: {th['primary_dark']} !important;
+    -webkit-text-fill-color: {th['primary_dark']} !important;
+    font-weight: 600 !important;
+}}
+
+/* إصلاح مربع رفع الملفات (File Uploader) في الوضع الليلي */
+div[data-testid="stFileUploader"] section {{
+    background-color: #ffffff !important;
+    border: 1.5px dashed #94a3b8 !important;
+    border-radius: 14px !important;
+    color: #0f172a !important;
+}}
+div[data-testid="stFileUploader"] section span,
+div[data-testid="stFileUploader"] section small,
+div[data-testid="stFileUploader"] section div {{
+    color: #475569 !important;
+}}
+div[data-testid="stFileUploader"] section button {{
+    background-color: {th['tint']} !important;
+    color: {th['primary']} !important;
+    border: 1px solid {th['primary']} !important;
+    border-radius: 10px !important;
+}}
+
 [data-testid="stForm"] {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
@@ -710,11 +776,16 @@ input::placeholder, textarea::placeholder {{
     margin-bottom: 6px !important;
     overflow: hidden !important;
 }}
-[data-testid="stExpander"] summary, [data-testid="stExpander"] summary p, [data-testid="stExpander"] summary span {{
+[data-testid="stExpander"] details,
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span,
+[data-testid="stExpanderDetails"] {{
     background-color: #ffffff !important;
     color: {th['primary']} !important;
     font-weight: 700 !important;
 }}
+
 button[data-baseweb="tab"] {{
     background-color: transparent !important;
     color: #475569 !important;
@@ -739,6 +810,7 @@ div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
 }}
 div[data-testid="stButton"] button p, div[data-testid="stDownloadButton"] button p {{
     color: {th['primary']} !important;
+    -webkit-text-fill-color: {th['primary']} !important;
     font-weight: 700 !important;
     font-size: 13.5px !important;
 }}
@@ -750,6 +822,7 @@ div[data-testid="stDownloadButton"] button {{
 }}
 div[data-testid="stDownloadButton"] button p {{
     color: #0369a1 !important;
+    -webkit-text-fill-color: #0369a1 !important;
     font-size: 14.5px !important;
 }}
 div[data-testid="stButton"] button:hover {{
@@ -766,6 +839,7 @@ div[data-testid="stButton"] button[kind="primary"], div[data-testid="stFormSubmi
 }}
 div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSubmitButton"] button p, div[data-testid="stDownloadButton"] button[kind="primary"] p {{
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
     font-size: 15px !important;
 }}
 
@@ -821,6 +895,7 @@ div[data-testid="stRadio"] label p {{
     font-size: 13px !important;
     font-weight: 700 !important;
     color: #475569 !important;
+    -webkit-text-fill-color: #475569 !important;
     margin: 0 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -832,6 +907,7 @@ div[data-testid="stRadio"] label:has(input:checked) {{
 }}
 div[data-testid="stRadio"] label:has(input:checked) p {{
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }}
 
 /* الهيدر والبنر المدمج الاحترافي */
@@ -1443,9 +1519,6 @@ def main_app():
                 for idea in sub_options:
                     st.markdown(f'<div class="idea-card"><span>💡 {idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
 
-            # ----------------------------------------------------
-            # نموذج إضافة شاهد جديد (مع Callback آمن يمنع StreamlitWidgetAlreadyInstantiatedError)
-            # ----------------------------------------------------
             if not is_visitor:
                 st.markdown("##### ➕ إضافة شاهد جديد لهذا البند")
                 
@@ -1456,7 +1529,6 @@ def main_app():
                 impact_key = f"draft_impact_{std_id}"
                 clear_flag_key = f"clear_draft_flag_{std_id}"
 
-                # تفريغ الحقول بأمان قبل رسمها إذا تم الحفظ في الدورة السابقة
                 if st.session_state.get(clear_flag_key, False):
                     for k in [desc_key, goal_key, target_key, impl_key, impact_key]:
                         st.session_state[k] = ""
@@ -1481,7 +1553,6 @@ def main_app():
                     height=110
                 )
 
-                # زر صياغة الوصف بالذكاء الاصطناعي مربوط بـ on_click لتحديث الحقول قبل رسمها بدون أي خطأ
                 st.button(
                     "✨ صياغة الوصف بالذكاء الاصطناعي",
                     key=f"ai_btn_{std_id}",
@@ -1489,7 +1560,6 @@ def main_app():
                     args=(std_id, std_data['title'], sub_options)
                 )
 
-                # قسم تفاصيل تقرير الشاهد (اختياري: الهدف، المستهدفون، التنفيذ، الأثر)
                 with st.expander("📄 تفاصيل تقرير الشاهد (اختياري: الهدف، المستهدفون، التنفيذ، الأثر)", expanded=False):
                     c_d1, c_d2 = st.columns(2)
                     with c_d1:
@@ -1554,7 +1624,6 @@ def main_app():
                                     "file_type": "external/link"
                                 }).execute()
                                 
-                            # تفعيل علم التفريغ الآمن للدورة القادمة
                             st.session_state[clear_flag_key] = True
                             clear_app_cache()
                             st.success("تم حفظ الشاهد بنجاح!")
