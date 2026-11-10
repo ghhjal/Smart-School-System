@@ -4,6 +4,9 @@ import time
 import uuid
 import json
 import datetime
+import zipfile
+from io import BytesIO
+from xml.sax.saxutils import escape as xml_escape
 from hijri_converter import Gregorian
 import streamlit.components.v1 as components
 
@@ -135,7 +138,7 @@ DEFAULT_SUB_ITEMS = {
 }
 
 # ==========================================
-# 4. الاتصال بقاعدة البيانات والتخزين المؤقت السريع (Caching)
+# 4. الاتصال بقاعدة البيانات والتخزين المؤقت السريع
 # ==========================================
 @st.cache_resource
 def init_connection():
@@ -209,7 +212,6 @@ def fetch_year_evidences(year_id):
 
 @st.cache_data(ttl=1800)
 def get_signed_urls_batch(paths_tuple):
-    """توليد كافة روابط المرفقات دفعة واحدة لتسريع التصفح ومنع أي ثقل"""
     if not paths_tuple:
         return {}
     url_map = {}
@@ -232,40 +234,249 @@ def get_signed_urls_batch(paths_tuple):
                     pass
     return url_map
 
+# ==========================================
+# 5. محرك توليد ملف Word قابل للتعديل (.docx)
+# ==========================================
+def generate_editable_docx(user_info, active_year, stds, evidences):
+    """إنشاء ملف Word حقيقي (.docx) منسق بالكامل باللغة العربية (RTL) وقابل للتعديل"""
+    stds_map = {s['id']: s for s in stds}
+    sorted_evs = sorted(evidences, key=lambda x: x.get('standard_id', 0))
+    total_ev = len(sorted_evs)
+    covered_stds = len(set(e['standard_id'] for e in sorted_evs))
+
+    def w_para(text, bold=False, size_pt=12, color="1E293B", align="right", space_after=140):
+        sz = int(size_pt * 2)
+        b_tag = "<w:b/><w:bCs/>" if bold else ""
+        return f"""
+        <w:p>
+            <w:pPr>
+                <w:bidi/>
+                <w:jc w:val="{align}"/>
+                <w:spacing w:after="{space_after}"/>
+            </w:pPr>
+            <w:r>
+                <w:rPr>
+                    <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+                    {b_tag}
+                    <w:color w:val="{color}"/>
+                    <w:sz w:val="{sz}"/>
+                    <w:szCs w:val="{sz}"/>
+                    <w:rtl/>
+                </w:rPr>
+                <w:t>{xml_escape(str(text))}</w:t>
+            </w:r>
+        </w:p>
+        """
+
+    def w_table(rows_data, header_bg="0F5243"):
+        tbl_xml = """
+        <w:tbl>
+            <w:tblPr>
+                <w:bidiVisual/>
+                <w:tblW w:w="5000" w:type="pct"/>
+                <w:tblBorders>
+                    <w:top w:val="single" w:sz="6" w:space="0" w:color="CBD5E1"/>
+                    <w:bottom w:val="single" w:sz="6" w:space="0" w:color="CBD5E1"/>
+                    <w:left w:val="single" w:sz="6" w:space="0" w:color="CBD5E1"/>
+                    <w:right w:val="single" w:sz="6" w:space="0" w:color="CBD5E1"/>
+                    <w:insideH w:val="single" w:sz="4" w:space="0" w:color="E2E8F0"/>
+                    <w:insideV w:val="single" w:sz="4" w:space="0" w:color="E2E8F0"/>
+                </w:tblBorders>
+            </w:tblPr>
+        """
+        for r_idx, row in enumerate(rows_data):
+            tbl_xml += "<w:tr>"
+            for c_text, is_header in row:
+                fill = header_bg if is_header else ("F8FAFC" if r_idx % 2 == 1 else "FFFFFF")
+                txt_color = "FFFFFF" if is_header else "0F172A"
+                tbl_xml += f"""
+                <w:tc>
+                    <w:tcPr>
+                        <w:shd w:val="clear" w:color="auto" w:fill="{fill}"/>
+                        <w:tcMar>
+                            <w:top w:w="120" w:type="dxa"/>
+                            <w:bottom w:w="120" w:type="dxa"/>
+                            <w:left w:w="150" w:type="dxa"/>
+                            <w:right w:w="150" w:type="dxa"/>
+                        </w:tcMar>
+                    </w:tcPr>
+                    {w_para(c_text, bold=is_header, size_pt=11, color=txt_color, align="center", space_after=0)}
+                </w:tc>
+                """
+            tbl_xml += "</w:tr>"
+        tbl_xml += "</w:tbl>"
+        return tbl_xml
+
+    body_parts = []
+    # 1. صفحة الغلاف
+    body_parts.append(w_para("المملكة العربية السعودية - وزارة التعليم", bold=True, size_pt=14, color="0F5243", align="center", space_after=120))
+    body_parts.append(w_para("منصة زياد الذكية لتوثيق الأداء المهني", bold=True, size_pt=13, color="B45309", align="center", space_after=300))
+    body_parts.append(w_para("ملف الإنجاز المهني الإلكتروني", bold=True, size_pt=24, color="0F5243", align="center", space_after=120))
+    body_parts.append(w_para("توثيق شواهد الأداء الوظيفي للمعلم", bold=True, size_pt=15, color="475569", align="center", space_after=400))
+
+    cover_rows = [
+        [("البيان", True), ("التفاصيل", True)],
+        [("اسم المعلم", False), (user_info.get("full_name", ""), False)],
+        [("التخصص", False), (user_info.get("specialization", ""), False)],
+        [("المدرسة", False), (user_info.get("school_name", ""), False)],
+        [("المرحلة الدراسية", False), (user_info.get("education_stage", ""), False)],
+        [("المدينة", False), (user_info.get("city", ""), False)],
+        [("مدير المدرسة", False), (user_info.get("principal_name", ""), False)],
+        [("العام الدراسي", False), (f"{active_year.get('year_name', '')}هـ", False)],
+        [("إجمالي الشواهد الموثقة", False), (f"{total_ev} شاهد ({covered_stds} من {len(stds)} معايير)", False)]
+    ]
+    body_parts.append(w_table(cover_rows))
+    body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
+
+    # 2. صفحة فهرس المعايير
+    body_parts.append(w_para("فهرس معايير الأداء الوظيفي المنجزة", bold=True, size_pt=18, color="0F5243", align="right", space_after=240))
+    index_rows = [[("م", True), ("معيار الأداء الوظيفي", True), ("الوزن النسبي", True), ("الشواهد الموثقة", True), ("المستهدف", True)]]
+    for s in stds:
+        cnt = len([e for e in sorted_evs if e['standard_id'] == s['id']])
+        if cnt == 0:
+            continue
+        index_rows.append([
+            (str(s['id']), False),
+            (s['title'], False),
+            (f"{s['weight']}%", False),
+            (str(cnt), False),
+            (str(s.get('target_evidences', 3)), False)
+        ])
+    body_parts.append(w_table(index_rows))
+    body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
+
+    # 3. صفحات الشواهد التفصيلية القابلة للتعديل
+    for idx, ev in enumerate(sorted_evs):
+        std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
+        exec_date = ev.get('execution_date') or ev['created_at'][:10]
+        files = ev.get('evidence_files', [])
+        links_list = [f['file_url'] for f in files if f.get('file_type') == 'external/link' or f.get('file_url', '').startswith('http')]
+        att_summary = f"عدد المرفقات المحفوظة: {len(files)}" + (f" | الرابط: {links_list[0]}" if links_list else "")
+
+        body_parts.append(w_para(f"المعيار {ev['standard_id']}: {std['title']} (الوزن {std['weight']}%)", bold=True, size_pt=16, color="0F5243", align="right", space_after=140))
+        ev_rows = [
+            [("عنوان الشاهد", True), (ev.get("title", ""), False)],
+            [("تاريخ التنفيذ الفعلي", True), (str(exec_date), False)],
+            [("وصف الشاهد والأثر", True), (ev.get("description") or "تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.", False)],
+            [("المرفقات والروابط", True), (att_summary, False)],
+            [("المعلم", True), (user_info.get("full_name", ""), False)],
+            [("مدير المدرسة", True), (user_info.get("principal_name", ""), False)]
+        ]
+        body_parts.append(w_table(ev_rows))
+        body_parts.append(w_para("ملاحظات إضافية / تعديل:", bold=True, size_pt=11, color="64748B", align="right", space_after=200))
+        if idx < len(sorted_evs) - 1:
+            body_parts.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
+
+    document_xml = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:body>
+            {''.join(body_parts)}
+            <w:sectPr>
+                <w:bidi/>
+                <w:pgSz w:w="11906" w:h="16838"/>
+                <w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/>
+            </w:sectPr>
+        </w:body>
+    </w:document>"""
+
+    content_types_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+        <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+        <Default Extension="xml" ContentType="application/xml"/>
+        <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+    </Types>"""
+
+    rels_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    </Relationships>"""
+
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as docx_zip:
+        docx_zip.writestr("[Content_Types].xml", content_types_xml.strip())
+        docx_zip.writestr("_rels/.rels", rels_xml.strip())
+        docx_zip.writestr("word/document.xml", document_xml.strip())
+    return buf.getvalue()
+
+def generate_excel_csv(stds, evidences):
+    """تصدير سجل الشواهد بصيغة CSV UTF-8 BOM يفتح في Excel باللغة العربية مباشرة"""
+    stds_map = {s['id']: s['title'] for s in stds}
+    lines = ["رقم المعيار,اسم المعيار,عنوان الشاهد,تاريخ التنفيذ,الوصف,عدد المرفقات"]
+    for ev in sorted(evidences, key=lambda x: x.get('standard_id', 0)):
+        s_id = ev.get('standard_id', '')
+        s_title = str(stds_map.get(s_id, '')).replace(',', ' - ')
+        title = str(ev.get('title', '')).replace(',', ' - ').replace('\n', ' ')
+        exec_d = ev.get('execution_date') or ev.get('created_at', '')[:10]
+        desc = str(ev.get('description', '') or '').replace(',', ' - ').replace('\n', ' ')
+        f_cnt = len(ev.get('evidence_files', []))
+        lines.append(f"{s_id},{s_title},{title},{exec_d},{desc},{f_cnt}")
+    return "\ufeff" + "\n".join(lines)
+
 user_info = get_user_profile()
 active_theme_key = user_info.get("theme", "emerald")
 if active_theme_key not in THEMES:
     active_theme_key = "emerald"
 th = THEMES[active_theme_key]
 
-ZIYAD_LOGO_SVG = '<svg width="46" height="46" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
+ZIYAD_LOGO_SVG = '<svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 5. التصميم الشامل (إصلاح الوضع الليلي + منع تكدس الأزرار في الجوال)
+# 6. التصميم الشامل (قفل الميلان الأفقي في الجوال + دعم الأزرار الجديدة)
 # ==========================================
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Readex+Pro:wght@400;500;600;700&display=swap');
 
-:root, html, body, .stApp {{
+/* قفل صارم للتمدد الأفقي والميلان يميناً ويساراً في متصفح الجوال */
+:root, html, body {{
     color-scheme: light !important;
     direction: rtl; 
     text-align: right; 
     font-family: 'Readex Pro', 'Cairo', sans-serif;
     background-color: {th['bg']} !important;
     color: #1e293b !important;
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overscroll-behavior-x: none !important;
+    touch-action: pan-y !important;
 }}
 
-header {{visibility: hidden;}}
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+    background-color: {th['bg']} !important;
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+    width: 100% !important;
+}}
+
+header {{visibility: hidden; height: 0 !important;}}
 #MainMenu {{visibility: hidden;}}
 footer {{visibility: hidden;}}
 .stSidebar {{display: none !important;}}
-.block-container {{ padding-top: 1.2rem !important; padding-bottom: 2rem !important; max-width: 760px !important; }}
+
+/* إزالة المسافات الفارغة الزائدة وتثبيت الحواف في الجوال */
+.block-container {{
+    padding: 0.5rem 0.65rem 1.8rem 0.65rem !important;
+    max-width: 720px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+}}
+[data-testid="stVerticalBlock"] {{
+    gap: 0.45rem !important;
+    max-width: 100% !important;
+}}
+div.element-container {{
+    max-width: 100% !important;
+}}
 
 /* فرض وضوح جميع العناوين والنصوص في الوضع الليلي للجوال */
 h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, [data-testid="stWidgetLabel"] p, [data-testid="stMarkdownContainer"] p {{
     font-family: 'Readex Pro', 'Cairo', sans-serif;
     color: #1e293b !important;
+    word-wrap: break-word !important;
 }}
 
 /* الحفاظ على خط أيقونات النظام لمنع ظهور كلمة visibility */
@@ -274,7 +485,7 @@ span[data-testid="stIconMaterial"], .material-icons, [class*="material-symbols"]
     direction: ltr !important;
 }}
 
-/* إصلاح حقول الإدخال والقوائم المنسدلة في الوضع الليلي */
+/* إصلاح حقول الإدخال والقوائم المنسدلة */
 [data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"] > div {{
     background-color: #ffffff !important;
     color: #0f172a !important;
@@ -293,17 +504,17 @@ input::placeholder, textarea::placeholder {{
 [data-testid="stForm"] {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
-    border-radius: 18px !important;
-    padding: 18px !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
+    border-radius: 16px !important;
+    padding: 14px !important;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.03) !important;
 }}
 
-/* إصلاح القوائم المنسدلة (Expanders) والتبويبات (Tabs) في الوضع الليلي */
+/* إصلاح القوائم المنسدلة (Expanders) والتبويبات (Tabs) */
 [data-testid="stExpander"] {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 14px !important;
-    margin-bottom: 10px !important;
+    margin-bottom: 6px !important;
     overflow: hidden !important;
 }}
 [data-testid="stExpander"] summary, [data-testid="stExpander"] summary p, [data-testid="stExpander"] summary span {{
@@ -321,79 +532,101 @@ button[data-baseweb="tab"][aria-selected="true"] {{
     border-bottom-color: {th['primary']} !important;
 }}
 
-/* إصلاح شكل الأزرار لمنع ظهورها باللون الأسود في الوضع الليلي */
-div[data-testid="stButton"] button {{
+/* تنسيق الأزرار وتصدير Word القابل للتعديل */
+div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {{
     background-color: #ffffff !important;
-    color: {th['primary']} !important;
-    border: 1.5px solid {th['primary']} !important;
-    border-radius: 12px !important;
+    color: #0369a1 !important;
+    border: 1.5px solid #0f172a !important;
+    border-radius: 14px !important;
     font-weight: 700 !important;
+    min-height: 48px !important;
     padding: 0.45rem 0.9rem !important;
     transition: all 0.18s ease !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
 }}
-div[data-testid="stButton"] button p {{
-    color: {th['primary']} !important;
+div[data-testid="stButton"] button p, div[data-testid="stDownloadButton"] button p {{
+    color: #0369a1 !important;
     font-weight: 700 !important;
+    font-size: 14.5px !important;
 }}
-div[data-testid="stButton"] button:hover {{
-    background-color: {th['tint']} !important;
+div[data-testid="stButton"] button:hover, div[data-testid="stDownloadButton"] button:hover {{
+    background-color: #f0f9ff !important;
 }}
-div[data-testid="stButton"] button[kind="primary"], div[data-testid="stFormSubmitButton"] button {{
+div[data-testid="stButton"] button[kind="primary"], div[data-testid="stFormSubmitButton"] button, div[data-testid="stDownloadButton"] button[kind="primary"] {{
     background: linear-gradient(135deg, {th['primary']}, {th['primary_light']}) !important;
     color: #ffffff !important;
     border: none !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
+    min-height: 50px !important;
     font-weight: 700 !important;
     box-shadow: 0 4px 12px rgba(15, 82, 67, 0.2) !important;
 }}
-div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSubmitButton"] button p {{
+div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSubmitButton"] button p, div[data-testid="stDownloadButton"] button[kind="primary"] p {{
     color: #ffffff !important;
+    font-size: 15px !important;
 }}
 
-/* شريط التنقل الأفقي وشريط الفلاتر (أفقي دائماً ولا ينقلب عمودياً في الجوال) */
+/* شريط التنقل والفرز المتجاوب 100% مع شاشة الجوال دون أي تمرير أو ميلان جانبي */
+div[data-testid="stRadio"] {{
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+}}
+div[data-testid="stRadio"] [data-testid="stWidgetLabel"] {{
+    display: none !important;
+}}
 div[data-testid="stRadio"] > div[role="radiogroup"] {{
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    gap: 4px !important;
     background: #ffffff !important;
-    padding: 6px !important;
-    border-radius: 16px !important;
+    padding: 5px !important;
+    border-radius: 14px !important;
     border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
     justify-content: space-between !important;
-    scrollbar-width: none;
 }}
-div[data-testid="stRadio"] > div[role="radiogroup"]::-webkit-scrollbar {{ display: none; }}
 div[data-testid="stRadio"] label {{
-    flex: 1 1 auto !important;
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
     margin: 0 !important;
-    padding: 8px 10px !important;
-    border-radius: 12px !important;
+    padding: 8px 2px !important;
+    border-radius: 10px !important;
     background: transparent !important;
     cursor: pointer !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    white-space: nowrap !important;
-    transition: all 0.2s ease !important;
+    overflow: hidden !important;
 }}
-/* إخفاء دائرة الراديو التقليدية لتحويلها إلى تبويبات كبسولات عصرية */
-div[data-testid="stRadio"] label > div:first-child {{
+/* إخفاء تام لدائرة الراديو التي كانت تسبب خروج الشريط عن شاشة الجوال */
+div[data-testid="stRadio"] input[type="radio"],
+div[data-testid="stRadio"] label > div:first-child,
+div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {{
     display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }}
 div[data-testid="stRadio"] label p {{
-    font-size: 13px !important;
+    font-size: 12px !important;
     font-weight: 700 !important;
     color: #475569 !important;
     margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }}
 div[data-testid="stRadio"] label:has(input:checked) {{
     background: {th['primary']} !important;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.12) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
 }}
 div[data-testid="stRadio"] label:has(input:checked) p {{
     color: #ffffff !important;
@@ -403,30 +636,32 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 .hero-wrapper {{
     background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%);
     color: white !important;
-    padding: 20px 22px;
-    border-radius: 22px;
-    margin-bottom: 12px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+    padding: 16px 18px;
+    border-radius: 20px;
+    margin-bottom: 4px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255,255,255,0.12);
+    box-sizing: border-box;
+    width: 100%;
 }}
 .hero-top {{
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255,255,255,0.15);
-    padding-bottom: 12px;
-    margin-bottom: 14px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }}
 .brand-box {{ display: flex; align-items: center; gap: 10px; }}
-.brand-title {{ font-size: 16px; font-weight: 700; color: #fbbf24 !important; margin: 0; }}
-.brand-sub {{ font-size: 11px; color: rgba(255,255,255,0.88) !important; margin: 2px 0 0 0; }}
+.brand-title {{ font-size: 15.5px; font-weight: 700; color: #fbbf24 !important; margin: 0; }}
+.brand-sub {{ font-size: 10.5px; color: rgba(255,255,255,0.88) !important; margin: 2px 0 0 0; }}
 .date-pill {{
     background: rgba(255,255,255,0.14);
-    padding: 5px 12px;
+    padding: 4px 10px;
     border-radius: 99px;
-    font-size: 11.5px;
+    font-size: 11px;
     color: #ffffff !important;
     border: 1px solid rgba(255,255,255,0.2);
 }}
@@ -435,135 +670,135 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     justify-content: space-between;
     align-items: flex-end;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 10px;
 }}
-.welcome-line {{ font-size: 13.5px; color: #fde68a !important; font-weight: 600; margin-bottom: 3px; }}
-.teacher-name {{ font-size: 23px; font-weight: 800; color: #ffffff !important; margin: 0 0 8px 0; }}
-.meta-badges {{ display: flex; flex-wrap: wrap; gap: 6px; }}
+.welcome-line {{ font-size: 13px; color: #fde68a !important; font-weight: 600; margin-bottom: 2px; }}
+.teacher-name {{ font-size: 21px; font-weight: 800; color: #ffffff !important; margin: 0 0 8px 0; }}
+.meta-badges {{ display: flex; flex-wrap: wrap; gap: 5px; }}
 .meta-pill {{
     background: rgba(0,0,0,0.25);
     color: #ffffff !important;
-    padding: 4px 10px;
-    border-radius: 9px;
-    font-size: 11.5px;
+    padding: 4px 9px;
+    border-radius: 8px;
+    font-size: 11px;
     font-weight: 500;
 }}
 .year-badge {{
     background: #fbbf24;
     color: #1e293b !important;
-    padding: 7px 14px;
-    border-radius: 12px;
-    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 11px;
+    font-size: 12.5px;
     font-weight: 700;
-    box-shadow: 0 4px 10px rgba(251, 191, 36, 0.3);
 }}
 
 /* بطاقات الإحصائيات السريعة */
 .kpi-grid {{
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; margin-top: 8px;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; width: 100%; box-sizing: border-box;
 }}
 .kpi-card {{
-    background: #ffffff; border-radius: 15px; padding: 12px 6px; text-align: center;
-    border: 1px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    background: #ffffff; border-radius: 14px; padding: 10px 4px; text-align: center;
+    border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
 }}
-.kpi-val {{ font-size: 20px; font-weight: 700; color: {th['primary']} !important; text-align: center; }}
-.kpi-lbl {{ font-size: 11px; color: #475569 !important; margin-top: 2px; font-weight: 600; text-align: center; }}
+.kpi-val {{ font-size: 18px; font-weight: 700; color: {th['primary']} !important; text-align: center; }}
+.kpi-lbl {{ font-size: 10.5px; color: #475569 !important; margin-top: 2px; font-weight: 600; text-align: center; }}
 
 /* شريط الإنجاز */
 .progress-card {{
-    background: #ffffff; padding: 14px 18px; border-radius: 16px; 
-    margin-bottom: 14px; border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    background: #ffffff; padding: 12px 16px; border-radius: 14px; 
+    margin-bottom: 6px; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box;
 }}
 .progress-bar-bg {{
-    background: #e2e8f0; height: 10px; border-radius: 6px; width: 100%; overflow: hidden; margin-top: 8px;
+    background: #e2e8f0; height: 9px; border-radius: 5px; width: 100%; overflow: hidden; margin-top: 6px;
 }}
 .progress-bar-fill {{
     background: linear-gradient(90deg, {th['primary']}, {th['primary_light']});
-    height: 100%; border-radius: 6px;
+    height: 100%; border-radius: 5px;
 }}
 
 /* بطاقة المعيار */
 .std-card {{
-    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;
-    padding: 14px 16px; margin-bottom: 6px;
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 15px;
+    padding: 12px 14px; margin-bottom: 2px;
     display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02); width: 100%; box-sizing: border-box;
 }}
 .std-num {{
-    width: 40px; height: 40px; border-radius: 12px;
+    width: 38px; height: 38px; border-radius: 11px;
     background: {th['tint']}; color: {th['primary']} !important;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 17px; margin-left: 12px; flex-shrink: 0;
+    font-weight: 700; font-size: 16px; margin-left: 10px; flex-shrink: 0;
 }}
 .std-num-empty {{ background: #fee2e2; color: #dc2626 !important; }}
-.std-title {{ font-size: 15px; font-weight: 700; color: #0f172a !important; margin-bottom: 4px; }}
+.std-title {{ font-size: 14.5px; font-weight: 700; color: #0f172a !important; margin-bottom: 3px; }}
 .weight-badge {{
-    background: #f1f5f9; color: #475569 !important; font-size: 11px; padding: 2px 9px;
-    border-radius: 8px; display: inline-block; font-weight: 600;
+    background: #f1f5f9; color: #475569 !important; font-size: 11px; padding: 2px 8px;
+    border-radius: 7px; display: inline-block; font-weight: 600;
 }}
 .dots-row {{ display: flex; gap: 4px; margin-bottom: 4px; justify-content: flex-end; }}
-.dot {{ width: 13px; height: 6px; border-radius: 3px; }}
+.dot {{ width: 12px; height: 5px; border-radius: 3px; }}
 .dot-on {{ background: {th['primary']}; }}
 .dot-off {{ background: #e2e8f0; }}
 
 /* المرفقات والصور المصغرة والروابط الخارجية */
 .thumbs-container {{
-    display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 6px 0; align-items: center;
+    display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px 0; align-items: center;
 }}
 .thumb-link {{
-    position: relative; display: inline-block; width: 96px; height: 96px;
-    border-radius: 12px; overflow: hidden; border: 2px solid {th['tint']};
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: transform 0.2s ease;
+    position: relative; display: inline-block; width: 90px; height: 90px;
+    border-radius: 11px; overflow: hidden; border: 2px solid {th['tint']};
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
 }}
-.thumb-link:hover {{ transform: scale(1.04); border-color: {th['primary']}; }}
 .thumb-link img {{ width: 100%; height: 100%; object-fit: cover; }}
 .thumb-overlay {{
     position: absolute; bottom: 0; left: 0; right: 0;
-    background: rgba(0,0,0,0.65); color: #ffffff !important; font-size: 10px;
+    background: rgba(0,0,0,0.65); color: #ffffff !important; font-size: 9.5px;
     text-align: center; padding: 2px 0;
 }}
 .pdf-badge {{
     display: inline-flex; align-items: center; justify-content: center;
-    height: 46px; padding: 0 14px; border-radius: 10px;
+    height: 42px; padding: 0 12px; border-radius: 9px;
     background: #f8fafc; border: 1.5px dashed {th['primary']};
-    color: {th['primary']} !important; font-weight: 700; font-size: 12.5px; text-decoration: none;
+    color: {th['primary']} !important; font-weight: 700; font-size: 12px; text-decoration: none;
 }}
 .ext-link-badge {{
     display: inline-flex; align-items: center; justify-content: center;
-    height: 46px; padding: 0 16px; border-radius: 10px;
+    height: 42px; padding: 0 14px; border-radius: 9px;
     background: #eff6ff; border: 1.5px solid #2563eb;
-    color: #1d4ed8 !important; font-weight: 700; font-size: 12.5px; text-decoration: none;
+    color: #1d4ed8 !important; font-weight: 700; font-size: 12px; text-decoration: none;
 }}
 
 /* بطاقة الشاهد */
 .ev-box {{
     background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px;
-    padding: 15px; margin-bottom: 10px; border-right: 4px solid {th['primary']};
+    padding: 14px; margin-bottom: 8px; border-right: 4px solid {th['primary']};
+    width: 100%; box-sizing: border-box;
 }}
 .idea-card {{
-    background: #ffffff; border: 1px solid #e2e8f0; padding: 10px 14px;
-    border-radius: 11px; margin-bottom: 6px; font-size: 13px; color: #1e293b !important;
+    background: #ffffff; border: 1px solid #e2e8f0; padding: 9px 12px;
+    border-radius: 10px; margin-bottom: 5px; font-size: 12.5px; color: #1e293b !important;
     display: flex; justify-content: space-between; align-items: center;
 }}
 .visitor-banner {{
     background: #fef3c7; color: #92400e !important; border: 1px solid #f59e0b;
-    padding: 10px 16px; border-radius: 12px; margin-bottom: 12px;
-    font-weight: 700; font-size: 13.5px; text-align: center;
+    padding: 8px 14px; border-radius: 11px; margin-bottom: 8px;
+    font-weight: 700; font-size: 13px; text-align: center;
 }}
 
 /* الفوتر الثابت */
 .ziyad-footer {{
-    margin-top: 38px;
-    padding: 18px 14px;
+    margin-top: 28px;
+    padding: 16px 12px;
     background: #ffffff;
     border-top: 3px solid {th['primary']};
-    border-radius: 16px 16px 8px 8px;
+    border-radius: 14px 14px 8px 8px;
     text-align: center;
     border: 1px solid #e2e8f0;
+    width: 100%;
+    box-sizing: border-box;
 }}
-.footer-brand {{ font-size: 14px; font-weight: 700; color: {th['primary']} !important; margin-bottom: 3px; text-align: center; }}
-.footer-rights {{ font-size: 11.5px; color: #64748b !important; text-align: center; }}
+.footer-brand {{ font-size: 13.5px; font-weight: 700; color: {th['primary']} !important; margin-bottom: 3px; text-align: center; }}
+.footer-rights {{ font-size: 11px; color: #64748b !important; text-align: center; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -576,7 +811,7 @@ if "visitor" in query_params and st.session_state.user is None:
         st.session_state.is_visitor = True
 
 # ==========================================
-# 6. دوال التاريخ والترحيب والفوتر وعرض المرفقات
+# 7. دوال التاريخ والترحيب والفوتر وعرض المرفقات
 # ==========================================
 def get_greeting_and_dates():
     tz = datetime.timezone(datetime.timedelta(hours=3))
@@ -630,15 +865,15 @@ def render_footer():
     st.markdown(footer_html, unsafe_allow_html=True)
 
 # ==========================================
-# 7. صفحة تسجيل الدخول (معلم + زائر)
+# 8. صفحة تسجيل الدخول (معلم + زائر)
 # ==========================================
 def login_page():
     login_hero = (
         f'<div class="hero-wrapper" style="text-align:center;">'
-        f'<div style="display:flex; justify-content:center; margin-bottom:10px;">{ZIYAD_LOGO_SVG}</div>'
+        f'<div style="display:flex; justify-content:center; margin-bottom:8px;">{ZIYAD_LOGO_SVG}</div>'
         f'<div style="font-size:15px; color:#fbbf24 !important; font-weight:700; text-align:center;">منصة زياد الذكية</div>'
-        f'<div style="font-size:23px; font-weight:800; margin:6px 0; color:white !important; text-align:center;">ملف الإنجاز المهني الإلكتروني</div>'
-        f'<div style="font-size:13px; opacity:0.95; color:white !important; text-align:center;">أ. {user_info["full_name"]} • {user_info["school_name"]}</div>'
+        f'<div style="font-size:22px; font-weight:800; margin:5px 0; color:white !important; text-align:center;">ملف الإنجاز المهني الإلكتروني</div>'
+        f'<div style="font-size:12.5px; opacity:0.95; color:white !important; text-align:center;">أ. {user_info["full_name"]} • {user_info["school_name"]}</div>'
         f'</div>'
     )
     st.markdown(login_hero, unsafe_allow_html=True)
@@ -682,12 +917,12 @@ def login_page():
     render_footer()
 
 # ==========================================
-# 8. التطبيق الرئيسي
+# 9. التطبيق الرئيسي
 # ==========================================
 def main_app():
     is_visitor = st.session_state.is_visitor
 
-    # 1. جلب البيانات المخزنة مؤقتاً بسرعة فائقة
+    # 1. جلب البيانات المخزنة مؤقتاً
     all_years = fetch_all_years()
     active_years = [y for y in all_years if y.get("is_active")]
     active_year = active_years[0] if active_years else (all_years[0] if all_years else {"id": None, "year_name": "1448"})
@@ -695,13 +930,12 @@ def main_app():
     stds, all_subs = fetch_standards_and_subs()
     evidences = fetch_year_evidences(active_year.get('id'))
 
-    # تحضير جميع روابط الصور والملفات دفعة واحدة (سرعة فائقة)
     all_file_paths = tuple(
         f['file_url'] for ev in evidences for f in ev.get('evidence_files', []) if f.get('file_url')
     )
     signed_urls_map = get_signed_urls_batch(all_file_paths)
 
-    # 2. الهيدر والبنر الاحترافي في قمة الصفحة دائماً
+    # 2. الهيدر والبنر الاحترافي
     greeting, today_str = get_greeting_and_dates()
     hero_html = (
         f'<div class="hero-wrapper">'
@@ -727,7 +961,6 @@ def main_app():
     )
     st.markdown(hero_html, unsafe_allow_html=True)
 
-    # تنبيه وضع الزائر
     if is_visitor:
         col_v1, col_v2 = st.columns([4, 1])
         with col_v1:
@@ -738,11 +971,11 @@ def main_app():
                 st.query_params.clear()
                 st.rerun()
 
-    # 3. شريط التنقل الأفقي الموحد (لا ينقلب عمودياً في الجوال أبداً)
+    # 3. شريط التنقل الأفقي المتجاوب 100% مع شاشة الجوال
     if is_visitor:
         nav_map = {
             'home': "🏠 الرئيسية",
-            'standard_view': "📋 البنود والشواهد",
+            'standard_view': "📋 البنود",
             'reports': "📄 التقرير"
         }
     else:
@@ -757,7 +990,7 @@ def main_app():
     nav_keys = list(nav_map.keys())
     curr_page = st.session_state.current_page if st.session_state.current_page in nav_keys else 'home'
     selected_nav = st.radio(
-        "القائمة الرئيسية",
+        "nav_bar",
         options=nav_keys,
         format_func=lambda k: nav_map[k],
         index=nav_keys.index(curr_page),
@@ -801,7 +1034,7 @@ def main_app():
             f'<div class="kpi-card"><div class="kpi-val" style="color:#dc2626 !important;">{empty_stds}</div><div class="kpi-lbl">بنود فارغة</div></div>'
             f'</div>'
             f'<div class="progress-card">'
-            f'<div style="display:flex; justify-content:space-between; font-weight:700; font-size:13.5px; color:#1e293b;">'
+            f'<div style="display:flex; justify-content:space-between; font-weight:700; font-size:13px; color:#1e293b;">'
             f'<span style="color:#1e293b !important;">نسبة تغطية معايير الأداء الوظيفي ({active_year["year_name"]}هـ)</span>'
             f'<span style="color:{th["primary"]} !important;">{pct}%</span>'
             f'</div>'
@@ -810,7 +1043,6 @@ def main_app():
         )
         st.markdown(kpi_html, unsafe_allow_html=True)
 
-        # شريط الفرز الأفقي الأنيق (Pills) في سطر واحد
         filter_map = {
             'all': f"الكل • {total_stds}",
             'empty': f"فارغة • {empty_stds}",
@@ -818,7 +1050,7 @@ def main_app():
         }
         f_keys = list(filter_map.keys())
         sel_filter = st.radio(
-            "فرز المعايير",
+            "filter_bar",
             options=f_keys,
             format_func=lambda x: filter_map[x],
             index=f_keys.index(st.session_state.filter_mode),
@@ -829,7 +1061,6 @@ def main_app():
             st.session_state.filter_mode = sel_filter
             st.rerun()
 
-        # عرض بطاقات البنود الـ 11
         for std in stds:
             s_id = std['id']
             count = ev_by_std[s_id]
@@ -846,13 +1077,13 @@ def main_app():
             ])
             
             if count == 0:
-                status_txt = '<span style="color:#dc2626 !important; font-size:12px; font-weight:600;">لا شواهد بعد</span>'
+                status_txt = '<span style="color:#dc2626 !important; font-size:11.5px; font-weight:600;">لا شواهد بعد</span>'
                 num_cls = "std-num std-num-empty"
             elif count >= target:
-                status_txt = f'<span style="color:{th["primary"]} !important; font-size:12px; font-weight:700;">مكتمل ({count} شواهد)</span>'
+                status_txt = f'<span style="color:{th["primary"]} !important; font-size:11.5px; font-weight:700;">مكتمل ({count} شواهد)</span>'
                 num_cls = "std-num"
             else:
-                status_txt = f'<span style="color:{th["accent"]} !important; font-size:12px; font-weight:600;">{count} شاهد • بقي {target - count}</span>'
+                status_txt = f'<span style="color:{th["accent"]} !important; font-size:11.5px; font-weight:600;">{count} شاهد • بقي {target - count}</span>'
                 num_cls = "std-num"
 
             card_html = (
@@ -868,11 +1099,11 @@ def main_app():
             st.markdown(card_html, unsafe_allow_html=True)
             
             btn_label = f"➕ إضافة أو استعراض شواهد البند {s_id}" if not is_visitor else f"👁️ استعراض شواهد البند {s_id}"
-            if st.button(btn_label, key=f"open_std_{s_id}", use_container_width=True):
+            if st.button(btn_label, key=f"open_std_{s_id}", type="primary", use_container_width=True):
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
-    # 📋 2. صفحة البنود والشواهد (مع دعم الرابط الاختياري https://)
+    # 📋 2. صفحة البنود والشواهد
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
         st.markdown("#### 📋 استعراض وإدارة بنود الأداء والشواهد")
@@ -917,7 +1148,7 @@ def main_app():
                                 f'{thumbs_html}</div>'
                             )
                             st.markdown(ev_card, unsafe_allow_html=True)
-                    if st.button(f"📂 فتح صفحة البند {s['id']} للإدارة والإضافة", key=f"jump_std_{s['id']}", use_container_width=True):
+                    if st.button(f"📂 فتح صفحة البند {s['id']} للإدارة والإضافة", key=f"jump_std_{s['id']}", type="primary", use_container_width=True):
                         navigate_to('standard_view', s['id'])
 
         else:
@@ -934,7 +1165,6 @@ def main_app():
                     exec_date = ev.get('execution_date') or ev['created_at'][:10]
                     thumbs_html = render_attachments_html(files, signed_urls_map)
 
-                    # استخراج الرابط الخارجي الحالي إن وجد لتسهيل تعديله
                     existing_links = [f['file_url'] for f in files if f.get('file_type') == 'external/link' or f.get('file_url', '').startswith('http')]
                     current_ext_link = existing_links[0] if existing_links else ""
 
@@ -984,7 +1214,6 @@ def main_app():
                                             if new_ext_link.strip():
                                                 supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": new_ext_link.strip(), "file_type": "external/link"}).execute()
                                         elif new_ext_link.strip() != current_ext_link:
-                                            # تحديث الرابط الخارجي فقط
                                             for f in files:
                                                 if f.get('file_type') == 'external/link' or f.get('file_url', '').startswith('http'):
                                                     supabase.table("evidence_files").delete().eq("id", f['id']).execute()
@@ -1007,7 +1236,6 @@ def main_app():
                                     time.sleep(0.3)
                                     st.rerun()
 
-            # عرض الأفكار والشواهد المستهدفة
             db_subs = [item['title'] for item in all_subs if item.get('standard_id') == std_id]
             sub_options = db_subs if db_subs else DEFAULT_SUB_ITEMS.get(std_id, [])
 
@@ -1015,7 +1243,6 @@ def main_app():
                 for idea in sub_options:
                     st.markdown(f'<div class="idea-card"><span>💡 {idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
 
-            # نموذج إضافة شاهد جديد (مع حقل الرابط الاختياري https://)
             if not is_visitor:
                 st.markdown("##### ➕ إضافة شاهد جديد لهذا البند")
                 with st.form(f"add_ev_std_{std_id}", clear_on_submit=True):
@@ -1115,7 +1342,7 @@ def main_app():
             if not is_act:
                 col_a, col_b = st.columns([3, 1])
                 with col_a:
-                    if st.button(f"🔄 تفعيل واستعراض ملف عام {y['year_name']}هـ", key=f"act_{y['id']}", use_container_width=True):
+                    if st.button(f"🔄 تفعيل واستعراض ملف عام {y['year_name']}هـ", key=f"act_{y['id']}", type="primary", use_container_width=True):
                         for item_y in all_years:
                             supabase.table("academic_years").update({"is_active": False}).eq("id", item_y['id']).execute()
                         supabase.table("academic_years").update({"is_active": True}).eq("id", y['id']).execute()
@@ -1129,13 +1356,13 @@ def main_app():
                             st.rerun()
 
     # ----------------------------------------
-    # 📄 4. صفحة التقارير والطباعة (3 تصاميم احترافية بحجم A4)
+    # 📄 4. صفحة التقارير والطباعة (PDF + Word قابل للتعديل مطابق للصورة)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
-        st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز (A4 PDF)")
+        st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
         
         report_style = st.selectbox(
-            "🎨 اختر تصميم التقرير قبل الطباعة:",
+            "🎨 اختر تصميم التقرير قبل التصدير:",
             [
                 "1. التصميم الرسمي الوزاري (إطار كلاسيكي وجداول رسمية)",
                 "2. التصميم العصري الحديث (بطاقات ناعمة وألوان المظهر الحالي)",
@@ -1143,209 +1370,217 @@ def main_app():
             ]
         )
 
-        if st.button("تجهيز التقرير بالتصميم المختار للطباعة 🖨️", type="primary", use_container_width=True):
-            with st.spinner("جاري تجهيز صفحات A4..."):
-                stds_map = {s['id']: s for s in stds}
-                all_evidences = sorted(evidences, key=lambda x: x.get('standard_id', 0))
-                
-                total_evidences = len(all_evidences)
-                active_stds = [s for s in stds if len([e for e in all_evidences if e['standard_id'] == s['id']]) > 0]
-                covered_stds = len(active_stds)
+        stds_map = {s['id']: s for s in stds}
+        all_evidences = sorted(evidences, key=lambda x: x.get('standard_id', 0))
+        total_evidences = len(all_evidences)
+        active_stds = [s for s in stds if len([e for e in all_evidences if e['standard_id'] == s['id']]) > 0]
+        covered_stds = len(active_stds)
 
-                if report_style.startswith("1."):
-                    rep_color = "#146c59"
-                    rep_sub = "#0f5243"
-                    cover_border = "6px double #146c59"
-                    box_radius = "4px"
-                elif report_style.startswith("2."):
-                    rep_color = th['primary']
-                    rep_sub = th['primary_dark']
-                    cover_border = f"3px solid {th['primary']}"
-                    box_radius = "14px"
-                else:
-                    rep_color = "#1e293b"
-                    rep_sub = "#334155"
-                    cover_border = "2px solid #1e293b"
-                    box_radius = "0px"
+        if report_style.startswith("1."):
+            rep_color = "#146c59"
+            rep_sub = "#0f5243"
+            cover_border = "6px double #146c59"
+            box_radius = "4px"
+        elif report_style.startswith("2."):
+            rep_color = th['primary']
+            rep_sub = th['primary_dark']
+            cover_border = f"3px solid {th['primary']}"
+            box_radius = "14px"
+        else:
+            rep_color = "#1e293b"
+            rep_sub = "#334155"
+            cover_border = "2px solid #1e293b"
+            box_radius = "0px"
 
-                html_content = f"""
-                <!DOCTYPE html>
-                <html dir="rtl" lang="ar">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>ملف الإنجاز المهني - {user_info['full_name']}</title>
-                    <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap');
-                        body {{ font-family: 'Readex Pro', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; }}
-                        .page {{ background-color: white; width: 210mm; height: 296mm; padding: 10mm 15mm; margin: 0 auto 20mm auto; box-shadow: 0 10px 20px rgba(0,0,0,0.15); box-sizing: border-box; page-break-after: always; page-break-inside: avoid; display: flex; flex-direction: column; overflow: hidden; }}
-                        .cover-page {{ border: {cover_border}; border-radius: {box_radius}; padding: 35px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; box-sizing: border-box; }}
-                        .cover-title {{ color: {rep_color}; font-size: 36px; font-weight: 700; margin-bottom: 10px; }}
-                        .cover-subtitle {{ font-size: 19px; margin-bottom: 35px; font-weight: 600; color: #475569; }}
-                        .info-table {{ width: 88%; border-collapse: collapse; margin: 0 auto; font-size: 16px; }}
-                        .info-table th, .info-table td {{ border: 1px solid #cbd5e1; padding: 12px; text-align: center; }}
-                        .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: 700; color: {rep_color}; }}
-                        .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 8px; margin-bottom: 14px; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }}
-                        .header-right {{ color: {rep_color}; }}
-                        .header-left {{ text-align: left; }}
-                        .index-title {{ color: {rep_color}; font-size: 22px; font-weight: 700; margin-bottom: 16px; }}
-                        .index-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
-                        .index-table th {{ background-color: #f1f5f9; color: {rep_color}; padding: 10px; text-align: center; border-bottom: 2px solid {rep_color}; }}
-                        .index-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; }}
-                        .content-wrapper {{ flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }}
-                        .std-header {{ background-color: {rep_color}; color: white; padding: 10px 15px; font-size: 15px; font-weight: 700; border-radius: {box_radius} {box_radius} 0 0; flex-shrink: 0; }}
-                        .ev-header {{ background-color: {rep_sub}; color: white; padding: 8px 15px; font-size: 13.5px; margin-bottom: 12px; border-radius: 0 0 {box_radius} {box_radius}; flex-shrink: 0; }}
-                        .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; flex-shrink: 0; }}
-                        .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; text-align: center; border-radius: {box_radius}; }}
-                        .meta-title {{ font-size: 11.5px; color: #64748b; font-weight: 600; }}
-                        .meta-value {{ font-size: 13.5px; font-weight: 700; color: #0f172a; }}
-                        .desc-section {{ margin-bottom: 12px; line-height: 1.6; font-size: 13.5px; padding: 10px; background: #fafafa; border-right: 4px solid {rep_color}; border-radius: {box_radius}; flex-shrink: 0; }}
-                        .images-grid {{ flex-grow: 1; display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 0; padding: 5px 0; overflow: hidden; }}
-                        .images-grid img {{ max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #cbd5e1; border-radius: {box_radius}; }}
-                        .pdf-notice {{ background: #f1f5f9; padding: 8px; text-align: center; border-radius: {box_radius}; font-size: 12.5px; color: #334155; margin-bottom: 8px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
-                        .signatures {{ display: flex; justify-content: space-between; margin-top: auto; border-top: 2px solid #e2e8f0; padding-top: 10px; text-align: center; flex-shrink: 0; }}
-                        .sig-box {{ width: 42%; }}
-                        .print-footer {{ text-align: center; font-size: 10px; color: #64748b; margin-top: 8px; padding-top: 4px; border-top: 1px dashed #e2e8f0; flex-shrink: 0; }}
-                        @media print {{
-                            body {{ background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                            .page {{ width: 210mm; height: 296mm; margin: 0; padding: 10mm 15mm; box-shadow: none; border: none; }}
-                            @page {{ size: A4 portrait; margin: 0; }}
-                        }}
-                    </style>
-                </head>
-                <body>
-                """
-                
-                html_content += f"""
-                <div class="page">
-                    <div class="cover-page">
-                        <div style="font-size:15px; font-weight:700; color:{rep_color}; margin-bottom:8px;">المملكة العربية السعودية • وزارة التعليم</div>
-                        <div style="font-size:13px; color:#b45309; font-weight:700; margin-bottom:12px;">🎓 منصة زياد الذكية لتوثيق الأداء المهني</div>
-                        <div class="cover-title">ملف الإنجاز المهني</div>
-                        <div class="cover-subtitle">توثيق شواهد الأداء الوظيفي</div>
-                        <table class="info-table">
-                            <tr><th>اسم المعلم</th><td>{user_info['full_name']}</td></tr>
-                            <tr><th>التخصص</th><td>{user_info['specialization']}</td></tr>
-                            <tr><th>المدرسة</th><td>{user_info['school_name']}</td></tr>
-                            <tr><th>المرحلة الدراسية</th><td>{user_info['education_stage']}</td></tr>
-                            <tr><th>المدينة</th><td>{user_info['city']}</td></tr>
-                            <tr><th>مدير المدرسة</th><td>{user_info['principal_name']}</td></tr>
-                            <tr><th>العام الدراسي</th><td>{active_year['year_name']}هـ</td></tr>
-                            <tr><th>إجمالي الشواهد الموثقة</th><td>{total_evidences} شاهد ({covered_stds} من {len(stds)} معايير)</td></tr>
-                        </table>
-                        <div style="margin-top:35px; font-size:11px; color:#64748b;">صدر إلكترونياً عبر منصة زياد الذكية — جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
-                    </div>
-                </div>
-                """
-                
-                shared_header = f"""
-                <div class="header-container">
-                    <div class="header-right">
-                        منصة زياد الذكية | أ. {user_info['full_name']}<br>
-                        <span style="font-size:11px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - العام الدراسي {active_year['year_name']}هـ</span>
-                    </div>
-                    <div class="header-left">
-                        المملكة العربية السعودية<br>
-                        <span style="font-size:11px; font-weight:normal; color:#666;">وزارة التعليم - {user_info['school_name']}</span>
-                    </div>
-                </div>
-                """
-                
-                html_content += f"""
-                <div class="page">
-                    {shared_header}
-                    <div class="index-title">فهرس معايير الأداء المنجزة</div>
-                    <table class="index-table">
-                        <tr><th>م</th><th>المعيار</th><th>الوزن النسبي</th><th>الشواهد الموثقة</th><th>المستهدف</th></tr>
-                """
-                for std in stds:
-                    count = ev_by_std[std['id']]
-                    if count == 0:
-                        continue
-                    target = std.get('target_evidences', 3)
-                    html_content += f"<tr><td>{std['id']}</td><td style='text-align:right; font-weight:bold;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:{rep_color}; font-weight:bold;'>{count}</td><td>{target}</td></tr>"
-                html_content += f"""
-                    </table>
-                    <div class="print-footer" style="margin-top:auto;">منصة زياد الذكية | جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
-                </div>
-                """
-                
-                for ev in all_evidences:
-                    std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
-                    exec_date = ev.get('execution_date') or ev['created_at'][:10]
-                    files = ev.get('evidence_files', [])
-                    img_html = ""
-                    pdf_count = 0
-                    ext_links = []
-                    for f in files:
-                        f_url = f.get('file_url', '')
-                        f_type = f.get('file_type', '')
-                        if f_type == 'external/link' or f_url.startswith('http'):
-                            ext_links.append(f_url)
-                        elif f_type.startswith('image/'):
-                            sec_u = signed_urls_map.get(f_url, '')
-                            if sec_u:
-                                img_html += f"<img src='{sec_u}'>"
-                        elif f_type == 'application/pdf':
-                            pdf_count += 1
-                            
-                    pdf_notice = f"<div class='pdf-notice'>📌 مرفق مستند PDF رسمي عدد ({pdf_count}) محفوظ في النظام الإلكتروني.</div>" if pdf_count > 0 else ""
-                    link_notice = f"<div class='pdf-notice'>🔗 رابط إلكتروني مرفق: {ext_links[0]}</div>" if ext_links else ""
-                    images_section = f"<div class='images-grid'>{img_html}</div>" if img_html else ""
+        html_content = f"""
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+            <meta charset="UTF-8">
+            <title>ملف الإنجاز المهني - {user_info['full_name']}</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap');
+                body {{ font-family: 'Readex Pro', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; }}
+                .page {{ background-color: white; width: 210mm; height: 296mm; padding: 10mm 15mm; margin: 0 auto 20mm auto; box-shadow: 0 10px 20px rgba(0,0,0,0.15); box-sizing: border-box; page-break-after: always; page-break-inside: avoid; display: flex; flex-direction: column; overflow: hidden; }}
+                .cover-page {{ border: {cover_border}; border-radius: {box_radius}; padding: 35px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; box-sizing: border-box; }}
+                .cover-title {{ color: {rep_color}; font-size: 36px; font-weight: 700; margin-bottom: 10px; }}
+                .cover-subtitle {{ font-size: 19px; margin-bottom: 35px; font-weight: 600; color: #475569; }}
+                .info-table {{ width: 88%; border-collapse: collapse; margin: 0 auto; font-size: 16px; }}
+                .info-table th, .info-table td {{ border: 1px solid #cbd5e1; padding: 12px; text-align: center; }}
+                .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: 700; color: {rep_color}; }}
+                .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 8px; margin-bottom: 14px; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }}
+                .header-right {{ color: {rep_color}; }}
+                .header-left {{ text-align: left; }}
+                .index-title {{ color: {rep_color}; font-size: 22px; font-weight: 700; margin-bottom: 16px; }}
+                .index-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
+                .index-table th {{ background-color: #f1f5f9; color: {rep_color}; padding: 10px; text-align: center; border-bottom: 2px solid {rep_color}; }}
+                .index-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; }}
+                .content-wrapper {{ flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }}
+                .std-header {{ background-color: {rep_color}; color: white; padding: 10px 15px; font-size: 15px; font-weight: 700; border-radius: {box_radius} {box_radius} 0 0; flex-shrink: 0; }}
+                .ev-header {{ background-color: {rep_sub}; color: white; padding: 8px 15px; font-size: 13.5px; margin-bottom: 12px; border-radius: 0 0 {box_radius} {box_radius}; flex-shrink: 0; }}
+                .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; flex-shrink: 0; }}
+                .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; text-align: center; border-radius: {box_radius}; }}
+                .meta-title {{ font-size: 11.5px; color: #64748b; font-weight: 600; }}
+                .meta-value {{ font-size: 13.5px; font-weight: 700; color: #0f172a; }}
+                .desc-section {{ margin-bottom: 12px; line-height: 1.6; font-size: 13.5px; padding: 10px; background: #fafafa; border-right: 4px solid {rep_color}; border-radius: {box_radius}; flex-shrink: 0; }}
+                .images-grid {{ flex-grow: 1; display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 0; padding: 5px 0; overflow: hidden; }}
+                .images-grid img {{ max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #cbd5e1; border-radius: {box_radius}; }}
+                .pdf-notice {{ background: #f1f5f9; padding: 8px; text-align: center; border-radius: {box_radius}; font-size: 12.5px; color: #334155; margin-bottom: 8px; border: 1px dashed #94a3b8; flex-shrink: 0; }}
+                .signatures {{ display: flex; justify-content: space-between; margin-top: auto; border-top: 2px solid #e2e8f0; padding-top: 10px; text-align: center; flex-shrink: 0; }}
+                .sig-box {{ width: 42%; }}
+                .print-footer {{ text-align: center; font-size: 10px; color: #64748b; margin-top: 8px; padding-top: 4px; border-top: 1px dashed #e2e8f0; flex-shrink: 0; }}
+                @media print {{
+                    body {{ background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                    .page {{ width: 210mm; height: 296mm; margin: 0; padding: 10mm 15mm; box-shadow: none; border: none; }}
+                    @page {{ size: A4 portrait; margin: 0; }}
+                }}
+            </style>
+        </head>
+        <body>
+        """
+        
+        html_content += f"""
+        <div class="page">
+            <div class="cover-page">
+                <div style="font-size:15px; font-weight:700; color:{rep_color}; margin-bottom:8px;">المملكة العربية السعودية • وزارة التعليم</div>
+                <div style="font-size:13px; color:#b45309; font-weight:700; margin-bottom:12px;">🎓 منصة زياد الذكية لتوثيق الأداء المهني</div>
+                <div class="cover-title">ملف الإنجاز المهني</div>
+                <div class="cover-subtitle">توثيق شواهد الأداء الوظيفي</div>
+                <table class="info-table">
+                    <tr><th>اسم المعلم</th><td>{user_info['full_name']}</td></tr>
+                    <tr><th>التخصص</th><td>{user_info['specialization']}</td></tr>
+                    <tr><th>المدرسة</th><td>{user_info['school_name']}</td></tr>
+                    <tr><th>المرحلة الدراسية</th><td>{user_info['education_stage']}</td></tr>
+                    <tr><th>المدينة</th><td>{user_info['city']}</td></tr>
+                    <tr><th>مدير المدرسة</th><td>{user_info['principal_name']}</td></tr>
+                    <tr><th>العام الدراسي</th><td>{active_year['year_name']}هـ</td></tr>
+                    <tr><th>إجمالي الشواهد الموثقة</th><td>{total_evidences} شاهد ({covered_stds} من {len(stds)} معايير)</td></tr>
+                </table>
+                <div style="margin-top:35px; font-size:11px; color:#64748b;">صدر إلكترونياً عبر منصة زياد الذكية — جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
+            </div>
+        </div>
+        """
+        
+        shared_header = f"""
+        <div class="header-container">
+            <div class="header-right">
+                منصة زياد الذكية | أ. {user_info['full_name']}<br>
+                <span style="font-size:11px; font-weight:normal; color:#666;">شواهد الأداء الوظيفي - العام الدراسي {active_year['year_name']}هـ</span>
+            </div>
+            <div class="header-left">
+                المملكة العربية السعودية<br>
+                <span style="font-size:11px; font-weight:normal; color:#666;">وزارة التعليم - {user_info['school_name']}</span>
+            </div>
+        </div>
+        """
+        
+        html_content += f"""
+        <div class="page">
+            {shared_header}
+            <div class="index-title">فهرس معايير الأداء المنجزة</div>
+            <table class="index-table">
+                <tr><th>م</th><th>المعيار</th><th>الوزن النسبي</th><th>الشواهد الموثقة</th><th>المستهدف</th></tr>
+        """
+        for std in stds:
+            count = ev_by_std[std['id']]
+            if count == 0:
+                continue
+            target = std.get('target_evidences', 3)
+            html_content += f"<tr><td>{std['id']}</td><td style='text-align:right; font-weight:bold;'>{std['title']}</td><td>{std['weight']}%</td><td style='color:{rep_color}; font-weight:bold;'>{count}</td><td>{target}</td></tr>"
+        html_content += f"""
+            </table>
+            <div class="print-footer" style="margin-top:auto;">منصة زياد الذكية | جميع الحقوق محفوظة © أ. {user_info['full_name']}</div>
+        </div>
+        """
+        
+        for ev in all_evidences:
+            std = stds_map.get(ev['standard_id'], {"title": "", "weight": 10})
+            exec_date = ev.get('execution_date') or ev['created_at'][:10]
+            files = ev.get('evidence_files', [])
+            img_html = ""
+            pdf_count = 0
+            ext_links = []
+            for f in files:
+                f_url = f.get('file_url', '')
+                f_type = f.get('file_type', '')
+                if f_type == 'external/link' or f_url.startswith('http'):
+                    ext_links.append(f_url)
+                elif f_type.startswith('image/'):
+                    sec_u = signed_urls_map.get(f_url, '')
+                    if sec_u:
+                        img_html += f"<img src='{sec_u}'>"
+                elif f_type == 'application/pdf':
+                    pdf_count += 1
                     
-                    html_content += f"""
-                    <div class="page">
-                        {shared_header}
-                        <div class="content-wrapper">
-                            <div class="std-header">المعيار {ev['standard_id']}: {std['title']} (الوزن {std['weight']}%)</div>
-                            <div class="ev-header">الشاهد: {ev['title']}</div>
-                            <div class="meta-grid">
-                                <div class="meta-box"><div class="meta-title">تاريخ التنفيذ الفعلي</div><div class="meta-value">{exec_date}</div></div>
-                                <div class="meta-box"><div class="meta-title">حالة التوثيق</div><div class="meta-value">شاهد معتمد وموثق</div></div>
-                            </div>
-                            <div class="desc-section"><strong>وصف الشاهد والأثر:</strong><br>{ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'}</div>
-                            {pdf_notice}
-                            {link_notice}
-                            {images_section}
-                        </div>
-                        <div class="signatures">
-                            <div class="sig-box">
-                                <div style="color:#666; font-size:12px; margin-bottom:16px;">المعلم:</div>
-                                <div style="font-weight:bold;">{user_info['full_name']}</div>
-                            </div>
-                            <div class="sig-box">
-                                <div style="color:#666; font-size:12px; margin-bottom:16px;">مدير المدرسة:</div>
-                                <div style="font-weight:bold;">{user_info['principal_name']}</div>
-                            </div>
-                        </div>
-                        <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
+            pdf_notice = f"<div class='pdf-notice'>📌 مرفق مستند PDF رسمي عدد ({pdf_count}) محفوظ في النظام الإلكتروني.</div>" if pdf_count > 0 else ""
+            link_notice = f"<div class='pdf-notice'>🔗 رابط إلكتروني مرفق: {ext_links[0]}</div>" if ext_links else ""
+            images_section = f"<div class='images-grid'>{img_html}</div>" if img_html else ""
+            
+            html_content += f"""
+            <div class="page">
+                {shared_header}
+                <div class="content-wrapper">
+                    <div class="std-header">المعيار {ev['standard_id']}: {std['title']} (الوزن {std['weight']}%)</div>
+                    <div class="ev-header">الشاهد: {ev['title']}</div>
+                    <div class="meta-grid">
+                        <div class="meta-box"><div class="meta-title">تاريخ التنفيذ الفعلي</div><div class="meta-value">{exec_date}</div></div>
+                        <div class="meta-box"><div class="meta-title">حالة التوثيق</div><div class="meta-value">شاهد معتمد وموثق</div></div>
                     </div>
-                    """
-                
-                html_content += "</body></html>"
-                safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
-                
-                components.html(f"""
-                    <div style="text-align: center; margin-top: 10px;">
-                        <button onclick="openPrintWindow()" style="width: 100%; padding: 15px; background-color: {rep_color}; color: white; border: none; border-radius: 12px; font-size: 17px; font-weight: bold; cursor: pointer; font-family: 'Readex Pro', sans-serif;">
-                            🖨️ فتح التقرير للطباعة بحجم A4
-                        </button>
+                    <div class="desc-section"><strong>وصف الشاهد والأثر:</strong><br>{ev.get('description') or 'تم تنفيذ الشاهد وتوثيقه وفق خطة توزيع المنهج.'}</div>
+                    {pdf_notice}
+                    {link_notice}
+                    {images_section}
+                </div>
+                <div class="signatures">
+                    <div class="sig-box">
+                        <div style="color:#666; font-size:12px; margin-bottom:16px;">المعلم:</div>
+                        <div style="font-weight:bold;">{user_info['full_name']}</div>
                     </div>
-                    <script>
-                        function openPrintWindow() {{
-                            var win = window.open('', '_blank');
-                            win.document.write(`{safe_html}`);
-                            win.document.close();
-                            setTimeout(function() {{ win.print(); }}, 1500);
-                        }}
-                    </script>
-                """, height=85)
+                    <div class="sig-box">
+                        <div style="color:#666; font-size:12px; margin-bottom:16px;">مدير المدرسة:</div>
+                        <div style="font-weight:bold;">{user_info['principal_name']}</div>
+                    </div>
+                </div>
+                <div class="print-footer">منصة زياد الذكية | ملف الإنجاز المهني — أ. {user_info['full_name']}</div>
+            </div>
+            """
+        
+        html_content += "</body></html>"
+        safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+        
+        # الزر الأول: تصدير ملف الإنجاز PDF (باللون الأخضر الوزاري)
+        components.html(f"""
+            <div style="text-align: center; margin: 4px 0;">
+                <button onclick="openPrintWindow()" style="width: 100%; height: 52px; background-color: #146c59; color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: 'Readex Pro', 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(20,108,89,0.2);">
+                    تصدير ملف الإنجاز PDF
+                </button>
+            </div>
+            <script>
+                function openPrintWindow() {{
+                    var win = window.open('', '_blank');
+                    win.document.write(`{safe_html}`);
+                    win.document.close();
+                    setTimeout(function() {{ win.print(); }}, 1200);
+                }}
+            </script>
+        """, height=62)
+
+        # الزر الثاني: تصدير Word قابل للتعديل (مطابق للصورة المرفقة)
+        docx_bytes = generate_editable_docx(user_info, active_year, stds, evidences)
+        st.download_button(
+            label="📄 تصدير Word قابل للتعديل",
+            data=docx_bytes,
+            file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            use_container_width=True
+        )
 
     # ----------------------------------------
-    # ⚙️ 5. صفحة حسابي (البيانات + المظاهر + مشاركة الزائر + النسخ الاحتياطي)
+    # ⚙️ 5. صفحة حسابي (البيانات + المظاهر + مشاركة الزائر + النسخ الاحتياطي المطور)
     # ----------------------------------------
     elif st.session_state.current_page == 'settings' and not is_visitor:
-        st.markdown("#### ⚙️ إعدادات الحساب والمظهر والمشاركة")
-        t1, t2, t3, t4 = st.tabs(["👤 البيانات والمظهر", "🔗 مشاركة للزوار", "💾 النسخ الاحتياطي", "🚪 الخروج"])
+        st.markdown("#### ⚙️ إعدادات الحساب والمظهر والنسخ الاحتياطي")
+        t1, t2, t3, t4 = st.tabs(["👤 البيانات والمظهر", "🔗 مشاركة للزوار", "💾 النسخ والتصدير", "🚪 الخروج"])
         
         with t1:
             with st.form("profile_form"):
@@ -1410,16 +1645,76 @@ def main_app():
             st.info(f"💡 **رابط المشاركة السريعة للزائر:** أضف `?visitor={curr_code}` لنهاية رابط موقعك، أو أعطِ الرمز `{curr_code}` للزائر ليدخله في تبويب (دخول زائر).")
 
         with t3:
-            st.write("تصدير نسخة احتياطية كاملة لبياناتك بصيغة JSON:")
-            if st.button("📦 تجهيز ملف النسخة الاحتياطية", type="primary", use_container_width=True):
-                backup = {"academic_years": all_years, "standards": stds, "evidences": evidences}
-                st.download_button(
-                    label="⬇️ تحميل النسخة الاحتياطية (JSON)",
-                    data=json.dumps(backup, ensure_ascii=False, indent=4),
-                    file_name=f"ziyad_portfolio_backup_{datetime.date.today()}.json",
-                    mime="application/json",
-                    use_container_width=True
-                )
+            st.markdown("##### 📤 تصدير ملف الإنجاز والنسخ الاحتياطي (متعدد الصيغ)")
+            st.write("اختر الصيغة المناسبة لتحميل نسخة كاملة من ملف إنجازك أو قاعدة بياناتك:")
+
+            # 1. تصدير Word قابل للتعديل
+            docx_backup_bytes = generate_editable_docx(user_info, active_year, stds, evidences)
+            st.download_button(
+                label="📄 تصدير ملف الإنجاز Word قابل للتعديل (.docx)",
+                data=docx_backup_bytes,
+                file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True
+            )
+
+            # 2. تصدير سجل الشواهد لبرنامج Excel (CSV)
+            csv_data = generate_excel_csv(stds, evidences)
+            st.download_button(
+                label="📊 تصدير سجل الشواهد لبرنامج Excel (.csv)",
+                data=csv_data.encode("utf-8"),
+                file_name=f"سجل_الشواهد_{active_year['year_name']}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+            # 3. تصدير النسخة الاحتياطية الشاملة للنظام (JSON)
+            full_backup = {
+                "user_profile": user_info,
+                "academic_years": all_years,
+                "standards": stds,
+                "sub_items": all_subs,
+                "evidences": evidences
+            }
+            st.download_button(
+                label="📦 تحميل النسخة الاحتياطية الشاملة للنظام (.json)",
+                data=json.dumps(full_backup, ensure_ascii=False, indent=4),
+                file_name=f"ziyad_full_backup_{datetime.date.today()}.json",
+                mime="application/json",
+                type="primary",
+                use_container_width=True
+            )
+
+            st.write("---")
+            st.markdown("##### 📥 استعادة نسخة احتياطية سابقة (Restore)")
+            uploaded_backup = st.file_uploader("ارفع ملف النسخة الاحتياطية (.json) لاستعادة الشواهد والبيانات:", type=["json"])
+            if uploaded_backup is not None:
+                if st.button("🔄 بدء استعادة البيانات الآن", type="primary", use_container_width=True):
+                    try:
+                        b_data = json.loads(uploaded_backup.getvalue().decode("utf-8"))
+                        restored_count = 0
+                        existing_ids = {e['id'] for e in evidences}
+                        for ev_item in b_data.get("evidences", []):
+                            if ev_item.get("id") not in existing_ids and active_year.get("id"):
+                                ins_ev = {
+                                    "standard_id": ev_item.get("standard_id", 1),
+                                    "year_id": active_year["id"],
+                                    "title": ev_item.get("title", "شاهد مستعاد"),
+                                    "description": ev_item.get("description", ""),
+                                    "execution_date": ev_item.get("execution_date") or ev_item.get("created_at", "")[:10]
+                                }
+                                try:
+                                    supabase.table("evidences").insert(ins_ev).execute()
+                                except Exception:
+                                    ins_ev.pop("execution_date", None)
+                                    supabase.table("evidences").insert(ins_ev).execute()
+                                restored_count += 1
+                        clear_app_cache()
+                        st.success(f"تمت استعادة ({restored_count}) شاهد جديد بنجاح إلى العام الحالي!")
+                        time.sleep(0.5)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"تعذر قراءة ملف النسخة الاحتياطية: {e}")
 
         with t4:
             if st.button("🚪 تسجيل الخروج من الحساب", type="primary", use_container_width=True):
@@ -1431,7 +1726,7 @@ def main_app():
     render_footer()
 
 # ==========================================
-# 9. نقطة تشغيل التطبيق
+# 10. نقطة تشغيل التطبيق
 # ==========================================
 if st.session_state.user is None and not st.session_state.is_visitor:
     login_page()
