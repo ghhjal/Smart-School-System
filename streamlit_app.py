@@ -299,7 +299,7 @@ def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", vari
     }
 
 # ==========================================
-# 5. الاتصال الآمن بقاعدة البيانات، ضغط الصور، والفرز الزمني الذكي
+# 5. الاتصال الآمن بقاعدة البيانات، ضغط الصور، وحساب مساحة السحابة
 # ==========================================
 @st.cache_resource
 def init_connection():
@@ -332,7 +332,6 @@ if 'ready_pdf_b64' not in st.session_state:
 if 'auto_open_pdf' not in st.session_state:
     st.session_state.auto_open_pdf = False
 
-# استعادة جلسة المصادقة في حال إعادة تشغيل الخادم لضمان عدم انقطاع عمل المعلم
 if st.session_state.user is not None and st.session_state.auth_tokens:
     try:
         curr_sess = supabase.auth.get_session()
@@ -357,10 +356,6 @@ def navigate_to(page_name, std_id=None):
     st.rerun()
 
 def optimize_uploaded_image(up_file):
-    """
-    ضغط وتحسين صور الجوال عالية الدقة تلقائياً عند الرفع لتوفير 90% من مساحة السحابة
-    ومنع بطء التصفح أو امتلاء الذاكرة عند توليد ملفات PDF و Word
-    """
     raw_bytes = up_file.getvalue()
     mime_type = up_file.type or ""
     ext = up_file.name.split('.')[-1].lower() if '.' in up_file.name else "bin"
@@ -368,7 +363,6 @@ def optimize_uploaded_image(up_file):
     if not mime_type.startswith("image/"):
         return raw_bytes, mime_type, ext
 
-    # إذا كانت الصورة صغيرة الحجم أصلاً (< 350KB) وصيغتها قياسية، نرفعها كما هي
     if len(raw_bytes) < 350 * 1024 and ext in ("jpg", "jpeg", "png"):
         return raw_bytes, mime_type, ext
 
@@ -389,6 +383,143 @@ def optimize_uploaded_image(up_file):
         return out_buf.getvalue(), "image/jpeg", "jpg"
     except Exception:
         return raw_bytes, mime_type, ext
+
+@st.cache_data(ttl=180)
+def fetch_storage_usage_stats():
+    """
+    حساب المساحة المستهلكة في مستودع Supabase (بالميجابايت والنسبة المئوية من 1GB)
+    مع حساب عدد الصور وملفات الـ PDF عبر كافة الأعوام الدراسية
+    """
+    limit_bytes = 1024 * 1024 * 1024  # 1 GB
+    total_bytes = 0
+    img_count = 0
+    pdf_count = 0
+    link_count = 0
+
+    try:
+        all_files_res = supabase.table("evidence_files").select("file_url, file_type").execute()
+        all_files = all_files_res.data if all_files_res.data else []
+    except Exception:
+        all_files = []
+
+    folders = set()
+    for f in all_files:
+        f_url = f.get("file_url", "")
+        f_type = f.get("file_type", "")
+        if f_type == "external/link" or f_url.startswith("http"):
+            link_count += 1
+        elif f_type.startswith("image/"):
+            img_count += 1
+            if "/" in f_url:
+                folders.add(f_url.split("/")[0])
+        elif f_type == "application/pdf":
+            pdf_count += 1
+            if "/" in f_url:
+                folders.add(f_url.split("/")[0])
+
+    # 1. محاولة جلب الحجم الدقيق عبر دالة SQL RPC السريعة إن وجدت
+    rpc_succeeded = False
+    try:
+        rpc_res = supabase.rpc("get_storage_usage").execute()
+        if isinstance(rpc_res.data, (int, float)) and rpc_res.data >= 0:
+            total_bytes = int(rpc_res.data)
+            rpc_succeeded = True
+    except Exception:
+        pass
+
+    # 2. إذا لم تكن دالة SQL مضافة، نفحص أحجام الملفات مباشرة عبر Storage API لكل مجلد
+    if not rpc_succeeded and (img_count + pdf_count) > 0:
+        try:
+            for folder in folders:
+                items = supabase.storage.from_("private-achievements").list(folder)
+                if items:
+                    for item in items:
+                        meta = item.get("metadata") or {}
+                        sz = meta.get("size", 0)
+                        if isinstance(sz, (int, float)):
+                            total_bytes += int(sz)
+        except Exception:
+            pass
+
+        # في حال تعذر قراءة الميتاداتا لبعض الملفات، نضع تقديراً احتياطياً ذكياً
+        if total_bytes == 0:
+            total_bytes = (img_count * 240 * 1024) + (pdf_count * 550 * 1024)
+
+    used_mb = total_bytes / (1024 * 1024)
+    limit_mb = 1024.0
+    remaining_mb = max(0.0, limit_mb - used_mb)
+    usage_pct = min(100.0, (used_mb / limit_mb) * 100.0)
+    est_more_images = int((remaining_mb * 1024) / 240)
+
+    return {
+        "total_bytes": total_bytes,
+        "used_mb": used_mb,
+        "limit_mb": limit_mb,
+        "remaining_mb": remaining_mb,
+        "usage_pct": usage_pct,
+        "img_count": img_count,
+        "pdf_count": pdf_count,
+        "link_count": link_count,
+        "est_more_images": est_more_images
+    }
+
+def render_storage_meter_card(storage_stats):
+    """رسم بطاقة عداد ومؤشر المساحة السحابية بتنبيهات لونية ذكية"""
+    pct = storage_stats["usage_pct"]
+    used_mb = storage_stats["used_mb"]
+    rem_mb = storage_stats["remaining_mb"]
+    imgs = storage_stats["img_count"]
+    pdfs = storage_stats["pdf_count"]
+    more_imgs = storage_stats["est_more_images"]
+
+    if used_mb < 1.0 and storage_stats["total_bytes"] > 0:
+        used_str = f"{storage_stats['total_bytes'] / 1024:.1f} KB"
+    else:
+        used_str = f"{used_mb:.2f} MB"
+
+    if pct < 70:
+        bar_color = "#10b981"
+        badge_bg = "#dcfce7"
+        badge_txt = "#166534"
+        status_label = "🟢 المساحة آمنة ووفيرة"
+        alert_msg = f"💡 المساحة المتبقية ({rem_mb:.1f} MB) تكفي لرفع قرابة ({more_imgs:,}) صورة إضافية بفضل نظام الضغط الذكي."
+    elif pct < 85:
+        bar_color = "#f59e0b"
+        badge_bg = "#fef3c7"
+        badge_txt = "#92400e"
+        status_label = "🟠 تنبيه: تجاوزت 70% من المساحة"
+        alert_msg = f"⚠️ تبقى لديك ({rem_mb:.1f} MB). يُنصح بمراجعة المرفقات وحذف الصور المكررة أو غير الضرورية."
+    else:
+        bar_color = "#ef4444"
+        badge_bg = "#fee2e2"
+        badge_txt = "#991b1b"
+        status_label = "🔴 تحذير حرج: المساحة قاربت على الامتلاء!"
+        alert_msg = f"🚨 تبقى ({rem_mb:.1f} MB) فقط من أصل 1024 MB! يرجى تصدير ملفاتك وحذف المرفقات القديمة لتفادي توقف الرفع."
+
+    vis_pct = max(pct, 1.5) if storage_stats["total_bytes"] > 0 else 0.0
+
+    meter_html = (
+        f'<div class="progress-card" dir="rtl" style="border:1.5px solid {bar_color}; margin-bottom:14px;">'
+        f'<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">'
+        f'<span style="font-weight:700; font-size:14.5px; color:#0f172a !important;">☁️ عداد مساحة التخزين السحابية (Supabase 1GB)</span>'
+        f'<span style="background:{badge_bg}; color:{badge_txt} !important; padding:4px 10px; border-radius:99px; font-size:11.5px; font-weight:700;">{status_label}</span>'
+        f'</div>'
+        f'<div style="display:flex; justify-content:space-between; font-size:12.5px; font-weight:700; color:#334155; margin-bottom:4px;">'
+        f'<span>المستهلك: {used_str} من 1024 MB</span>'
+        f'<span style="color:{bar_color} !important;">{pct:.1f}%</span>'
+        f'</div>'
+        f'<div class="progress-bar-bg" style="height:11px; background:#e2e8f0;">'
+        f'<div style="width:{vis_pct}%; height:100%; background:{bar_color}; border-radius:6px; transition:width 0.3s ease;"></div>'
+        f'</div>'
+        f'<div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:10px; font-size:12px; color:#475569;">'
+        f'<span>🖼️ الصور المحفوظة: <strong>{imgs}</strong></span>'
+        f'<span>📄 ملفات PDF: <strong>{pdfs}</strong></span>'
+        f'<span>📦 المتبقي: <strong>{rem_mb:.1f} MB</strong></span>'
+        f'</div>'
+        f'<div style="margin-top:8px; padding:7px 10px; background:#f8fafc; border-radius:9px; font-size:11.5px; color:#334155;">{alert_msg}</div>'
+        f'</div>'
+    )
+    st.markdown(meter_html, unsafe_allow_html=True)
 
 def sort_evidences_chronologically(ev_list):
     def _sort_key(ev):
@@ -455,7 +586,6 @@ def fetch_all_years():
         res = supabase.table("academic_years").select("*").order("created_at", desc=True).execute()
         if res.data:
             return res.data
-        # إنشاء عام افتراضي تلقائياً في حال كانت قاعدة البيانات جديدة أو فارغة
         ins = supabase.table("academic_years").insert({"year_name": "1448", "is_active": True}).execute()
         return ins.data if ins.data else []
     except Exception:
@@ -555,7 +685,6 @@ def fetch_and_prepare_word_image(file_path, signed_url=""):
 # 6. محرك توليد ملف Word قابل للتعديل (.docx) محصن ضد الرموز الخفية
 # ==========================================
 def clean_xml_text(val):
-    """إزالة أي رموز تحكم خفية غير صالحة في XML 1.0 لمنع رسائل خطأ أوفيس"""
     if val is None:
         return ""
     cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', str(val))
@@ -2235,6 +2364,12 @@ def main_app():
     # 🏠 1. الصفحة الرئيسية
     # ----------------------------------------
     if st.session_state.current_page == 'home':
+        # تنبيه تلقائي في الرئيسية إذا اقتربت مساحة السحابة من الامتلاء (> 80%)
+        if not is_visitor:
+            storage_stats_home = fetch_storage_usage_stats()
+            if storage_stats_home["usage_pct"] >= 80:
+                st.warning(f"⚠️ تنبيه المساحة السحابية: استهلكت ({storage_stats_home['usage_pct']:.1f}%) من مساحة الـ 1GB المجانية. يمكنك مراجعة عداد المساحة في تبويب (⚙️ حسابي).")
+
         kpi_html = (
             f'<div class="kpi-grid" dir="rtl">'
             f'<div class="kpi-card"><div class="kpi-val">{total_ev_count}</div><div class="kpi-lbl">إجمالي الشواهد</div></div>'
@@ -2517,7 +2652,7 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة (آمنة بـ Base64 وتعمل عند الطلب فقط)
+    # 📄 3. صفحة التقارير والطباعة
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
@@ -2532,7 +2667,6 @@ def main_app():
             ]
         )
 
-        # الزر الأول: تجهيز وطباعة PDF عند الطلب فقط (بنظام Base64 الآمن)
         if st.button("🖨️ تجهيز وطباعة ملف الإنجاز PDF", type="primary", use_container_width=True):
             with st.spinner("جاري تجهيز صفحات تقرير PDF..."):
                 html_content = build_pdf_report_html(
@@ -2600,7 +2734,6 @@ def main_app():
             """, height=62)
 
         st.write("")
-        # الزر الثاني: تجهيز ملف Word عند الضغط فقط
         if st.button("📄 تجهيز ملف Word قابل للتعديل (شامل الصور والمرفقات)", use_container_width=True):
             with st.spinner("جاري تجهيز ملف الـ Word وتضمين صور الشواهد بداخله..."):
                 all_evidences = sort_evidences_chronologically(evidences)
@@ -2619,10 +2752,15 @@ def main_app():
             )
 
     # ----------------------------------------
-    # ⚙️ 4. صفحة حسابي
+    # ⚙️ 4. صفحة حسابي (شاملة عداد المساحة السحابية الذكي 1GB)
     # ----------------------------------------
     elif st.session_state.current_page == 'settings' and not is_visitor:
         st.markdown("#### ⚙️ إعدادات الحساب والمظهر والأرشيف والنسخ الاحتياطي")
+
+        # عرض بطاقة عداد المساحة السحابية ومؤشر الاستهلاك في أعلى صفحة حسابي مباشرة
+        storage_stats = fetch_storage_usage_stats()
+        render_storage_meter_card(storage_stats)
+
         t1, t2, t3, t4 = st.tabs(["👤 البيانات والمظهر", "📅 الأرشيف والنسخ", "🔗 مشاركة للزوار", "🚪 الخروج"])
         
         with t1:
