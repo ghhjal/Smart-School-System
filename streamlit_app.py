@@ -327,6 +327,8 @@ if 'custom_gemini_key' not in st.session_state:
     st.session_state.custom_gemini_key = ""
 if 'ready_docx_bytes' not in st.session_state:
     st.session_state.ready_docx_bytes = None
+if 'ready_zip_bytes' not in st.session_state:
+    st.session_state.ready_zip_bytes = None
 if 'ready_pdf_b64' not in st.session_state:
     st.session_state.ready_pdf_b64 = None
 if 'auto_open_pdf' not in st.session_state:
@@ -346,6 +348,7 @@ if st.session_state.user is not None and st.session_state.auth_tokens:
 def clear_app_cache():
     st.cache_data.clear()
     st.session_state.ready_docx_bytes = None
+    st.session_state.ready_zip_bytes = None
     st.session_state.ready_pdf_b64 = None
     st.session_state.auto_open_pdf = False
 
@@ -386,11 +389,6 @@ def optimize_uploaded_image(up_file):
 
 @st.cache_data(ttl=180)
 def fetch_storage_usage_stats():
-    """
-    حساب المساحة المستهلكة في مستودع Supabase (بالميجابايت والنسبة المئوية من 1GB)
-    مع حساب عدد الصور وملفات الـ PDF عبر كافة الأعوام الدراسية
-    """
-    limit_bytes = 1024 * 1024 * 1024  # 1 GB
     total_bytes = 0
     img_count = 0
     pdf_count = 0
@@ -417,7 +415,6 @@ def fetch_storage_usage_stats():
             if "/" in f_url:
                 folders.add(f_url.split("/")[0])
 
-    # 1. محاولة جلب الحجم الدقيق عبر دالة SQL RPC السريعة إن وجدت
     rpc_succeeded = False
     try:
         rpc_res = supabase.rpc("get_storage_usage").execute()
@@ -427,7 +424,6 @@ def fetch_storage_usage_stats():
     except Exception:
         pass
 
-    # 2. إذا لم تكن دالة SQL مضافة، نفحص أحجام الملفات مباشرة عبر Storage API لكل مجلد
     if not rpc_succeeded and (img_count + pdf_count) > 0:
         try:
             for folder in folders:
@@ -441,7 +437,6 @@ def fetch_storage_usage_stats():
         except Exception:
             pass
 
-        # في حال تعذر قراءة الميتاداتا لبعض الملفات، نضع تقديراً احتياطياً ذكياً
         if total_bytes == 0:
             total_bytes = (img_count * 240 * 1024) + (pdf_count * 550 * 1024)
 
@@ -464,7 +459,6 @@ def fetch_storage_usage_stats():
     }
 
 def render_storage_meter_card(storage_stats):
-    """رسم بطاقة عداد ومؤشر المساحة السحابية بتنبيهات لونية ذكية"""
     pct = storage_stats["usage_pct"]
     used_mb = storage_stats["used_mb"]
     rem_mb = storage_stats["remaining_mb"]
@@ -682,13 +676,17 @@ def fetch_and_prepare_word_image(file_path, signed_url=""):
         return None
 
 # ==========================================
-# 6. محرك توليد ملف Word قابل للتعديل (.docx) محصن ضد الرموز الخفية
+# 6. محركات التصدير (Word للتقرير + حقيبة مرفقات ZIP وCSV وJSON للنسخ الاحتياطي)
 # ==========================================
 def clean_xml_text(val):
     if val is None:
         return ""
     cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', str(val))
     return cleaned
+
+def sanitize_filename_part(name_str):
+    cleaned = re.sub(r'[\\/*?:"<>|\r\n\t]+', '_', str(name_str or '').strip())
+    return cleaned[:55].strip('_') or "ملف"
 
 def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_map):
     stds_map = {s['id']: s for s in stds}
@@ -1015,6 +1013,72 @@ def generate_excel_csv(stds, evidences):
         f_cnt = len(ev.get('evidence_files', []))
         lines.append(f"{s_id},{s_title},{title},{exec_d},{desc},{f_cnt}")
     return "\ufeff" + "\n".join(lines)
+
+def generate_attachments_zip(user_info, active_year, all_years, stds, all_subs, evidences, signed_urls_map):
+    """
+    إنشاء حقيبة أرشيفية متكاملة (.zip) تضم جميع الصور وملفات الـ PDF الأصلية
+    مصنفة داخل مجلدات بأسماء المعايير والشواهد، بالإضافة لملف Excel وملف JSON
+    """
+    stds_map = {s['id']: s['title'] for s in stds}
+    sorted_evs = sort_evidences_chronologically(evidences)
+
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        # 1. إضافة سجل الإكسل وملف النظام JSON داخل الحقيبة
+        csv_str = generate_excel_csv(stds, sorted_evs)
+        zf.writestr("سجل_الشواهد.csv", csv_str.encode("utf-8"))
+
+        full_backup = {
+            "user_profile": user_info,
+            "academic_years": all_years,
+            "standards": stds,
+            "sub_items": all_subs,
+            "evidences": sorted_evs
+        }
+        zf.writestr("نسخة_النظام_الاحتياطية.json", json.dumps(full_backup, ensure_ascii=False, indent=4).encode("utf-8"))
+
+        # 2. تحميل وإدراج كافة الصور وملفات الـ PDF مرتبة في مجلدات المعايير
+        for idx, ev in enumerate(sorted_evs, 1):
+            s_id = ev.get("standard_id", 1)
+            s_title = sanitize_filename_part(stds_map.get(s_id, f"معيار_{s_id}"))
+            ev_title = sanitize_filename_part(ev.get("title", f"شاهد_{idx}"))
+            exec_d = sanitize_filename_part(ev.get("execution_date") or ev.get("created_at", "")[:10])
+            folder_path = f"البند_{s_id}_{s_title}/{idx}_{ev_title}_{exec_d}"
+
+            # ملف نصي صغير يوثق وصف الشاهد والروابط داخل مجلده
+            info_txt = (
+                f"عنوان الشاهد: {ev.get('title', '')}\n"
+                f"المعيار: {s_id} - {stds_map.get(s_id, '')}\n"
+                f"تاريخ التنفيذ: {ev.get('execution_date') or ev.get('created_at', '')[:10]}\n"
+                f"الوصف:\n{ev.get('description') or ''}\n"
+            )
+            zf.writestr(f"{folder_path}/بيانات_الشاهد.txt", info_txt.encode("utf-8"))
+
+            for f_idx, f_rec in enumerate(ev.get("evidence_files", []), 1):
+                f_url = f_rec.get("file_url", "")
+                f_type = f_rec.get("file_type", "")
+                if f_type == "external/link" or f_url.startswith("http"):
+                    zf.writestr(f"{folder_path}/رابط_خارجي_{f_idx}.txt", f_url.encode("utf-8"))
+                    continue
+
+                ext = f_url.split(".")[-1].lower() if "." in f_url else ("pdf" if f_type == "application/pdf" else "jpg")
+                raw_file_bytes = None
+                try:
+                    raw_file_bytes = supabase.storage.from_("private-achievements").download(f_url)
+                except Exception:
+                    s_u = signed_urls_map.get(f_url, "")
+                    if s_u:
+                        try:
+                            req = urllib.request.Request(s_u, headers={"User-Agent": "Mozilla/5.0"})
+                            with urllib.request.urlopen(req, timeout=8) as resp:
+                                raw_file_bytes = resp.read()
+                        except Exception:
+                            pass
+
+                if raw_file_bytes:
+                    zf.writestr(f"{folder_path}/مرفق_{f_idx}.{ext}", raw_file_bytes)
+
+    return buf.getvalue()
 
 user_info = get_user_profile()
 active_theme_key = user_info.get("theme", "emerald")
@@ -2364,7 +2428,6 @@ def main_app():
     # 🏠 1. الصفحة الرئيسية
     # ----------------------------------------
     if st.session_state.current_page == 'home':
-        # تنبيه تلقائي في الرئيسية إذا اقتربت مساحة السحابة من الامتلاء (> 80%)
         if not is_visitor:
             storage_stats_home = fetch_storage_usage_stats()
             if storage_stats_home["usage_pct"] >= 80:
@@ -2652,7 +2715,7 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة
+    # 📄 3. صفحة التقارير والطباعة (المكان الحصري لتصدير PDF و Word)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
@@ -2752,12 +2815,11 @@ def main_app():
             )
 
     # ----------------------------------------
-    # ⚙️ 4. صفحة حسابي (شاملة عداد المساحة السحابية الذكي 1GB)
+    # ⚙️ 4. صفحة حسابي (عداد المساحة + الأرشيف + النسخ الاحتياطي المخصص للبيانات وحقيبة ZIP)
     # ----------------------------------------
     elif st.session_state.current_page == 'settings' and not is_visitor:
         st.markdown("#### ⚙️ إعدادات الحساب والمظهر والأرشيف والنسخ الاحتياطي")
 
-        # عرض بطاقة عداد المساحة السحابية ومؤشر الاستهلاك في أعلى صفحة حسابي مباشرة
         storage_stats = fetch_storage_usage_stats()
         render_storage_meter_card(storage_stats)
 
@@ -2877,23 +2939,26 @@ def main_app():
                                     st.rerun()
 
             else:
-                st.markdown("##### 📤 تصدير ملف الإنجاز والنسخ الاحتياطي (متعدد الصيغ)")
-                st.caption("اختر الصيغة المناسبة لتحميل نسخة كاملة من ملف إنجازك أو قاعدة بياناتك:")
+                st.markdown("##### 📤 النسخ الاحتياطي للأصول والبيانات (للحفظ الخارجي والاستعادة)")
+                st.caption("لحفظ نسخة أمان كاملة على جهازك أو قرصك الخارجي (بينما طباعة PDF وتصدير Word متاحان في تبويب 📄 التقرير):")
 
-                if st.button("📄 تجهيز نسخة Word قابلة للتعديل (شاملة الصور)", use_container_width=True):
-                    with st.spinner("جاري تجهيز ملف الـ Word وتضمين الصور..."):
-                        st.session_state.ready_docx_bytes = generate_editable_docx(
-                            user_info, active_year, stds, evidences, signed_urls_map
+                # 1. حقيبة المرفقات والصور الأصلية مصنفة في مجلدات (.zip)
+                if st.button("🗂️ تجهيز حقيبة المرفقات والصور الأصلية مرتبة بالمجلدات (.zip)", use_container_width=True):
+                    with st.spinner("جاري جمع الصور وملفات الـ PDF وترتيبها في مجلدات المعايير..."):
+                        st.session_state.ready_zip_bytes = generate_attachments_zip(
+                            user_info, active_year, all_years, stds, all_subs, evidences, signed_urls_map
                         )
-                if st.session_state.ready_docx_bytes:
+                if st.session_state.ready_zip_bytes:
                     st.download_button(
-                        label="⬇️ تحميل ملف الـ Word الجاهز (.docx)",
-                        data=st.session_state.ready_docx_bytes,
-                        file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        label="⬇️ تحميل حقيبة المرفقات والصور الجاهزة (.zip)",
+                        data=st.session_state.ready_zip_bytes,
+                        file_name=f"حقيبة_شواهد_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.zip",
+                        mime="application/zip",
+                        type="primary",
                         use_container_width=True
                     )
 
+                # 2. سجل البيانات لبرنامج Excel (.csv)
                 csv_data = generate_excel_csv(stds, evidences)
                 st.download_button(
                     label="📊 تصدير سجل الشواهد لبرنامج Excel (.csv)",
@@ -2903,6 +2968,7 @@ def main_app():
                     use_container_width=True
                 )
 
+                # 3. ملف النظام الشامل للاستعادة (.json)
                 full_backup = {
                     "user_profile": user_info,
                     "academic_years": all_years,
