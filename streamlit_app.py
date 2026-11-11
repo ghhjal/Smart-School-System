@@ -9,6 +9,7 @@ import base64
 import datetime
 import zipfile
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from PIL import Image
 from xml.sax.saxutils import escape as xml_escape
@@ -299,7 +300,7 @@ def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", vari
     }
 
 # ==========================================
-# 5. الاتصال الآمن بقاعدة البيانات، ضغط الصور، وحساب مساحة السحابة
+# 5. الاتصال الآمن بقاعدة البيانات، ضغط الصور، وحساب المساحة السحابية السريع
 # ==========================================
 @st.cache_resource
 def init_connection():
@@ -387,8 +388,12 @@ def optimize_uploaded_image(up_file):
     except Exception:
         return raw_bytes, mime_type, ext
 
-@st.cache_data(ttl=180)
+@st.cache_data(ttl=600, show_spinner=False)
 def fetch_storage_usage_stats():
+    """
+    حساب المساحة المستهلكة في مستودع Supabase بسرعة فائقة عبر المعالجة المتوازية
+    ودون إظهار أي رسائل نظام تقنية (show_spinner=False)
+    """
     total_bytes = 0
     img_count = 0
     pdf_count = 0
@@ -425,15 +430,24 @@ def fetch_storage_usage_stats():
         pass
 
     if not rpc_succeeded and (img_count + pdf_count) > 0:
-        try:
-            for folder in folders:
-                items = supabase.storage.from_("private-achievements").list(folder)
+        def _get_folder_size(folder_name):
+            f_bytes = 0
+            try:
+                items = supabase.storage.from_("private-achievements").list(folder_name)
                 if items:
                     for item in items:
                         meta = item.get("metadata") or {}
                         sz = meta.get("size", 0)
                         if isinstance(sz, (int, float)):
-                            total_bytes += int(sz)
+                            f_bytes += int(sz)
+            except Exception:
+                pass
+            return f_bytes
+
+        try:
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                sizes = list(executor.map(_get_folder_size, folders))
+                total_bytes = sum(sizes)
         except Exception:
             pass
 
@@ -553,7 +567,7 @@ def run_ai_draft_callback(std_id, std_title, sub_options):
     st.session_state[impact_key] = ai_res["impact"]
     st.session_state[f"ai_status_{std_id}"] = ai_res["engine"]
 
-@st.cache_data(ttl=180)
+@st.cache_data(ttl=300, show_spinner=False)
 def get_user_profile():
     default_profile = {
         "full_name": "زياد المعمري",
@@ -574,7 +588,7 @@ def get_user_profile():
         pass
     return default_profile
 
-@st.cache_data(ttl=180)
+@st.cache_data(ttl=300, show_spinner=False)
 def fetch_all_years():
     try:
         res = supabase.table("academic_years").select("*").order("created_at", desc=True).execute()
@@ -585,7 +599,7 @@ def fetch_all_years():
     except Exception:
         return []
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=600, show_spinner=False)
 def fetch_standards_and_subs():
     try:
         stds = supabase.table("standards").select("*").order("id").execute().data
@@ -597,7 +611,7 @@ def fetch_standards_and_subs():
         subs = []
     return stds, subs
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=180, show_spinner=False)
 def fetch_year_evidences(year_id):
     if not year_id:
         return []
@@ -608,7 +622,7 @@ def fetch_year_evidences(year_id):
     except Exception:
         return []
 
-@st.cache_data(ttl=1800)
+@st.cache_data(ttl=1800, show_spinner=False)
 def get_signed_urls_batch(paths_tuple):
     if not paths_tuple:
         return {}
@@ -633,7 +647,7 @@ def get_signed_urls_batch(paths_tuple):
                     pass
     return url_map
 
-@st.cache_data(ttl=1800)
+@st.cache_data(ttl=1800, show_spinner=False)
 def fetch_and_prepare_word_image(file_path, signed_url=""):
     raw_bytes = None
     try:
@@ -693,6 +707,30 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
     sorted_evs = sort_evidences_chronologically(evidences)
     total_ev = len(sorted_evs)
     covered_stds = len(set(e['standard_id'] for e in sorted_evs))
+
+    # جلب وتجهيز جميع صور الشواهد بالتوازي لتسريع بناء ملف الـ Word
+    image_tasks = []
+    for ev in sorted_evs:
+        for f in ev.get('evidence_files', []):
+            f_url = f.get('file_url', '')
+            f_type = f.get('file_type', '')
+            if f_type.startswith('image/') and not f_url.startswith('http'):
+                image_tasks.append((f_url, signed_urls_map.get(f_url, '')))
+
+    prepared_images_map = {}
+    if image_tasks:
+        def _prep_task(task_pair):
+            return task_pair[0], fetch_and_prepare_word_image(task_pair[0], task_pair[1])
+        try:
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                for p_path, p_info in executor.map(_prep_task, image_tasks):
+                    if p_info:
+                        prepared_images_map[p_path] = p_info
+        except Exception:
+            for t_path, t_su in image_tasks:
+                p_info = fetch_and_prepare_word_image(t_path, t_su)
+                if p_info:
+                    prepared_images_map[t_path] = p_info
 
     media_files = {}
     rels_entries = []
@@ -935,8 +973,7 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
             f_url = f.get('file_url', '')
             f_type = f.get('file_type', '')
             if f_type.startswith('image/') and not f_url.startswith('http'):
-                s_url = signed_urls_map.get(f_url, '')
-                img_info = fetch_and_prepare_word_image(f_url, s_url)
+                img_info = prepared_images_map.get(f_url)
                 if img_info:
                     rel_id = f"rIdImg{img_counter}"
                     media_name = f"image_{img_counter}.jpg"
@@ -1015,16 +1052,45 @@ def generate_excel_csv(stds, evidences):
     return "\ufeff" + "\n".join(lines)
 
 def generate_attachments_zip(user_info, active_year, all_years, stds, all_subs, evidences, signed_urls_map):
-    """
-    إنشاء حقيبة أرشيفية متكاملة (.zip) تضم جميع الصور وملفات الـ PDF الأصلية
-    مصنفة داخل مجلدات بأسماء المعايير والشواهد، بالإضافة لملف Excel وملف JSON
-    """
     stds_map = {s['id']: s['title'] for s in stds}
     sorted_evs = sort_evidences_chronologically(evidences)
 
+    # جلب كافة الملفات بالتوازي لتسريع تجهيز حقيبة الـ ZIP
+    download_tasks = []
+    for ev in sorted_evs:
+        for f_rec in ev.get("evidence_files", []):
+            f_url = f_rec.get("file_url", "")
+            f_type = f_rec.get("file_type", "")
+            if f_type != "external/link" and not f_url.startswith("http"):
+                download_tasks.append((f_url, signed_urls_map.get(f_url, "")))
+
+    downloaded_map = {}
+    if download_tasks:
+        def _dl_file(pair):
+            f_p, s_u = pair
+            raw_b = None
+            try:
+                raw_b = supabase.storage.from_("private-achievements").download(f_p)
+            except Exception:
+                if s_u:
+                    try:
+                        req = urllib.request.Request(s_u, headers={"User-Agent": "Mozilla/5.0"})
+                        with urllib.request.urlopen(req, timeout=8) as resp:
+                            raw_b = resp.read()
+                    except Exception:
+                        pass
+            return f_p, raw_b
+
+        try:
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                for k_path, k_bytes in executor.map(_dl_file, download_tasks):
+                    if k_bytes:
+                        downloaded_map[k_path] = k_bytes
+        except Exception:
+            pass
+
     buf = BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        # 1. إضافة سجل الإكسل وملف النظام JSON داخل الحقيبة
         csv_str = generate_excel_csv(stds, sorted_evs)
         zf.writestr("سجل_الشواهد.csv", csv_str.encode("utf-8"))
 
@@ -1037,7 +1103,6 @@ def generate_attachments_zip(user_info, active_year, all_years, stds, all_subs, 
         }
         zf.writestr("نسخة_النظام_الاحتياطية.json", json.dumps(full_backup, ensure_ascii=False, indent=4).encode("utf-8"))
 
-        # 2. تحميل وإدراج كافة الصور وملفات الـ PDF مرتبة في مجلدات المعايير
         for idx, ev in enumerate(sorted_evs, 1):
             s_id = ev.get("standard_id", 1)
             s_title = sanitize_filename_part(stds_map.get(s_id, f"معيار_{s_id}"))
@@ -1045,7 +1110,6 @@ def generate_attachments_zip(user_info, active_year, all_years, stds, all_subs, 
             exec_d = sanitize_filename_part(ev.get("execution_date") or ev.get("created_at", "")[:10])
             folder_path = f"البند_{s_id}_{s_title}/{idx}_{ev_title}_{exec_d}"
 
-            # ملف نصي صغير يوثق وصف الشاهد والروابط داخل مجلده
             info_txt = (
                 f"عنوان الشاهد: {ev.get('title', '')}\n"
                 f"المعيار: {s_id} - {stds_map.get(s_id, '')}\n"
@@ -1062,19 +1126,7 @@ def generate_attachments_zip(user_info, active_year, all_years, stds, all_subs, 
                     continue
 
                 ext = f_url.split(".")[-1].lower() if "." in f_url else ("pdf" if f_type == "application/pdf" else "jpg")
-                raw_file_bytes = None
-                try:
-                    raw_file_bytes = supabase.storage.from_("private-achievements").download(f_url)
-                except Exception:
-                    s_u = signed_urls_map.get(f_url, "")
-                    if s_u:
-                        try:
-                            req = urllib.request.Request(s_u, headers={"User-Agent": "Mozilla/5.0"})
-                            with urllib.request.urlopen(req, timeout=8) as resp:
-                                raw_file_bytes = resp.read()
-                        except Exception:
-                            pass
-
+                raw_file_bytes = downloaded_map.get(f_url)
                 if raw_file_bytes:
                     zf.writestr(f"{folder_path}/مرفق_{f_idx}.{ext}", raw_file_bytes)
 
@@ -2425,14 +2477,9 @@ def main_app():
     pct = int((stds_with_ev / total_stds) * 100) if total_stds else 0
 
     # ----------------------------------------
-    # 🏠 1. الصفحة الرئيسية
+    # 🏠 1. الصفحة الرئيسية (تفتح فوراً بدون أي تأخير)
     # ----------------------------------------
     if st.session_state.current_page == 'home':
-        if not is_visitor:
-            storage_stats_home = fetch_storage_usage_stats()
-            if storage_stats_home["usage_pct"] >= 80:
-                st.warning(f"⚠️ تنبيه المساحة السحابية: استهلكت ({storage_stats_home['usage_pct']:.1f}%) من مساحة الـ 1GB المجانية. يمكنك مراجعة عداد المساحة في تبويب (⚙️ حسابي).")
-
         kpi_html = (
             f'<div class="kpi-grid" dir="rtl">'
             f'<div class="kpi-card"><div class="kpi-val">{total_ev_count}</div><div class="kpi-lbl">إجمالي الشواهد</div></div>'
@@ -2815,7 +2862,7 @@ def main_app():
             )
 
     # ----------------------------------------
-    # ⚙️ 4. صفحة حسابي (عداد المساحة + الأرشيف + النسخ الاحتياطي المخصص للبيانات وحقيبة ZIP)
+    # ⚙️ 4. صفحة حسابي (عداد المساحة السريع + الأرشيف + النسخ الاحتياطي المخصص للبيانات وحقيبة ZIP)
     # ----------------------------------------
     elif st.session_state.current_page == 'settings' and not is_visitor:
         st.markdown("#### ⚙️ إعدادات الحساب والمظهر والأرشيف والنسخ الاحتياطي")
@@ -2942,7 +2989,6 @@ def main_app():
                 st.markdown("##### 📤 النسخ الاحتياطي للأصول والبيانات (للحفظ الخارجي والاستعادة)")
                 st.caption("لحفظ نسخة أمان كاملة على جهازك أو قرصك الخارجي (بينما طباعة PDF وتصدير Word متاحان في تبويب 📄 التقرير):")
 
-                # 1. حقيبة المرفقات والصور الأصلية مصنفة في مجلدات (.zip)
                 if st.button("🗂️ تجهيز حقيبة المرفقات والصور الأصلية مرتبة بالمجلدات (.zip)", use_container_width=True):
                     with st.spinner("جاري جمع الصور وملفات الـ PDF وترتيبها في مجلدات المعايير..."):
                         st.session_state.ready_zip_bytes = generate_attachments_zip(
@@ -2958,7 +3004,6 @@ def main_app():
                         use_container_width=True
                     )
 
-                # 2. سجل البيانات لبرنامج Excel (.csv)
                 csv_data = generate_excel_csv(stds, evidences)
                 st.download_button(
                     label="📊 تصدير سجل الشواهد لبرنامج Excel (.csv)",
@@ -2968,7 +3013,6 @@ def main_app():
                     use_container_width=True
                 )
 
-                # 3. ملف النظام الشامل للاستعادة (.json)
                 full_backup = {
                     "user_profile": user_info,
                     "academic_years": all_years,
@@ -3043,6 +3087,7 @@ def main_app():
                     supabase.auth.sign_out()
                 except Exception:
                     pass
+                clear_app_cache()
                 st.session_state.user = None
                 st.session_state.auth_tokens = None
                 st.session_state.is_visitor = False
