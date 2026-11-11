@@ -40,12 +40,12 @@ THEMES = {
         "tint": "#e6f2ef"
     },
     "royal": {
-        "name": "🔵 الأزرق الملكي الاحترافي",
+        "name": "🔵 أزرق منصة زياد الذكية",
         "primary": "#1e3a8a",
         "primary_light": "#2563eb",
-        "primary_dark": "#172554",
-        "bg": "#f0f4f8",
-        "accent": "#0284c7",
+        "primary_dark": "#0f172a",
+        "bg": "#f4f7fb",
+        "accent": "#f59e0b",
         "tint": "#dbeafe"
     },
     "bronze": {
@@ -63,7 +63,7 @@ THEMES = {
         "primary_light": "#334155",
         "primary_dark": "#0f172a",
         "bg": "#f1f5f9",
-        "accent": "#475569",
+        "accent": "#f59e0b",
         "tint": "#e2e8f0"
     }
 }
@@ -390,10 +390,6 @@ def optimize_uploaded_image(up_file):
 
 @st.cache_data(ttl=600, show_spinner=False)
 def fetch_storage_usage_stats():
-    """
-    حساب المساحة المستهلكة في مستودع Supabase بسرعة فائقة عبر المعالجة المتوازية
-    ودون إظهار أي رسائل نظام تقنية (show_spinner=False)
-    """
     total_bytes = 0
     img_count = 0
     pdf_count = 0
@@ -509,7 +505,7 @@ def render_storage_meter_card(storage_stats):
     meter_html = (
         f'<div class="progress-card" dir="rtl" style="border:1.5px solid {bar_color}; margin-bottom:14px;">'
         f'<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">'
-        f'<span style="font-weight:700; font-size:14.5px; color:#0f172a !important;">☁️ عداد مساحة التخزين السحابية (Supabase 1GB)</span>'
+        f'<span style="font-weight:800; font-size:14.5px; color:#0f172a !important;">☁️ عداد مساحة التخزين السحابية (Supabase 1GB)</span>'
         f'<span style="background:{badge_bg}; color:{badge_txt} !important; padding:4px 10px; border-radius:99px; font-size:11.5px; font-weight:700;">{status_label}</span>'
         f'</div>'
         f'<div style="display:flex; justify-content:space-between; font-size:12.5px; font-weight:700; color:#334155; margin-bottom:4px;">'
@@ -708,7 +704,6 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
     total_ev = len(sorted_evs)
     covered_stds = len(set(e['standard_id'] for e in sorted_evs))
 
-    # جلب وتجهيز جميع صور الشواهد بالتوازي لتسريع بناء ملف الـ Word
     image_tasks = []
     for ev in sorted_evs:
         for f in ev.get('evidence_files', []):
@@ -1055,7 +1050,6 @@ def generate_attachments_zip(user_info, active_year, all_years, stds, all_subs, 
     stds_map = {s['id']: s['title'] for s in stds}
     sorted_evs = sort_evidences_chronologically(evidences)
 
-    # جلب كافة الملفات بالتوازي لتسريع تجهيز حقيبة الـ ZIP
     download_tasks = []
     for ev in sorted_evs:
         for f_rec in ev.get("evidence_files", []):
@@ -1138,27 +1132,48 @@ if active_theme_key not in THEMES:
     active_theme_key = "emerald"
 th = THEMES[active_theme_key]
 
-ZIYAD_LOGO_SVG = '<svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
+ZIYAD_LOGO_SVG = '<svg width="46" height="46" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 7. التصميم الشامل + حقن مراقب RTL للقوائم المنسدلة المنبثقة خارج .stApp
+# 7. التصميم الشامل بهوية خط "منصة زياد الذكية" (Cairo & Tajawal) + إخفاء شريط التمرير
 # ==========================================
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Readex+Pro:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap');
+
+/* إخفاء أشرطة التمرير العمودية والأفقية نهائياً من كافة الحاويات */
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.stApp::-webkit-scrollbar,
+[data-testid="stAppViewContainer"]::-webkit-scrollbar,
+[data-testid="stMain"]::-webkit-scrollbar,
+.main::-webkit-scrollbar,
+.block-container::-webkit-scrollbar {{
+    display: none !important;
+    width: 0px !important;
+    height: 0px !important;
+    background: transparent !important;
+}}
+
+*, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .block-container {{
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}}
 
 :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
     --text-color: #0f172a !important;
     --background-color: {th['bg']} !important;
     --secondary-background-color: #ffffff !important;
     --primary-color: {th['primary']} !important;
+    --font: 'Cairo', 'Tajawal', sans-serif !important;
     color-scheme: light only !important;
     direction: rtl !important; 
     text-align: right !important; 
-    font-family: 'Readex Pro', 'Cairo', sans-serif;
+    font-family: 'Cairo', 'Tajawal', sans-serif !important;
     background-color: {th['bg']} !important;
     color: #0f172a !important;
-    overflow-x: hidden !important;
+    overflow-x: clip !important;
     max-width: 100% !important;
     width: 100% !important;
     margin: 0 !important;
@@ -1172,34 +1187,44 @@ header {{visibility: hidden; height: 0 !important;}}
 footer {{visibility: hidden;}}
 .stSidebar {{display: none !important;}}
 
+/* إبقاء overflow: visible على block-container لمنع ظهور شريط التمرير الداخلي على اليسار */
 .block-container {{
     padding: 0.5rem 0.65rem 1.8rem 0.65rem !important;
-    max-width: 720px !important;
+    max-width: 740px !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    overflow-x: hidden !important;
+    overflow: visible !important;
     direction: rtl !important;
     text-align: right !important;
 }}
 [data-testid="stVerticalBlock"] {{
-    gap: 0.45rem !important;
+    gap: 0.48rem !important;
     max-width: 100% !important;
+    overflow: visible !important;
     direction: rtl !important;
 }}
 div.element-container, [data-testid="stMarkdownContainer"] {{
     max-width: 100% !important;
+    overflow: visible !important;
     direction: rtl !important;
     text-align: right !important;
 }}
 
-h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p, [data-testid="stMarkdownContainer"] p {{
-    font-family: 'Readex Pro', 'Cairo', sans-serif;
-    color: #0f172a !important;
+/* تعميم هوية خط منصة زياد الذكية (Cairo / Tajawal) على كافة العناصر */
+h1, h2, h3, h4, h5, h6, p, label, span, div, button, input, textarea, .stMarkdown,
+[data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p, [data-testid="stMarkdownContainer"] p {{
+    font-family: 'Cairo', 'Tajawal', sans-serif !important;
+    color: #0f172a;
     direction: rtl !important;
-    text-align: right !important;
     word-wrap: break-word !important;
 }}
 
+h1, h2, h3, h4, h5 {{
+    font-weight: 800 !important;
+    letter-spacing: -0.2px !important;
+}}
+
+/* استثناء أيقونات النظام Material Icons */
 span[data-testid="stIconMaterial"], .material-icons, [class*="material-symbols"] {{
     font-family: 'Material Symbols Rounded', 'Material Icons' !important;
     direction: ltr !important;
@@ -1223,6 +1248,8 @@ input, textarea {{
     caret-color: {th['primary']} !important;
     direction: rtl !important;
     text-align: right !important;
+    font-family: 'Cairo', 'Tajawal', sans-serif !important;
+    font-weight: 600 !important;
 }}
 
 div[data-baseweb="input"],
@@ -1244,6 +1271,7 @@ div[data-baseweb="select"] svg {{
     text-align: right !important;
     white-space: normal !important;
     line-height: 1.4 !important;
+    font-weight: 700 !important;
 }}
 
 input::placeholder, textarea::placeholder {{
@@ -1266,7 +1294,7 @@ div[data-testid="stAlert"], div[data-testid="stAlert"] > div, div[role="alert"] 
 div[data-testid="stAlert"] p, div[data-testid="stAlert"] span, div[role="alert"] p {{
     color: {th['primary_dark']} !important;
     -webkit-text-fill-color: {th['primary_dark']} !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     direction: rtl !important;
     text-align: right !important;
 }}
@@ -1320,7 +1348,7 @@ div[data-testid="stFileUploader"] section button {{
 [data-testid="stExpanderDetails"] {{
     background-color: #ffffff !important;
     color: {th['primary']} !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     direction: rtl !important;
     text-align: right !important;
 }}
@@ -1328,7 +1356,7 @@ div[data-testid="stFileUploader"] section button {{
 button[data-baseweb="tab"] {{
     background-color: transparent !important;
     color: #475569 !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
 }}
 button[data-baseweb="tab"][aria-selected="true"] {{
     color: {th['primary']} !important;
@@ -1340,7 +1368,7 @@ div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
     color: {th['primary']} !important;
     border: 1px solid #b7e0d6 !important;
     border-radius: 12px !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     min-height: 44px !important;
     padding: 0.4rem 0.85rem !important;
     transition: all 0.18s ease !important;
@@ -1351,8 +1379,8 @@ div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
 div[data-testid="stButton"] button p, div[data-testid="stDownloadButton"] button p {{
     color: {th['primary']} !important;
     -webkit-text-fill-color: {th['primary']} !important;
-    font-weight: 700 !important;
-    font-size: 13.5px !important;
+    font-weight: 800 !important;
+    font-size: 14px !important;
     white-space: normal !important;
     line-height: 1.3 !important;
     text-align: center !important;
@@ -1377,20 +1405,21 @@ div[data-testid="stButton"] button[kind="primary"], div[data-testid="stFormSubmi
     border: none !important;
     border-radius: 14px !important;
     min-height: 50px !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     box-shadow: 0 4px 12px rgba(15, 82, 67, 0.2) !important;
 }}
 div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSubmitButton"] button p, div[data-testid="stDownloadButton"] button[kind="primary"] p {{
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     font-size: 15px !important;
+    font-weight: 800 !important;
     text-align: center !important;
 }}
 
+/* شريط التبويبات والفرز بنفس هوية منصة زياد الذكية (بدون دوائر الراديو ومع إطار ذهبي للتبويب النشط) */
 div[data-testid="stRadio"] {{
     width: 100% !important;
     max-width: 100% !important;
-    overflow: hidden !important;
 }}
 div[data-testid="stRadio"] [data-testid="stWidgetLabel"] {{
     display: none !important;
@@ -1402,42 +1431,45 @@ div[data-testid="stRadio"] > div[role="radiogroup"] {{
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
-    gap: 5px !important;
+    gap: 6px !important;
     background: #ffffff !important;
-    padding: 5px !important;
-    border-radius: 14px !important;
+    padding: 6px !important;
+    border-radius: 16px !important;
     border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03) !important;
     justify-content: space-between !important;
     direction: rtl !important;
 }}
-div[data-testid="stRadio"] label {{
+div[data-testid="stRadio"] label,
+div[data-testid="stRadio"] [data-baseweb="radio"] {{
     flex: 1 1 0% !important;
     min-width: 0 !important;
     margin: 0 !important;
-    padding: 9px 4px !important;
-    border-radius: 10px !important;
+    padding: 8px 6px !important;
+    border-radius: 12px !important;
     background: transparent !important;
+    border: 2px solid transparent !important;
     cursor: pointer !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    overflow: hidden !important;
+    transition: all 0.18s ease !important;
 }}
+/* إخفاء قاطع لدائرة الراديو الجانبية */
 div[data-testid="stRadio"] input[type="radio"],
 div[data-testid="stRadio"] label > div:first-child,
 div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {{
     display: none !important;
-    width: 0 !important;
-    height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    width: 0px !important;
+    height: 0px !important;
+    opacity: 0 !important;
+    position: absolute !important;
+    pointer-events: none !important;
 }}
 div[data-testid="stRadio"] label p {{
-    font-size: 13px !important;
-    font-weight: 700 !important;
+    font-size: 13.5px !important;
+    font-weight: 800 !important;
     color: #475569 !important;
     -webkit-text-fill-color: #475569 !important;
     margin: 0 !important;
@@ -1448,21 +1480,24 @@ div[data-testid="stRadio"] label p {{
 }}
 div[data-testid="stRadio"] label:has(input:checked) {{
     background: {th['primary']} !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
+    border: 2px solid #f59e0b !important;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12) !important;
 }}
 div[data-testid="stRadio"] label:has(input:checked) p {{
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
+    font-weight: 800 !important;
 }}
 
+/* البنر العلوي بنفس روح وهوية منصة زياد الذكية */
 .hero-wrapper {{
-    background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%);
+    background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 52%, {th['primary_light']} 100%);
     color: white !important;
-    padding: 16px 18px;
-    border-radius: 20px;
-    margin-bottom: 4px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255,255,255,0.12);
+    padding: 18px 20px;
+    border-radius: 22px;
+    margin-bottom: 6px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255,255,255,0.15);
     box-sizing: border-box;
     width: 100%;
     direction: rtl !important;
@@ -1476,19 +1511,20 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     padding-bottom: 10px;
     margin-bottom: 12px;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     direction: rtl !important;
 }}
-.brand-box {{ display: flex; align-items: center; gap: 10px; direction: rtl !important; }}
-.brand-title {{ font-size: 15.5px; font-weight: 700; color: #fbbf24 !important; margin: 0; text-align: right !important; }}
-.brand-sub {{ font-size: 10.5px; color: rgba(255,255,255,0.88) !important; margin: 2px 0 0 0; text-align: right !important; }}
+.brand-box {{ display: flex; align-items: center; gap: 12px; direction: rtl !important; }}
+.brand-title {{ font-size: 19px; font-weight: 900; color: #ffffff !important; margin: 0; text-align: right !important; letter-spacing: -0.3px; }}
+.brand-sub {{ font-size: 11.5px; font-weight: 700; color: #fde68a !important; margin: 2px 0 0 0; text-align: right !important; }}
 .date-pill {{
-    background: rgba(255,255,255,0.14);
-    padding: 4px 10px;
+    background: rgba(15, 23, 42, 0.35);
+    padding: 5px 12px;
     border-radius: 99px;
-    font-size: 11px;
+    font-size: 11.5px;
+    font-weight: 700;
     color: #ffffff !important;
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.22);
     direction: rtl !important;
 }}
 .hero-body {{
@@ -1499,38 +1535,38 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     gap: 10px;
     direction: rtl !important;
 }}
-.welcome-line {{ font-size: 13px; color: #fde68a !important; font-weight: 600; margin-bottom: 2px; text-align: right !important; }}
-.teacher-name {{ font-size: 21px; font-weight: 800; color: #ffffff !important; margin: 0 0 8px 0; text-align: right !important; }}
-.meta-badges {{ display: flex; flex-wrap: wrap; gap: 5px; direction: rtl !important; }}
+.welcome-line {{ font-size: 13px; color: #fde68a !important; font-weight: 700; margin-bottom: 2px; text-align: right !important; }}
+.teacher-name {{ font-size: 22px; font-weight: 900; color: #ffffff !important; margin: 0 0 8px 0; text-align: right !important; }}
+.meta-badges {{ display: flex; flex-wrap: wrap; gap: 6px; direction: rtl !important; }}
 .meta-pill {{
     background: rgba(0,0,0,0.25);
     color: #ffffff !important;
-    padding: 4px 9px;
-    border-radius: 8px;
-    font-size: 11px;
-    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 9px;
+    font-size: 11.5px;
+    font-weight: 700;
 }}
 .year-badge {{
     background: #fbbf24;
-    color: #1e293b !important;
-    padding: 6px 12px;
-    border-radius: 11px;
-    font-size: 12.5px;
-    font-weight: 700;
+    color: #0f172a !important;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 800;
 }}
 
 .kpi-grid {{
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; width: 100%; box-sizing: border-box; direction: rtl !important;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; direction: rtl !important;
 }}
 .kpi-card {{
-    background: #ffffff; border-radius: 14px; padding: 10px 4px; text-align: center !important;
-    border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    background: #ffffff; border-radius: 16px; padding: 12px 6px; text-align: center !important;
+    border: 1px solid #e2e8f0; box-shadow: 0 3px 8px rgba(0,0,0,0.03);
 }}
-.kpi-val {{ font-size: 18px; font-weight: 700; color: {th['primary']} !important; text-align: center !important; }}
-.kpi-lbl {{ font-size: 10.5px; color: #475569 !important; margin-top: 2px; font-weight: 600; text-align: center !important; }}
+.kpi-val {{ font-size: 21px; font-weight: 900; color: {th['primary']} !important; text-align: center !important; }}
+.kpi-lbl {{ font-size: 11px; color: #475569 !important; margin-top: 2px; font-weight: 700; text-align: center !important; }}
 
 .progress-card {{
-    background: #ffffff; padding: 12px 16px; border-radius: 14px; 
+    background: #ffffff; padding: 12px 16px; border-radius: 15px; 
     margin-bottom: 6px; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box; direction: rtl !important;
 }}
 .progress-bar-bg {{
@@ -1542,23 +1578,23 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 }}
 
 .std-card {{
-    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 15px;
-    padding: 12px 14px; margin-bottom: 2px;
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;
+    padding: 13px 15px; margin-bottom: 2px;
     display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02); width: 100%; box-sizing: border-box;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02); width: 100%; box-sizing: border-box;
     direction: rtl !important; text-align: right !important;
 }}
 .std-num {{
-    width: 38px; height: 38px; border-radius: 11px;
+    width: 40px; height: 40px; border-radius: 12px;
     background: {th['tint']}; color: {th['primary']} !important;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 16px; margin-left: 10px; flex-shrink: 0;
+    font-weight: 900; font-size: 17px; margin-left: 12px; flex-shrink: 0;
 }}
 .std-num-empty {{ background: #fee2e2; color: #dc2626 !important; }}
-.std-title {{ font-size: 14.5px; font-weight: 700; color: #0f172a !important; margin-bottom: 3px; text-align: right !important; direction: rtl !important; }}
+.std-title {{ font-size: 15px; font-weight: 800; color: #0f172a !important; margin-bottom: 3px; text-align: right !important; direction: rtl !important; }}
 .weight-badge {{
-    background: #f1f5f9; color: #475569 !important; font-size: 11px; padding: 2px 8px;
-    border-radius: 7px; display: inline-block; font-weight: 600;
+    background: #f1f5f9; color: #475569 !important; font-size: 11.5px; padding: 2px 9px;
+    border-radius: 8px; display: inline-block; font-weight: 700;
 }}
 .dots-row {{ display: flex; gap: 4px; margin-bottom: 4px; justify-content: flex-end; }}
 .dot {{ width: 12px; height: 5px; border-radius: 3px; }}
@@ -1592,7 +1628,7 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     text-align: right !important;
 }}
 .ev-title-right {{
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     font-size: 15.5px !important;
     color: {th['primary']} !important;
     direction: rtl !important;
@@ -1600,7 +1636,8 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     unicode-bidi: isolate !important;
 }}
 .ev-desc-rtl {{
-    font-size: 13.5px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
     color: #334155 !important;
     line-height: 1.75 !important;
     margin-bottom: 8px !important;
@@ -1628,31 +1665,31 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 .thumb-overlay {{
     position: absolute; bottom: 0; left: 0; right: 0;
     background: rgba(0,0,0,0.65); color: #ffffff !important; font-size: 9.5px;
-    text-align: center !important; padding: 2px 0;
+    font-weight: 700; text-align: center !important; padding: 2px 0;
 }}
 .pdf-badge {{
     display: inline-flex; align-items: center; justify-content: center;
     height: 42px; padding: 0 12px; border-radius: 9px;
     background: #f8fafc; border: 1.5px dashed {th['primary']};
-    color: {th['primary']} !important; font-weight: 700; font-size: 12px; text-decoration: none;
+    color: {th['primary']} !important; font-weight: 800; font-size: 12px; text-decoration: none;
 }}
 .ext-link-badge {{
     display: inline-flex; align-items: center; justify-content: center;
     height: 42px; padding: 0 14px; border-radius: 9px;
     background: #eff6ff; border: 1.5px solid #2563eb;
-    color: #1d4ed8 !important; font-weight: 700; font-size: 12px; text-decoration: none;
+    color: #1d4ed8 !important; font-weight: 800; font-size: 12px; text-decoration: none;
 }}
 
 .idea-card {{
     background: #ffffff; border: 1px solid #e2e8f0; padding: 9px 12px;
-    border-radius: 10px; margin-bottom: 5px; font-size: 12.5px; color: #1e293b !important;
+    border-radius: 10px; margin-bottom: 5px; font-size: 13px; font-weight: 600; color: #1e293b !important;
     display: flex; justify-content: space-between; align-items: center;
     direction: rtl !important; text-align: right !important;
 }}
 .visitor-banner {{
     background: #fef3c7; color: #92400e !important; border: 1px solid #f59e0b;
     padding: 8px 14px; border-radius: 11px; margin-bottom: 8px;
-    font-weight: 700; font-size: 13px; text-align: center !important;
+    font-weight: 800; font-size: 13px; text-align: center !important;
 }}
 
 .ziyad-footer {{
@@ -1666,12 +1703,12 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     width: 100%;
     box-sizing: border-box;
 }}
-.footer-brand {{ font-size: 13.5px; font-weight: 700; color: {th['primary']} !important; margin-bottom: 3px; text-align: center !important; }}
-.footer-rights {{ font-size: 11px; color: #64748b !important; text-align: center !important; }}
+.footer-brand {{ font-size: 14px; font-weight: 800; color: {th['primary']} !important; margin-bottom: 3px; text-align: center !important; }}
+.footer-rights {{ font-size: 11.5px; font-weight: 600; color: #64748b !important; text-align: center !important; }}
 </style>
 """, unsafe_allow_html=True)
 
-# حقن مباشر في head الصفحة الأم + MutationObserver لإجبار القوائم المنسدلة المنبثقة (Portals) على الاتجاه من اليمين لليسار RTL
+# حقن خط Cairo & Tajawal في الصفحة الأم + إخفاء شريط التمرير ودوائر الراديو + فرض RTL للقوائم المنسدلة
 components.html(f"""
 <script>
 (function() {{
@@ -1680,6 +1717,17 @@ components.html(f"""
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
 
+        // 1. حقن خطوط منصة زياد الذكية (Cairo & Tajawal) مباشرة في head المتصفح
+        var fontId = 'ziyad-google-fonts';
+        if (!pDoc.getElementById(fontId)) {{
+            var link = pDoc.createElement('link');
+            link.id = fontId;
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap';
+            pDoc.head.appendChild(link);
+        }}
+
+        // 2. إخفاء أشرطة التمرير ودوائر الراديو وتوحيد الخط في الصفحة الأم
         var styleId = 'ziyad-global-portal-rtl';
         var existingStyle = pDoc.getElementById(styleId);
         if (!existingStyle) {{
@@ -1688,6 +1736,24 @@ components.html(f"""
             pDoc.head.appendChild(existingStyle);
         }}
         existingStyle.innerHTML = `
+            *::-webkit-scrollbar {{
+                display: none !important;
+                width: 0px !important;
+                height: 0px !important;
+            }}
+            *, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .block-container {{
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+            }}
+            .block-container {{
+                overflow: visible !important;
+            }}
+            div[data-testid="stRadio"] label > div:first-child,
+            div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {{
+                display: none !important;
+                width: 0px !important;
+                height: 0px !important;
+            }}
             div[data-baseweb="popover"],
             div[data-baseweb="popover"] *,
             div[data-baseweb="menu"],
@@ -1700,7 +1766,7 @@ components.html(f"""
             li[role="option"] * {{
                 direction: rtl !important;
                 text-align: right !important;
-                font-family: 'Readex Pro', 'Cairo', sans-serif !important;
+                font-family: 'Cairo', 'Tajawal', sans-serif !important;
             }}
             li[role="option"] {{
                 display: flex !important;
@@ -1710,12 +1776,13 @@ components.html(f"""
                 padding: 10px 14px !important;
                 background-color: #ffffff !important;
                 color: #0f172a !important;
+                font-weight: 700 !important;
             }}
             li[role="option"]:hover,
             li[role="option"][aria-selected="true"] {{
                 background-color: {th['tint']} !important;
                 color: {th['primary']} !important;
-                font-weight: 700 !important;
+                font-weight: 800 !important;
             }}
         `;
 
@@ -1731,6 +1798,11 @@ components.html(f"""
                     ch.style.setProperty('direction', 'rtl', 'important');
                     ch.style.setProperty('text-align', 'right', 'important');
                 }});
+            }});
+            // إخفاء دوائر الراديو برمجياً
+            var radioCircles = pDoc.querySelectorAll('div[data-testid="stRadio"] label > div:first-child');
+            radioCircles.forEach(function(rc) {{
+                rc.style.setProperty('display', 'none', 'important');
             }});
         }}
 
@@ -1988,9 +2060,9 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
         <meta charset="UTF-8">
         <title>ملف الإنجاز المهني - {safe_t_name}</title>
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap');
             * {{ box-sizing: border-box; direction: rtl; }}
-            body {{ font-family: 'Readex Pro', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; direction: rtl; text-align: right; }}
+            body {{ font-family: 'Cairo', 'Tajawal', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; direction: rtl; text-align: right; }}
             
             .page {{
                 background-color: white;
@@ -2009,19 +2081,19 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
             }}
             
             .cover-page {{ border: {cover_border}; border-radius: {box_radius}; padding: 35px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; }}
-            .cover-title {{ color: {rep_color}; font-size: 36px; font-weight: 700; margin-bottom: 10px; }}
-            .cover-subtitle {{ font-size: 19px; margin-bottom: 35px; font-weight: 600; color: #475569; }}
+            .cover-title {{ color: {rep_color}; font-size: 36px; font-weight: 900; margin-bottom: 10px; }}
+            .cover-subtitle {{ font-size: 19px; margin-bottom: 35px; font-weight: 700; color: #475569; }}
             .info-table {{ width: 88%; border-collapse: collapse; margin: 0 auto; font-size: 16px; }}
             .info-table th, .info-table td {{ border: 1px solid #cbd5e1; padding: 12px; text-align: center; }}
-            .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: 700; color: {rep_color}; }}
+            .info-table th {{ background-color: #f8fafc; width: 32%; font-weight: 800; color: {rep_color}; }}
             
-            .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 6px; margin-bottom: 10px; font-size: 12px; font-weight: 700; flex-shrink: 0; }}
+            .header-container {{ display: flex; justify-content: space-between; border-bottom: 2px solid {rep_color}; padding-bottom: 6px; margin-bottom: 10px; font-size: 12px; font-weight: 800; flex-shrink: 0; }}
             .header-right {{ color: {rep_color}; text-align: right; }}
             .header-left {{ text-align: left; }}
             
-            .index-title {{ color: {rep_color}; font-size: 22px; font-weight: 700; margin-bottom: 16px; text-align: right; }}
+            .index-title {{ color: {rep_color}; font-size: 22px; font-weight: 800; margin-bottom: 16px; text-align: right; }}
             .index-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
-            .index-table th {{ background-color: #f1f5f9; color: {rep_color}; padding: 10px; text-align: center; border-bottom: 2px solid {rep_color}; }}
+            .index-table th {{ background-color: #f1f5f9; color: {rep_color}; padding: 10px; text-align: center; border-bottom: 2px solid {rep_color}; font-weight: 800; }}
             .index-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; }}
             
             .content-wrapper {{ flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }}
@@ -2037,19 +2109,19 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
                 margin-bottom: 10px;
                 flex-shrink: 0;
             }}
-            .top-ev-title {{ font-size: 16px; font-weight: 700; text-align: right; }}
+            .top-ev-title {{ font-size: 16px; font-weight: 800; text-align: right; }}
             .top-std-sub {{ font-size: 12.5px; opacity: 0.92; text-align: left; }}
             
             .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; flex-shrink: 0; }}
             .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 7px 12px; text-align: center; border-radius: {box_radius}; }}
-            .meta-title {{ font-size: 11px; color: #64748b; font-weight: 600; }}
-            .meta-value {{ font-size: 13px; font-weight: 700; color: #0f172a; }}
+            .meta-title {{ font-size: 11px; color: #64748b; font-weight: 700; }}
+            .meta-value {{ font-size: 13px; font-weight: 800; color: #0f172a; }}
             
             .desc-header {{
                 border-right: 4px solid {rep_color};
                 padding-right: 8px;
                 font-size: 13.5px;
-                font-weight: 700;
+                font-weight: 800;
                 color: {rep_color};
                 margin-bottom: 4px;
                 flex-shrink: 0;
@@ -2076,7 +2148,7 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
                 background-color: #e6f2ef;
                 color: {rep_color};
                 text-align: center;
-                font-weight: 700;
+                font-weight: 800;
                 font-size: 13px;
                 padding: 5px;
                 border-radius: 6px;
@@ -2147,8 +2219,8 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
     html_content += f"""
     <div class="page">
         <div class="cover-page">
-            <div style="font-size:15px; font-weight:700; color:{rep_color}; margin-bottom:8px;">المملكة العربية السعودية • وزارة التعليم</div>
-            <div style="font-size:13px; color:#b45309; font-weight:700; margin-bottom:12px;">🎓 منصة زياد الذكية لتوثيق الأداء المهني</div>
+            <div style="font-size:15px; font-weight:800; color:{rep_color}; margin-bottom:8px;">المملكة العربية السعودية • وزارة التعليم</div>
+            <div style="font-size:13px; color:#b45309; font-weight:800; margin-bottom:12px;">🎓 منصة زياد الذكية لتوثيق الأداء المهني</div>
             <div class="cover-title">ملف الإنجاز المهني</div>
             <div class="cover-subtitle">توثيق شواهد الأداء الوظيفي</div>
             <table class="info-table">
@@ -2301,7 +2373,7 @@ def render_footer():
     safe_name = html.escape(str(user_info.get("full_name", "")))
     footer_html = (
         f'<div class="ziyad-footer" dir="rtl">'
-        f'<div class="footer-brand">🎓 منصة زياد الذكية | نظام ملف الإنجاز المهني الإلكتروني</div>'
+        f'<div class="footer-brand">🎓 منصة زياد الذكية | بوابة التعليم الذكية {year_now}</div>'
         f'<div class="footer-rights">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {safe_name}</div>'
         f'</div>'
     )
@@ -2316,9 +2388,9 @@ def login_page():
     login_hero = (
         f'<div class="hero-wrapper" dir="rtl" style="text-align:center;">'
         f'<div style="display:flex; justify-content:center; margin-bottom:8px;">{ZIYAD_LOGO_SVG}</div>'
-        f'<div style="font-size:15px; color:#fbbf24 !important; font-weight:700; text-align:center;">منصة زياد الذكية</div>'
-        f'<div style="font-size:22px; font-weight:800; margin:5px 0; color:white !important; text-align:center;">ملف الإنجاز المهني الإلكتروني</div>'
-        f'<div style="font-size:12.5px; opacity:0.95; color:white !important; text-align:center;">أ. {safe_name} • {safe_school}</div>'
+        f'<div style="font-size:16px; color:#fbbf24 !important; font-weight:800; text-align:center;">منصة زياد الذكية • بوابة التعليم الذكية 2026</div>'
+        f'<div style="font-size:23px; font-weight:900; margin:5px 0; color:white !important; text-align:center;">ملف الإنجاز المهني الإلكتروني</div>'
+        f'<div style="font-size:13px; opacity:0.95; color:white !important; font-weight:700; text-align:center;">أ. {safe_name} • {safe_school}</div>'
         f'</div>'
     )
     st.markdown(login_hero, unsafe_allow_html=True)
@@ -2384,7 +2456,7 @@ def main_app():
     )))
     signed_urls_map = get_signed_urls_batch(all_file_paths)
 
-    # الهيدر والبنر الاحترافي
+    # الهيدر والبنر الاحترافي بهوية منصة زياد الذكية
     greeting, today_str = get_greeting_and_dates()
     safe_name = html.escape(str(user_info.get("full_name", "")))
     safe_school = html.escape(str(user_info.get("school_name", "")))
@@ -2397,7 +2469,7 @@ def main_app():
         f'<div class="hero-top" dir="rtl">'
         f'<div class="brand-box">{ZIYAD_LOGO_SVG}'
         f'<div><div class="brand-title">منصة زياد الذكية</div>'
-        f'<div class="brand-sub">نظام إدارة وتوثيق شواهد الأداء الوظيفي</div></div></div>'
+        f'<div class="brand-sub">بوابة التعليم الذكية 2026 • ملف الإنجاز المهني</div></div></div>'
         f'<div class="date-pill">🗓️ {today_str}</div>'
         f'</div>'
         f'<div class="hero-body" dir="rtl">'
@@ -2426,7 +2498,7 @@ def main_app():
                 st.query_params.clear()
                 st.rerun()
 
-    # شريط التنقل الرئيسي (4 تبويبات متوازنة)
+    # شريط التنقل الرئيسي (4 تبويبات متوازنة بدون دوائر راديو)
     if is_visitor:
         nav_map = {
             'home': "🏠 الرئيسية",
@@ -2477,7 +2549,7 @@ def main_app():
     pct = int((stds_with_ev / total_stds) * 100) if total_stds else 0
 
     # ----------------------------------------
-    # 🏠 1. الصفحة الرئيسية (تفتح فوراً بدون أي تأخير)
+    # 🏠 1. الصفحة الرئيسية
     # ----------------------------------------
     if st.session_state.current_page == 'home':
         kpi_html = (
@@ -2488,7 +2560,7 @@ def main_app():
             f'<div class="kpi-card"><div class="kpi-val" style="color:#dc2626 !important;">{empty_stds}</div><div class="kpi-lbl">بنود فارغة</div></div>'
             f'</div>'
             f'<div class="progress-card" dir="rtl">'
-            f'<div style="display:flex; justify-content:space-between; font-weight:700; font-size:13px; color:#1e293b;">'
+            f'<div style="display:flex; justify-content:space-between; font-weight:800; font-size:13.5px; color:#1e293b;">'
             f'<span style="color:#1e293b !important;">نسبة تغطية معايير الأداء الوظيفي ({safe_year}هـ)</span>'
             f'<span style="color:{th["primary"]} !important;">{pct}%</span>'
             f'</div>'
@@ -2531,13 +2603,13 @@ def main_app():
             ])
             
             if count == 0:
-                status_txt = '<span style="color:#dc2626 !important; font-size:11.5px; font-weight:600;">لا شواهد بعد</span>'
+                status_txt = '<span style="color:#dc2626 !important; font-size:11.5px; font-weight:700;">لا شواهد بعد</span>'
                 num_cls = "std-num std-num-empty"
             elif count >= target:
-                status_txt = f'<span style="color:{th["primary"]} !important; font-size:11.5px; font-weight:700;">مكتمل ({count} شواهد)</span>'
+                status_txt = f'<span style="color:{th["primary"]} !important; font-size:11.5px; font-weight:800;">مكتمل ({count} شواهد)</span>'
                 num_cls = "std-num"
             else:
-                status_txt = f'<span style="color:{th["accent"]} !important; font-size:11.5px; font-weight:600;">{count} شاهد • بقي {target - count}</span>'
+                status_txt = f'<span style="color:{th["accent"]} !important; font-size:11.5px; font-weight:700;">{count} شاهد • بقي {target - count}</span>'
                 num_cls = "std-num"
 
             safe_std_t = html.escape(str(std["title"]))
@@ -2630,7 +2702,7 @@ def main_app():
                         f'<div class="ev-box" dir="rtl">'
                         f'<div class="ev-header-row" dir="rtl">'
                         f'<span class="ev-title-right" dir="rtl">📄 {order_idx} - {safe_ev_t}</span>'
-                        f'<span style="background:{th["tint"]}; color:{th["primary_dark"]} !important; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:700;" dir="rtl">'
+                        f'<span style="background:{th["tint"]}; color:{th["primary_dark"]} !important; padding:4px 12px; border-radius:10px; font-size:12px; font-weight:800;" dir="rtl">'
                         f'📅 تاريخ التنفيذ: {exec_date}</span></div>'
                         f'<div class="ev-desc-rtl" dir="rtl">{safe_ev_d}</div>'
                         f'{thumbs_html}</div>'
@@ -2762,7 +2834,7 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة (المكان الحصري لتصدير PDF و Word)
+    # 📄 3. صفحة التقارير والطباعة
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
@@ -2791,7 +2863,7 @@ def main_app():
             st.success("✅ تم تجهيز تقرير PDF! إذا لم تفتح نافذة الطباعة تلقائياً، اضغط على الزر الأخضر بالأسفل:")
             components.html(f"""
                 <div style="text-align: center; margin: 4px 0;">
-                    <button onclick="openPrintWindow()" style="width: 100%; height: 50px; background-color: #146c59; color: white; border: none; border-radius: 14px; font-size: 15.5px; font-weight: bold; cursor: pointer; font-family: 'Readex Pro', 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(20,108,89,0.2);">
+                    <button onclick="openPrintWindow()" style="width: 100%; height: 50px; background-color: #146c59; color: white; border: none; border-radius: 14px; font-size: 15.5px; font-weight: 800; cursor: pointer; font-family: 'Cairo', 'Tajawal', sans-serif; box-shadow: 0 4px 10px rgba(20,108,89,0.2);">
                         🖨️ فتح نافذة الطباعة وحفظ PDF الآن
                     </button>
                 </div>
@@ -2862,7 +2934,7 @@ def main_app():
             )
 
     # ----------------------------------------
-    # ⚙️ 4. صفحة حسابي (عداد المساحة السريع + الأرشيف + النسخ الاحتياطي المخصص للبيانات وحقيبة ZIP)
+    # ⚙️ 4. صفحة حسابي
     # ----------------------------------------
     elif st.session_state.current_page == 'settings' and not is_visitor:
         st.markdown("#### ⚙️ إعدادات الحساب والمظهر والأرشيف والنسخ الاحتياطي")
