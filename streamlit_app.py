@@ -1137,7 +1137,7 @@ th = THEMES[active_theme_key]
 ZIYAD_LOGO_SVG = '<svg width="52" height="52" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 7. التصميم الشامل وتوحيد خط Cairo على جميع العناصر والتبويبات
+# 7. التصميم الشامل وتوحيد خط Cairo وإخفاء دوائر الراديو وعلامات الروابط
 # ==========================================
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1189,7 +1189,6 @@ body::-webkit-scrollbar,
     touch-action: pan-y !important;
 }}
 
-/* توحيد الخط الإجباري (Cairo) على جميع النصوص والبنرات والبطاقات والأزرار وحقول الإدخال مع استثناء الأيقونات */
 *:not([data-testid="stIconMaterial"]):not(.material-icons):not([class*="material-symbols"]):not(svg):not(path) {{
     font-family: 'Cairo', sans-serif !important;
 }}
@@ -1198,6 +1197,24 @@ header {{visibility: hidden; height: 0 !important;}}
 #MainMenu {{visibility: hidden;}}
 footer {{visibility: hidden;}}
 .stSidebar {{display: none !important;}}
+
+/* إخفاء أيقونات الروابط (Anchor Links) التي تظهر بجانب العناوين تماماً */
+[data-testid="stHeaderActionElements"],
+.stMarkdown h1 a,
+.stMarkdown h2 a,
+.stMarkdown h3 a,
+.stMarkdown h4 a,
+.stMarkdown h5 a,
+.stMarkdown h6 a,
+h1 > a, h2 > a, h3 > a, h4 > a, h5 > a, h6 > a,
+a.anchor-link {{
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    pointer-events: none !important;
+}}
 
 .block-container {{
     padding: 0.7rem 0.75rem 2rem 0.75rem !important;
@@ -1233,6 +1250,25 @@ h1, h2, h3, h4, h5, h6, p, label, .stMarkdown,
 h1, h2, h3, h4, h5 {{
     font-weight: 800 !important;
     letter-spacing: 0px !important;
+}}
+
+.section-heading {{
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+    margin: 8px 0 10px 0 !important;
+    direction: rtl !important;
+    text-align: right !important;
+}}
+.sub-heading {{
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 15.5px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 10px 0 8px 0 !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 
 span[data-testid="stIconMaterial"], .material-icons, [class*="material-symbols"] {{
@@ -1427,7 +1463,7 @@ div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSub
 }}
 
 /* ========================================================= */
-/* شريط التبويبات الكبسولات (Pills) - إخفاء دائرة الراديو فقط مع إبقاء النصوص كاملة وواضحة */
+/* شريط التبويبات الكبسولات (Pills) - إخفاء دائرة الراديو الحمراء/الرمادية نهائياً */
 /* ========================================================= */
 div[data-testid="stRadio"] {{
     width: 100% !important;
@@ -1460,7 +1496,7 @@ div[data-testid="stRadio"] label[data-baseweb="radio"] {{
     min-width: 0 !important;
     min-height: 42px !important;
     margin: 0 !important;
-    padding: 8px 12px !important;
+    padding: 8px 10px !important;
     border-radius: 12px !important;
     background: #f8fafc !important;
     border: 1.5px solid #e2e8f0 !important;
@@ -1476,20 +1512,23 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {{
     background: {th['tint']} !important;
     border-color: {th['primary']} !important;
 }}
-/* إخفاء دائرة الراديو الأولى فقط دون المساس بحاوية النص الثانية */
-div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-of-type,
-div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-of-type,
+/* إخفاء قاطع لدائرة الراديو (أول div لا يحتوي على النص) */
+div[data-testid="stRadio"] label > div:not(:has([data-testid="stMarkdownContainer"])),
 div[data-testid="stRadio"] input[type="radio"] {{
     display: none !important;
     width: 0 !important;
     height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
     opacity: 0 !important;
+    visibility: hidden !important;
     position: absolute !important;
     pointer-events: none !important;
 }}
-/* إظهار حاوية النص الثانية بشكل كامل ومتمركز */
-div[data-testid="stRadio"] label[data-baseweb="radio"] > div:last-of-type,
-div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:last-of-type,
+/* إظهار حاوية النص بشكل كامل ومتمركز */
+div[data-testid="stRadio"] label > div:has([data-testid="stMarkdownContainer"]),
 div[data-testid="stRadio"] label [data-testid="stMarkdownContainer"] {{
     display: flex !important;
     align-items: center !important;
@@ -1831,7 +1870,7 @@ div[data-testid="stRadio"] label:has(input:checked) span {{
 </style>
 """, unsafe_allow_html=True)
 
-# حقن خط Cairo في الصفحة الأم + معالجة التبويبات بدقة بدون إخفاء النصوص + فرض RTL للقوائم المنسدلة
+# حقن خط Cairo في الصفحة الأم + إزالة دوائر الراديو وعلامات الروابط نهائياً عبر الـ DOM + فرض RTL للقوائم المنسدلة
 components.html(f"""
 <script>
 (function() {{
@@ -1869,11 +1908,18 @@ components.html(f"""
             *:not([data-testid="stIconMaterial"]):not(.material-icons):not([class*="material-symbols"]):not(svg):not(path) {{
                 font-family: 'Cairo', sans-serif !important;
             }}
+            [data-testid="stHeaderActionElements"],
+            h1 a, h2 a, h3 a, h4 a, h5 a, h6 a, a.anchor-link {{
+                display: none !important;
+                visibility: hidden !important;
+                width: 0 !important;
+                height: 0 !important;
+                opacity: 0 !important;
+            }}
             .block-container {{
                 overflow: visible !important;
             }}
-            div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-of-type,
-            div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-of-type,
+            div[data-testid="stRadio"] label > div:not(:has([data-testid="stMarkdownContainer"])),
             div[data-testid="stRadio"] input[type="radio"] {{
                 display: none !important;
                 width: 0px !important;
@@ -1881,8 +1927,7 @@ components.html(f"""
                 opacity: 0 !important;
                 position: absolute !important;
             }}
-            div[data-testid="stRadio"] label[data-baseweb="radio"] > div:last-of-type,
-            div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:last-of-type,
+            div[data-testid="stRadio"] label > div:has([data-testid="stMarkdownContainer"]),
             div[data-testid="stRadio"] label [data-testid="stMarkdownContainer"] {{
                 display: flex !important;
                 align-items: center !important;
@@ -1938,17 +1983,31 @@ components.html(f"""
                     ch.style.setProperty('text-align', 'right', 'important');
                 }});
             }});
+
+            var anchors = pDoc.querySelectorAll('[data-testid="stHeaderActionElements"], h1 a, h2 a, h3 a, h4 a, h5 a, h6 a');
+            anchors.forEach(function(a) {{
+                a.style.setProperty('display', 'none', 'important');
+            }});
+
             var radioLabels = pDoc.querySelectorAll('div[data-testid="stRadio"] label');
             radioLabels.forEach(function(lbl) {{
-                var directDivs = Array.from(lbl.children).filter(function(c) {{ return c.tagName === 'DIV'; }});
-                if (directDivs.length >= 2) {{
-                    directDivs[0].style.setProperty('display', 'none', 'important');
-                    directDivs[directDivs.length - 1].style.setProperty('display', 'flex', 'important');
-                    directDivs[directDivs.length - 1].style.setProperty('visibility', 'visible', 'important');
-                    directDivs[directDivs.length - 1].style.setProperty('opacity', '1', 'important');
-                    directDivs[directDivs.length - 1].style.setProperty('width', '100%', 'important');
-                    directDivs[directDivs.length - 1].style.setProperty('justify-content', 'center', 'important');
-                }}
+                Array.from(lbl.children).forEach(function(child) {{
+                    if (child.tagName === 'INPUT') {{
+                        child.style.setProperty('display', 'none', 'important');
+                    }} else if (child.tagName === 'DIV') {{
+                        if (child.querySelector('[data-testid="stMarkdownContainer"]') || (child.textContent && child.textContent.trim().length > 0)) {{
+                            child.style.setProperty('display', 'flex', 'important');
+                            child.style.setProperty('visibility', 'visible', 'important');
+                            child.style.setProperty('opacity', '1', 'important');
+                            child.style.setProperty('width', '100%', 'important');
+                            child.style.setProperty('justify-content', 'center', 'important');
+                        }} else {{
+                            child.style.setProperty('display', 'none', 'important');
+                            child.style.setProperty('width', '0px', 'important');
+                            child.style.setProperty('height', '0px', 'important');
+                        }}
+                    }}
+                }});
             }});
         }}
 
@@ -2035,7 +2094,7 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
 
         with tab_edit:
             if storage_files:
-                st.markdown("##### 🖼️ الصور والمرفقات الحالية (يمكنك حذف أي مرفق بمفرده):")
+                st.markdown('<div class="sub-heading">🖼️ الصور والمرفقات الحالية (يمكنك حذف أي مرفق بمفرده):</div>', unsafe_allow_html=True)
                 cols_count = min(len(storage_files), 3)
                 att_cols = st.columns(cols_count)
                 for idx_f, f_obj in enumerate(storage_files):
@@ -2553,8 +2612,8 @@ def login_page():
     st.markdown(login_hero, unsafe_allow_html=True)
 
     login_modes = {
-        'teacher': "🔒 دخول المعلم ",
-        'visitor': "👁️ دخول الزائر "
+        'teacher': "🔒 دخول المعلم",
+        'visitor': "👁️ دخول الزائر"
     }
     mode_keys = list(login_modes.keys())
     selected_mode = st.radio(
@@ -2803,7 +2862,7 @@ def main_app():
     # 📋 2. صفحة البنود والشواهد
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
-        st.markdown("#### 📋 استعراض وإدارة بنود الأداء والشواهد")
+        st.markdown('<div class="section-heading">📋 استعراض وإدارة بنود الأداء والشواهد</div>', unsafe_allow_html=True)
         
         options_map = {0: "🔍 عرض ملخص جميع البنود والشواهد المرفوعة"}
         for s in stds:
@@ -2857,7 +2916,7 @@ def main_app():
             std_data = [s for s in stds if s['id'] == std_id][0]
             std_evidences = sort_evidences_chronologically([e for e in evidences if e['standard_id'] == std_id])
 
-            st.markdown(f"##### 📂 الشواهد المرفوعة في البند {std_id}: {std_data['title']} ({len(std_evidences)})")
+            st.markdown(f'<div class="sub-heading">📂 الشواهد المرفوعة في البند {std_id}: {std_data["title"]} ({len(std_evidences)})</div>', unsafe_allow_html=True)
             if not std_evidences:
                 st.info("لا توجد شواهد مرفوعة في هذا البند حتى الآن. يمكنك إضافة شاهد جديد من النموذج بالأسفل.")
             else:
@@ -2891,7 +2950,7 @@ def main_app():
                     st.markdown(f'<div class="idea-card" dir="rtl"><span>💡 {safe_idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
 
             if not is_visitor:
-                st.markdown("##### ➕ إضافة شاهد جديد لهذا البند")
+                st.markdown('<div class="sub-heading">➕ إضافة شاهد جديد لهذا البند</div>', unsafe_allow_html=True)
                 
                 desc_key = f"draft_desc_{std_id}"
                 goal_key = f"draft_goal_{std_id}"
@@ -3007,7 +3066,7 @@ def main_app():
     # 📄 3. صفحة التقارير والطباعة
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
-        st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
+        st.markdown('<div class="section-heading">📄 تصدير وطباعة ملف الإنجاز</div>', unsafe_allow_html=True)
         st.info(f"📊 الملف جاهز للتصدير ويحتوي على ({total_ev_count}) شاهد موزعة على ({stds_with_ev}) من أصل ({total_stds}) معايير. اختر التصميم ثم اضغط على الزر المطلوب:")
         
         report_style = st.selectbox(
@@ -3108,7 +3167,7 @@ def main_app():
     # ⚙️ 4. صفحة حسابي
     # ----------------------------------------
     elif st.session_state.current_page == 'settings' and not is_visitor:
-        st.markdown("#### ⚙️ إعدادات الحساب والمظهر والأرشيف والنسخ الاحتياطي")
+        st.markdown('<div class="section-heading">⚙️ إعدادات الحساب والمظهر والأرشيف والنسخ الاحتياطي</div>', unsafe_allow_html=True)
 
         storage_stats = fetch_storage_usage_stats()
         render_storage_meter_card(storage_stats)
@@ -3117,14 +3176,14 @@ def main_app():
         
         with t1:
             with st.form("profile_form"):
-                st.markdown("##### 🎨 مظهر التطبيق")
+                st.markdown('<div class="sub-heading">🎨 مظهر التطبيق</div>', unsafe_allow_html=True)
                 theme_keys = list(THEMES.keys())
                 theme_labels = [THEMES[k]["name"] for k in theme_keys]
                 current_idx = theme_keys.index(active_theme_key) if active_theme_key in theme_keys else 0
                 selected_theme_label = st.selectbox("اختر المظهر اللوني للتطبيق:", theme_labels, index=current_idx)
                 chosen_theme_key = theme_keys[theme_labels.index(selected_theme_label)]
 
-                st.markdown("##### 📝 البيانات الأساسية")
+                st.markdown('<div class="sub-heading">📝 البيانات الأساسية</div>', unsafe_allow_html=True)
                 c1, c2 = st.columns(2)
                 with c1:
                     n_name = st.text_input("اسم المعلم:", value=user_info['full_name'])
@@ -3135,7 +3194,7 @@ def main_app():
                     n_stage = st.text_input("المرحلة الدراسية:", value=user_info['education_stage'])
                     n_prin = st.text_input("اسم مدير المدرسة:", value=user_info['principal_name'])
 
-                st.markdown("##### ✨ إعداد الذكاء الاصطناعي (اختياري)")
+                st.markdown('<div class="sub-heading">✨ إعداد الذكاء الاصطناعي (اختياري)</div>', unsafe_allow_html=True)
                 g_key_in = st.text_input(
                     "مفتاح Gemini API (اختياري - في حال تركه فارغاً يعمل محرك القوالب التربوية الذكي المدمج مجاناً):",
                     value=st.session_state.custom_gemini_key,
@@ -3174,7 +3233,7 @@ def main_app():
             )
 
             if sub_section == "archive_sec":
-                st.markdown("##### 📅 أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية")
+                st.markdown('<div class="sub-heading">📅 أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية</div>', unsafe_allow_html=True)
                 st.caption("في نهاية العام الدراسي، يمكنك أرشفة الملف الحالي وفتح ملف إنجاز جديد للعام القادم مع بقاء جميع شواهدك السابقة محفوظة.")
                 
                 with st.form("archive_and_new_year_form", clear_on_submit=True):
@@ -3195,7 +3254,7 @@ def main_app():
                         else:
                             st.warning("يرجى كتابة اسم العام الدراسي الجديد.")
 
-                st.markdown("##### 🗂️ سجل ملفات الإنجاز المحفوظة")
+                st.markdown('<div class="sub-heading">🗂️ سجل ملفات الإنجاز المحفوظة</div>', unsafe_allow_html=True)
                 for y in all_years:
                     y_ev_res = supabase.table("evidences").select("id", count="exact").eq("year_id", y['id']).execute()
                     y_count = y_ev_res.count if y_ev_res.count is not None else len(y_ev_res.data)
@@ -3229,7 +3288,7 @@ def main_app():
                                     st.rerun()
 
             else:
-                st.markdown("##### 📤 النسخ الاحتياطي للأصول والبيانات (للحفظ الخارجي والاستعادة)")
+                st.markdown('<div class="sub-heading">📤 النسخ الاحتياطي للأصول والبيانات (للحفظ الخارجي والاستعادة)</div>', unsafe_allow_html=True)
                 st.caption("لحفظ نسخة أمان كاملة على جهازك أو قرصك الخارجي (بينما طباعة PDF وتصدير Word متاحان في تبويب 📄 التقرير):")
 
                 if st.button("🗂️ تجهيز حقيبة المرفقات والصور الأصلية مرتبة بالمجلدات (.zip)", use_container_width=True):
@@ -3273,7 +3332,7 @@ def main_app():
                 )
 
                 st.write("---")
-                st.markdown("##### 📥 استعادة نسخة احتياطية سابقة (Restore)")
+                st.markdown('<div class="sub-heading">📥 استعادة نسخة احتياطية سابقة (Restore)</div>', unsafe_allow_html=True)
                 uploaded_backup = st.file_uploader("ارفع ملف النسخة الاحتياطية (.json) لاستعادة الشواهد والبيانات:", type=["json"])
                 if uploaded_backup is not None:
                     if st.button("🔄 بدء استعادة البيانات الآن", type="primary", use_container_width=True):
@@ -3304,7 +3363,7 @@ def main_app():
                             st.error(f"تعذر قراءة ملف النسخة الاحتياطية: {e}")
 
         with t3:
-            st.markdown("##### 🔗 التحكم في وصول الزوار (قراءة ومشاهدة فقط)")
+            st.markdown('<div class="sub-heading">🔗 التحكم في وصول الزوار (قراءة ومشاهدة فقط)</div>', unsafe_allow_html=True)
             with st.form("visitor_settings_form"):
                 allow_v = st.checkbox("تفعيل السماح بدخول الزوار عبر الرمز السري", value=user_info.get("allow_visitor", True))
                 v_code_input = st.text_input("الرمز السري للزائر:", value=str(user_info.get("visitor_code", "1448")))
@@ -3322,7 +3381,7 @@ def main_app():
                         st.error(f"يرجى التأكد من تحديث جدول user_profile: {e}")
 
             curr_code = user_info.get("visitor_code", "1448")
-            st.info(f"💡 **رابط المشاركة السريعة للزائر:** أضف `?visitor={curr_code}` لنهاية رابط موقعك، أو أعطِ الرمز `{curr_code}` للزائر ليدخله في تبويب (دخول زائر).")
+            st.info(f"💡 **رابط المشاركة السريعة للزائر:** أضف `?visitor={curr_code}` لنهاية رابط موقعك، أو أعطِ الرمز `{curr_code}` للزائر ليدخله في تبويب (دخول الزائر).")
 
         with t4:
             if st.button("🚪 تسجيل الخروج من الحساب", type="primary", use_container_width=True):
