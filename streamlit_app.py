@@ -1512,7 +1512,6 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {{
     background: {th['tint']} !important;
     border-color: {th['primary']} !important;
 }}
-/* إخفاء قاطع لدائرة الراديو (أول div لا يحتوي على النص) */
 div[data-testid="stRadio"] label > div:not(:has([data-testid="stMarkdownContainer"])),
 div[data-testid="stRadio"] input[type="radio"] {{
     display: none !important;
@@ -1527,7 +1526,6 @@ div[data-testid="stRadio"] input[type="radio"] {{
     position: absolute !important;
     pointer-events: none !important;
 }}
-/* إظهار حاوية النص بشكل كامل ومتمركز */
 div[data-testid="stRadio"] label > div:has([data-testid="stMarkdownContainer"]),
 div[data-testid="stRadio"] label [data-testid="stMarkdownContainer"] {{
     display: flex !important;
@@ -1630,25 +1628,66 @@ div[data-testid="stRadio"] label:has(input:checked) span {{
     border-bottom: 1px solid #f1f5f9;
 }}
 
-/* شارات الفوتر السفلية في صفحة الدخول */
-.login-footer-badges {{
+/* بطاقات بيانات التواصل والمنصات السفلية */
+.contact-grid-3 {{
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     margin-top: 12px;
     direction: rtl !important;
 }}
-.login-f-pill {{
+.contact-grid-2 {{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+    direction: rtl !important;
+}}
+@media (max-width: 640px) {{
+    .contact-grid-3 {{
+        grid-template-columns: 1fr;
+    }}
+    .contact-grid-2 {{
+        grid-template-columns: 1fr;
+    }}
+}}
+.contact-pill-card {{
     font-family: 'Cairo', sans-serif !important;
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 10px 8px;
+    border-radius: 14px;
+    padding: 10px 12px;
     text-align: center !important;
+    text-decoration: none !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    transition: all 0.18s ease;
+}}
+.contact-pill-card:hover {{
+    border-color: {th['primary']} !important;
+    background: {th['tint']} !important;
+    transform: translateY(-2px);
+}}
+.contact-pill-title {{
+    font-family: 'Cairo', sans-serif !important;
     font-size: 12.5px !important;
     font-weight: 800 !important;
+    color: {th['primary']} !important;
+    text-align: center !important;
+}}
+.contact-pill-val {{
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
     color: #334155 !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    direction: ltr !important;
+    unicode-bidi: embed;
+    text-align: center !important;
+    word-break: break-all;
 }}
 
 /* بنر الصفحة الرئيسية بعد الدخول */
@@ -2576,22 +2615,45 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
 def render_footer(is_login=False):
     year_now = datetime.date.today().year
     safe_name = html.escape(str(user_info.get("full_name", "")))
+    contact_cards_html = (
+        f'<div class="contact-grid-3">'
+        f'<a href="mailto:ziyadalamri30@gmail.com" class="contact-pill-card">'
+        f'<span class="contact-pill-title">✉️ البريد الإلكتروني</span>'
+        f'<span class="contact-pill-val">ziyadalamri30@gmail.com</span>'
+        f'</a>'
+        f'<a href="https://wa.me/966534900049" target="_blank" class="contact-pill-card">'
+        f'<span class="contact-pill-title">💬 الواتساب</span>'
+        f'<span class="contact-pill-val">966534900049</span>'
+        f'</a>'
+        f'<a href="https://t.me/ZiyadAlmoamri" target="_blank" class="contact-pill-card">'
+        f'<span class="contact-pill-title">✈️ التليجرام</span>'
+        f'<span class="contact-pill-val">@ZiyadAlmoamri</span>'
+        f'</a>'
+        f'</div>'
+        f'<div class="contact-grid-2">'
+        f'<a href="https://zi-style.streamlit.app" target="_blank" class="contact-pill-card">'
+        f'<span class="contact-pill-title">🧠 منصة أنماط التعلم</span>'
+        f'<span class="contact-pill-val">zi-style.streamlit.app</span>'
+        f'</a>'
+        f'<a href="https://zi-edu.streamlit.app" target="_blank" class="contact-pill-card">'
+        f'<span class="contact-pill-title">🎓 منصة زياد الذكية</span>'
+        f'<span class="contact-pill-val">zi-edu.streamlit.app</span>'
+        f'</a>'
+        f'</div>'
+    )
     if is_login:
         footer_html = (
             f'<div style="margin-top:26px; text-align:center;" dir="rtl">'
             f'<div class="footer-brand">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {year_now}</div>'
-            f'<div class="login-footer-badges">'
-            f'<div class="login-f-pill">🛡️ توثيق رسمي معتمد</div>'
-            f'<div class="login-f-pill">☁️ حفظ سحابي آمن</div>'
-            f'<div class="login-f-pill">🖨️ تقارير A4 ذكية</div>'
-            f'</div>'
+            f'{contact_cards_html}'
             f'</div>'
         )
     else:
         footer_html = (
             f'<div class="ziyad-footer" dir="rtl">'
             f'<div class="footer-brand">🎓 منصة زياد الذكية | بوابة التعليم الذكية {year_now}</div>'
-            f'<div class="footer-rights">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {safe_name}</div>'
+            f'<div class="footer-rights" style="margin-bottom:10px;">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {safe_name}</div>'
+            f'{contact_cards_html}'
             f'</div>'
         )
     st.markdown(footer_html, unsafe_allow_html=True)
