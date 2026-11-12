@@ -1628,7 +1628,7 @@ div[data-testid="stRadio"] label:has(input:checked) span {{
     border-bottom: 1px solid #f1f5f9;
 }}
 
-/* بطاقات بيانات التواصل والمنصات السفلية */
+/* أزرار التواصل والمنصات المباشرة (بدون إظهار الأرقام أو الإيميل أو الروابط) */
 .contact-grid-3 {{
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1643,51 +1643,47 @@ div[data-testid="stRadio"] label:has(input:checked) span {{
     margin-top: 10px;
     direction: rtl !important;
 }}
-@media (max-width: 640px) {{
+@media (max-width: 520px) {{
     .contact-grid-3 {{
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
     }}
     .contact-grid-2 {{
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
     }}
 }}
 .contact-pill-card {{
     font-family: 'Cairo', sans-serif !important;
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 10px 12px;
+    border-radius: 12px;
+    padding: 11px 10px;
     text-align: center !important;
     text-decoration: none !important;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
     transition: all 0.18s ease;
+    cursor: pointer;
 }}
 .contact-pill-card:hover {{
     border-color: {th['primary']} !important;
     background: {th['tint']} !important;
     transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
 }}
 .contact-pill-title {{
     font-family: 'Cairo', sans-serif !important;
-    font-size: 12.5px !important;
+    font-size: 13px !important;
     font-weight: 800 !important;
-    color: {th['primary']} !important;
-    text-align: center !important;
-}}
-.contact-pill-val {{
-    font-family: 'Cairo', sans-serif !important;
-    font-size: 12px !important;
-    font-weight: 700 !important;
     color: #334155 !important;
-    direction: ltr !important;
-    unicode-bidi: embed;
     text-align: center !important;
-    word-break: break-all;
+    white-space: nowrap;
+}}
+.contact-pill-card:hover .contact-pill-title {{
+    color: {th['primary']} !important;
 }}
 
 /* بنر الصفحة الرئيسية بعد الدخول */
@@ -2619,25 +2615,20 @@ def render_footer(is_login=False):
         f'<div class="contact-grid-3">'
         f'<a href="mailto:ziyadalamri30@gmail.com" class="contact-pill-card">'
         f'<span class="contact-pill-title">✉️ البريد الإلكتروني</span>'
-        f'<span class="contact-pill-val">ziyadalamri30@gmail.com</span>'
         f'</a>'
         f'<a href="https://wa.me/966534900049" target="_blank" class="contact-pill-card">'
         f'<span class="contact-pill-title">💬 الواتساب</span>'
-        f'<span class="contact-pill-val">966534900049</span>'
         f'</a>'
         f'<a href="https://t.me/ZiyadAlmoamri" target="_blank" class="contact-pill-card">'
         f'<span class="contact-pill-title">✈️ التليجرام</span>'
-        f'<span class="contact-pill-val">@ZiyadAlmoamri</span>'
         f'</a>'
         f'</div>'
         f'<div class="contact-grid-2">'
         f'<a href="https://zi-style.streamlit.app" target="_blank" class="contact-pill-card">'
         f'<span class="contact-pill-title">🧠 منصة أنماط التعلم</span>'
-        f'<span class="contact-pill-val">zi-style.streamlit.app</span>'
         f'</a>'
         f'<a href="https://zi-edu.streamlit.app" target="_blank" class="contact-pill-card">'
         f'<span class="contact-pill-title">🎓 منصة زياد الذكية</span>'
-        f'<span class="contact-pill-val">zi-edu.streamlit.app</span>'
         f'</a>'
         f'</div>'
     )
