@@ -1134,7 +1134,7 @@ if active_theme_key not in THEMES:
     active_theme_key = "emerald"
 th = THEMES[active_theme_key]
 
-ZIYAD_LOGO_SVG = '<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
+ZIYAD_LOGO_SVG = '<svg class="floating-cap-logo" width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
 # 7. التصميم الشامل وتوحيد خط Cairo وإخفاء دوائر الراديو وعلامات الروابط
@@ -1619,6 +1619,14 @@ div[data-testid="stRadio"] label:has(input:checked) span {{
     z-index: 2;
     direction: rtl !important;
     text-align: center !important;
+}}
+@keyframes float-cap {{
+    0%, 100% {{ transform: translateY(0px) rotate(0deg); }}
+    50% {{ transform: translateY(-6px) rotate(-3deg); }}
+}}
+.floating-cap-logo {{
+    animation: float-cap 3.5s ease-in-out infinite !important;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.2));
 }}
 .unified-title-row {{
     display: inline-flex;
