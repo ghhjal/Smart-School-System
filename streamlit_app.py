@@ -1286,16 +1286,19 @@ div[data-baseweb="select"] > div,
 div[data-testid="stTextInput"] input,
 div[data-testid="stTextArea"] textarea,
 div[data-testid="stDateInput"] input,
+div[data-baseweb="select"] *,
 input, textarea {{
-    background-color: #f8fafc !important;
-    background: #f8fafc !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
+    color-scheme: light !important;
     caret-color: {th['primary']} !important;
     direction: rtl !important;
     text-align: right !important;
     font-family: 'Cairo', sans-serif !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
 }}
 
 div[data-baseweb="input"],
@@ -2095,16 +2098,44 @@ components.html(f"""
         `;
 
         function enforcePortalRTL() {{
+            pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
             var nodes = pDoc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], ul[role="listbox"], li[role="option"]');
             nodes.forEach(function(el) {{
                 el.setAttribute('dir', 'rtl');
                 el.style.setProperty('direction', 'rtl', 'important');
                 el.style.setProperty('text-align', 'right', 'important');
+                el.style.setProperty('background-color', '#ffffff', 'important');
+                el.style.setProperty('color', '#0f172a', 'important');
                 var children = el.querySelectorAll('div, span');
                 children.forEach(function(ch) {{
                     ch.setAttribute('dir', 'rtl');
                     ch.style.setProperty('direction', 'rtl', 'important');
                     ch.style.setProperty('text-align', 'right', 'important');
+                    ch.style.setProperty('color', '#0f172a', 'important');
+                    ch.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                }});
+            }});
+
+            var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
+            inputBoxes.forEach(function(box) {{
+                box.style.setProperty('background-color', '#ffffff', 'important');
+                box.style.setProperty('background', '#ffffff', 'important');
+                box.style.setProperty('color', '#0f172a', 'important');
+                box.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                var innerEls = box.querySelectorAll('div, span, input, textarea');
+                innerEls.forEach(function(inn) {{
+                    inn.style.setProperty('color', '#0f172a', 'important');
+                    inn.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                    if (inn.tagName === 'INPUT' || inn.tagName === 'TEXTAREA') {{
+                        inn.style.setProperty('background-color', '#ffffff', 'important');
+                    }} else {{
+                        inn.style.setProperty('background-color', 'transparent', 'important');
+                    }}
+                }});
+                var svgs = box.querySelectorAll('svg');
+                svgs.forEach(function(s) {{
+                    s.style.setProperty('fill', '#0f172a', 'important');
+                    s.style.setProperty('color', '#0f172a', 'important');
                 }});
             }});
 
