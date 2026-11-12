@@ -744,7 +744,7 @@ def generate_editable_docx(user_info, active_year, stds, evidences, signed_urls_
             runs_xml += f"""
             <w:r>
                 <w:rPr>
-                    <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+                    <w:rFonts w:ascii="Cairo" w:hAnsi="Cairo" w:cs="Cairo"/>
                     {b_tag}
                     <w:color w:val="{color}"/>
                     <w:sz w:val="{sz}"/>
@@ -1137,14 +1137,17 @@ th = THEMES[active_theme_key]
 ZIYAD_LOGO_SVG = '<svg width="52" height="52" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 7. التصميم الشامل الموحد بخط "منصة زياد الذكية" (Tajawal) وإصلاح التبويبات
+# 7. التصميم الشامل وتوحيد خط Cairo على جميع العناصر والتبويبات
 # ==========================================
-st.markdown(f"""
+st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+""", unsafe_allow_html=True)
+
+st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 
 *::-webkit-scrollbar,
 html::-webkit-scrollbar,
@@ -1170,11 +1173,11 @@ body::-webkit-scrollbar,
     --background-color: {th['bg']} !important;
     --secondary-background-color: #ffffff !important;
     --primary-color: {th['primary']} !important;
-    --font: 'Tajawal', sans-serif !important;
+    --font: 'Cairo', sans-serif !important;
     color-scheme: light only !important;
     direction: rtl !important; 
     text-align: right !important; 
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     background-color: {th['bg']} !important;
     color: #0f172a !important;
     overflow-x: clip !important;
@@ -1184,6 +1187,11 @@ body::-webkit-scrollbar,
     padding: 0 !important;
     overscroll-behavior-x: none !important;
     touch-action: pan-y !important;
+}}
+
+/* توحيد الخط الإجباري (Cairo) على جميع النصوص والبنرات والبطاقات والأزرار وحقول الإدخال مع استثناء الأيقونات */
+*:not([data-testid="stIconMaterial"]):not(.material-icons):not([class*="material-symbols"]):not(svg):not(path) {{
+    font-family: 'Cairo', sans-serif !important;
 }}
 
 header {{visibility: hidden; height: 0 !important;}}
@@ -1213,20 +1221,20 @@ div.element-container, [data-testid="stMarkdownContainer"] {{
     text-align: right !important;
 }}
 
-/* فرض خط Tajawal الموحد على جميع العناصر والنصوص والبنرات والأزرار */
-h1, h2, h3, h4, h5, h6, p, label, span, div, button, input, textarea, .stMarkdown,
+h1, h2, h3, h4, h5, h6, p, label, .stMarkdown,
 [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p, [data-testid="stMarkdownContainer"] p {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
+    color: #0f172a;
     direction: rtl !important;
     word-wrap: break-word !important;
+    letter-spacing: 0px !important;
 }}
 
 h1, h2, h3, h4, h5 {{
     font-weight: 800 !important;
-    color: #0f172a !important;
+    letter-spacing: 0px !important;
 }}
 
-/* استثناء أيقونات النظام Material Icons فقط */
 span[data-testid="stIconMaterial"], .material-icons, [class*="material-symbols"] {{
     font-family: 'Material Symbols Rounded', 'Material Icons' !important;
     direction: ltr !important;
@@ -1250,8 +1258,8 @@ input, textarea {{
     caret-color: {th['primary']} !important;
     direction: rtl !important;
     text-align: right !important;
-    font-family: 'Tajawal', sans-serif !important;
-    font-weight: 700 !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 600 !important;
 }}
 
 div[data-baseweb="input"],
@@ -1273,7 +1281,6 @@ div[data-baseweb="select"] svg {{
     text-align: right !important;
     white-space: normal !important;
     line-height: 1.4 !important;
-    font-family: 'Tajawal', sans-serif !important;
     font-weight: 700 !important;
 }}
 
@@ -1283,7 +1290,6 @@ input::placeholder, textarea::placeholder {{
     opacity: 1 !important;
     direction: rtl !important;
     text-align: right !important;
-    font-family: 'Tajawal', sans-serif !important;
 }}
 
 div[data-testid="stAlert"], div[data-testid="stAlert"] > div, div[role="alert"] {{
@@ -1361,7 +1367,6 @@ button[data-baseweb="tab"] {{
     background-color: transparent !important;
     color: #475569 !important;
     font-weight: 800 !important;
-    font-family: 'Tajawal', sans-serif !important;
 }}
 button[data-baseweb="tab"][aria-selected="true"] {{
     color: {th['primary']} !important;
@@ -1380,17 +1385,15 @@ div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
     box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
     white-space: normal !important;
     direction: rtl !important;
-    font-family: 'Tajawal', sans-serif !important;
 }}
 div[data-testid="stButton"] button p, div[data-testid="stDownloadButton"] button p {{
     color: {th['primary']} !important;
     -webkit-text-fill-color: {th['primary']} !important;
     font-weight: 800 !important;
-    font-size: 14.5px !important;
+    font-size: 14px !important;
     white-space: normal !important;
     line-height: 1.3 !important;
     text-align: center !important;
-    font-family: 'Tajawal', sans-serif !important;
 }}
 div[data-testid="stDownloadButton"] button {{
     background-color: #ffffff !important;
@@ -1418,20 +1421,20 @@ div[data-testid="stButton"] button[kind="primary"], div[data-testid="stFormSubmi
 div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSubmitButton"] button p, div[data-testid="stDownloadButton"] button[kind="primary"] p {{
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
-    font-size: 15.5px !important;
+    font-size: 15px !important;
     font-weight: 800 !important;
     text-align: center !important;
-    font-family: 'Tajawal', sans-serif !important;
 }}
 
 /* ========================================================= */
-/* إصلاح شريط التبويبات والفرز والدخول (إخفاء الدائرة الأولى فقط وإظهار النصوص كاملة) */
+/* شريط التبويبات الكبسولات (Pills) - إخفاء دائرة الراديو فقط مع إبقاء النصوص كاملة وواضحة */
 /* ========================================================= */
 div[data-testid="stRadio"] {{
     width: 100% !important;
     max-width: 100% !important;
+    margin-bottom: 6px !important;
 }}
-div[data-testid="stRadio"] > [data-testid="stWidgetLabel"] {{
+div[data-testid="stRadio"] [data-testid="stWidgetLabel"] {{
     display: none !important;
 }}
 div[data-testid="stRadio"] > div[role="radiogroup"] {{
@@ -1447,18 +1450,20 @@ div[data-testid="stRadio"] > div[role="radiogroup"] {{
     border-radius: 16px !important;
     border: 1px solid #e2e8f0 !important;
     box-shadow: 0 3px 10px rgba(0,0,0,0.03) !important;
-    justify-content: space-between !important;
+    justify-content: stretch !important;
+    align-items: stretch !important;
     direction: rtl !important;
 }}
+div[data-testid="stRadio"] > div[role="radiogroup"] > label,
 div[data-testid="stRadio"] label[data-baseweb="radio"] {{
     flex: 1 1 0% !important;
     min-width: 0 !important;
-    min-height: 44px !important;
+    min-height: 42px !important;
     margin: 0 !important;
     padding: 8px 12px !important;
     border-radius: 12px !important;
     background: #f8fafc !important;
-    border: 2px solid transparent !important;
+    border: 1.5px solid #e2e8f0 !important;
     cursor: pointer !important;
     display: flex !important;
     align-items: center !important;
@@ -1466,73 +1471,82 @@ div[data-testid="stRadio"] label[data-baseweb="radio"] {{
     text-align: center !important;
     transition: all 0.18s ease !important;
 }}
-/* إخفاء الدائرة الجانبية الأولى فقط دون المساس بحاوية النص */
-div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {{
-    display: none !important;
-    width: 0px !important;
-    height: 0px !important;
+div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover,
+div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {{
+    background: {th['tint']} !important;
+    border-color: {th['primary']} !important;
 }}
+/* إخفاء دائرة الراديو الأولى فقط دون المساس بحاوية النص الثانية */
+div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-of-type,
+div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-of-type,
 div[data-testid="stRadio"] input[type="radio"] {{
     display: none !important;
-    width: 0px !important;
-    height: 0px !important;
-    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
     opacity: 0 !important;
+    position: absolute !important;
+    pointer-events: none !important;
 }}
-/* ضمان ظهور حاوية النص الأخيرة بكامل وضوحها */
-div[data-testid="stRadio"] label[data-baseweb="radio"] > div:last-child,
-div[data-testid="stRadio"] label[data-baseweb="radio"] [data-testid="stMarkdownContainer"] {{
+/* إظهار حاوية النص الثانية بشكل كامل ومتمركز */
+div[data-testid="stRadio"] label[data-baseweb="radio"] > div:last-of-type,
+div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:last-of-type,
+div[data-testid="stRadio"] label [data-testid="stMarkdownContainer"] {{
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    width: auto !important;
+    width: 100% !important;
     height: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: static !important;
     margin: 0 !important;
     padding: 0 !important;
 }}
-div[data-testid="stRadio"] label[data-baseweb="radio"] p {{
-    font-family: 'Tajawal', sans-serif !important;
-    font-size: 14.5px !important;
+div[data-testid="stRadio"] label p,
+div[data-testid="stRadio"] label span {{
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 14px !important;
     font-weight: 800 !important;
     color: #334155 !important;
     -webkit-text-fill-color: #334155 !important;
     margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.4 !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
     text-align: center !important;
 }}
+div[data-testid="stRadio"] label:has(input:checked),
 div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {{
-    background: linear-gradient(135deg, {th['primary']}, {th['primary_light']}) !important;
+    background: linear-gradient(135deg, {th['primary_dark']}, {th['primary']}, {th['primary_light']}) !important;
     border: 2px solid #f59e0b !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
 }}
-div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
+div[data-testid="stRadio"] label:has(input:checked) p,
+div[data-testid="stRadio"] label:has(input:checked) span {{
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     font-weight: 800 !important;
 }}
 
 /* ========================================================= */
-/* البنر الزجاجي ثلاثي الأبعاد بهوية خط Tajawal */
+/* البنر الزجاجي ثلاثي الأبعاد المطابق لفيديو منصة زياد الذكية */
 /* ========================================================= */
 .hero-wrapper {{
     background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 52%, {th['primary_light']} 100%) !important;
     color: #ffffff !important;
     padding: 20px 24px;
     border-radius: 24px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), 0 12px 26px rgba(15, 23, 42, 0.16) !important;
     border: 1px solid rgba(255,255,255,0.18) !important;
     box-sizing: border-box;
     width: 100%;
     direction: rtl !important;
     text-align: right !important;
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
 }}
 
+/* تصميم بنر صفحة الدخول */
 .login-banner-flex {{
     display: flex;
     align-items: center;
@@ -1543,17 +1557,18 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     direction: rtl !important;
 }}
 .login-Main-title {{
-    font-family: 'Tajawal', sans-serif !important;
-    font-size: 32px !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 30px !important;
     font-weight: 900 !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     margin: 0 !important;
-    line-height: 1.2 !important;
+    line-height: 1.3 !important;
+    letter-spacing: 0px !important;
     text-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }}
 .login-portal-pill {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     background: rgba(15, 23, 42, 0.32) !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
@@ -1565,7 +1580,7 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     box-shadow: inset 0 1px 2px rgba(255,255,255,0.2);
 }}
 .login-card-heading {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     font-size: 20px !important;
     font-weight: 900 !important;
     color: #0f172a !important;
@@ -1576,6 +1591,7 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     border-bottom: 1px solid #f1f5f9;
 }}
 
+/* شارات الفوتر السفلية في صفحة الدخول */
 .login-footer-badges {{
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1584,7 +1600,7 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     direction: rtl !important;
 }}
 .login-f-pill {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
@@ -1596,6 +1612,7 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     box-shadow: 0 2px 5px rgba(0,0,0,0.02);
 }}
 
+/* بنر الصفحة الرئيسية بعد الدخول */
 .hero-top {{
     display: flex;
     justify-content: space-between;
@@ -1608,14 +1625,14 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     direction: rtl !important;
 }}
 .brand-box {{ display: flex; align-items: center; gap: 12px; direction: rtl !important; }}
-.brand-title {{ font-family: 'Tajawal', sans-serif !important; font-size: 22px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0; text-align: right !important; }}
-.brand-sub {{ font-family: 'Tajawal', sans-serif !important; font-size: 12px !important; font-weight: 700 !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; margin: 2px 0 0 0; text-align: right !important; }}
+.brand-title {{ font-family: 'Cairo', sans-serif !important; font-size: 21px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0; text-align: right !important; letter-spacing: 0px !important; }}
+.brand-sub {{ font-family: 'Cairo', sans-serif !important; font-size: 12px !important; font-weight: 700 !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; margin: 2px 0 0 0; text-align: right !important; }}
 .date-pill {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     background: rgba(15, 23, 42, 0.35);
     padding: 5px 12px;
     border-radius: 99px;
-    font-size: 12px !important;
+    font-size: 11.5px !important;
     font-weight: 700 !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
@@ -1630,27 +1647,27 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     gap: 10px;
     direction: rtl !important;
 }}
-.welcome-line {{ font-family: 'Tajawal', sans-serif !important; font-size: 13.5px !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; font-weight: 700 !important; margin-bottom: 2px; text-align: right !important; }}
-.teacher-name {{ font-family: 'Tajawal', sans-serif !important; font-size: 24px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0 0 8px 0; text-align: right !important; }}
+.welcome-line {{ font-family: 'Cairo', sans-serif !important; font-size: 13px !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; font-weight: 700 !important; margin-bottom: 2px; text-align: right !important; }}
+.teacher-name {{ font-family: 'Cairo', sans-serif !important; font-size: 22px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0 0 8px 0; text-align: right !important; letter-spacing: 0px !important; }}
 .meta-badges {{ display: flex; flex-wrap: wrap; gap: 6px; direction: rtl !important; }}
 .meta-pill {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     background: rgba(0,0,0,0.25);
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     padding: 4px 10px;
     border-radius: 9px;
-    font-size: 12px !important;
+    font-size: 11.5px !important;
     font-weight: 700 !important;
 }}
 .year-badge {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     background: #fbbf24 !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
     padding: 6px 14px;
     border-radius: 12px;
-    font-size: 13.5px !important;
+    font-size: 13px !important;
     font-weight: 800 !important;
 }}
 
@@ -1661,8 +1678,8 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     background: #ffffff; border-radius: 16px; padding: 12px 6px; text-align: center !important;
     border: 1px solid #e2e8f0; box-shadow: 0 3px 8px rgba(0,0,0,0.03);
 }}
-.kpi-val {{ font-family: 'Tajawal', sans-serif !important; font-size: 22px; font-weight: 900; color: {th['primary']} !important; text-align: center !important; }}
-.kpi-lbl {{ font-family: 'Tajawal', sans-serif !important; font-size: 11.5px; color: #475569 !important; margin-top: 2px; font-weight: 700; text-align: center !important; }}
+.kpi-val {{ font-family: 'Cairo', sans-serif !important; font-size: 21px; font-weight: 900; color: {th['primary']} !important; text-align: center !important; }}
+.kpi-lbl {{ font-family: 'Cairo', sans-serif !important; font-size: 11.5px; color: #475569 !important; margin-top: 2px; font-weight: 700; text-align: center !important; }}
 
 .progress-card {{
     background: #ffffff; padding: 12px 16px; border-radius: 15px; 
@@ -1684,16 +1701,16 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     direction: rtl !important; text-align: right !important;
 }}
 .std-num {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     width: 40px; height: 40px; border-radius: 12px;
     background: {th['tint']}; color: {th['primary']} !important;
     display: flex; align-items: center; justify-content: center;
     font-weight: 900; font-size: 17px; margin-left: 12px; flex-shrink: 0;
 }}
 .std-num-empty {{ background: #fee2e2; color: #dc2626 !important; }}
-.std-title {{ font-family: 'Tajawal', sans-serif !important; font-size: 15.5px; font-weight: 800; color: #0f172a !important; margin-bottom: 3px; text-align: right !important; direction: rtl !important; }}
+.std-title {{ font-family: 'Cairo', sans-serif !important; font-size: 15.5px; font-weight: 800; color: #0f172a !important; margin-bottom: 3px; text-align: right !important; direction: rtl !important; letter-spacing: 0px !important; }}
 .weight-badge {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     background: #f1f5f9; color: #475569 !important; font-size: 11.5px; padding: 2px 9px;
     border-radius: 8px; display: inline-block; font-weight: 700;
 }}
@@ -1716,6 +1733,7 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
 }}
 .ev-box * {{
     direction: rtl !important;
+    font-family: 'Cairo', sans-serif !important;
 }}
 .ev-header-row {{
     display: flex !important;
@@ -1729,18 +1747,18 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     text-align: right !important;
 }}
 .ev-title-right {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     font-weight: 800 !important;
-    font-size: 16px !important;
+    font-size: 15.5px !important;
     color: {th['primary']} !important;
     direction: rtl !important;
     text-align: right !important;
     unicode-bidi: isolate !important;
 }}
 .ev-desc-rtl {{
-    font-family: 'Tajawal', sans-serif !important;
-    font-size: 14.5px !important;
-    font-weight: 500 !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
     color: #334155 !important;
     line-height: 1.75 !important;
     margin-bottom: 8px !important;
@@ -1784,17 +1802,17 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
 }}
 
 .idea-card {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     background: #ffffff; border: 1px solid #e2e8f0; padding: 9px 12px;
-    border-radius: 10px; margin-bottom: 5px; font-size: 13.5px; font-weight: 700; color: #1e293b !important;
+    border-radius: 10px; margin-bottom: 5px; font-size: 13px; font-weight: 700; color: #1e293b !important;
     display: flex; justify-content: space-between; align-items: center;
     direction: rtl !important; text-align: right !important;
 }}
 .visitor-banner {{
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
     background: #fef3c7; color: #92400e !important; border: 1px solid #f59e0b;
     padding: 8px 14px; border-radius: 11px; margin-bottom: 8px;
-    font-weight: 800; font-size: 13.5px; text-align: center !important;
+    font-weight: 800; font-size: 13px; text-align: center !important;
 }}
 
 .ziyad-footer {{
@@ -1808,12 +1826,12 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {{
     width: 100%;
     box-sizing: border-box;
 }}
-.footer-brand {{ font-family: 'Tajawal', sans-serif !important; font-size: 14px; font-weight: 800; color: #334155 !important; margin-bottom: 4px; text-align: center !important; }}
-.footer-rights {{ font-family: 'Tajawal', sans-serif !important; font-size: 12px; font-weight: 600; color: #64748b !important; text-align: center !important; }}
+.footer-brand {{ font-family: 'Cairo', sans-serif !important; font-size: 13.5px; font-weight: 800; color: #334155 !important; margin-bottom: 4px; text-align: center !important; }}
+.footer-rights {{ font-family: 'Cairo', sans-serif !important; font-size: 11.5px; font-weight: 600; color: #64748b !important; text-align: center !important; }}
 </style>
 """, unsafe_allow_html=True)
 
-# حقن خط Tajawal في الصفحة الأم + فرض RTL للقوائم المنسدلة دون المساس بنصوص التبويبات
+# حقن خط Cairo في الصفحة الأم + معالجة التبويبات بدقة بدون إخفاء النصوص + فرض RTL للقوائم المنسدلة
 components.html(f"""
 <script>
 (function() {{
@@ -1822,12 +1840,12 @@ components.html(f"""
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
 
-        var fontId = 'ziyad-tajawal-font';
+        var fontId = 'ziyad-google-fonts';
         if (!pDoc.getElementById(fontId)) {{
             var link = pDoc.createElement('link');
             link.id = fontId;
             link.rel = 'stylesheet';
-            link.href = 'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap';
             pDoc.head.appendChild(link);
         }}
 
@@ -1847,18 +1865,33 @@ components.html(f"""
             *, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .block-container {{
                 scrollbar-width: none !important;
                 -ms-overflow-style: none !important;
-                font-family: 'Tajawal', sans-serif;
+            }}
+            *:not([data-testid="stIconMaterial"]):not(.material-icons):not([class*="material-symbols"]):not(svg):not(path) {{
+                font-family: 'Cairo', sans-serif !important;
             }}
             .block-container {{
                 overflow: visible !important;
             }}
-            div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {{
+            div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-of-type,
+            div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-of-type,
+            div[data-testid="stRadio"] input[type="radio"] {{
                 display: none !important;
+                width: 0px !important;
+                height: 0px !important;
+                opacity: 0 !important;
+                position: absolute !important;
             }}
-            div[data-testid="stRadio"] label[data-baseweb="radio"] > div:last-child {{
+            div[data-testid="stRadio"] label[data-baseweb="radio"] > div:last-of-type,
+            div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:last-of-type,
+            div[data-testid="stRadio"] label [data-testid="stMarkdownContainer"] {{
                 display: flex !important;
-                visibility: visible !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 100% !important;
+                height: auto !important;
                 opacity: 1 !important;
+                visibility: visible !important;
+                position: static !important;
             }}
             div[data-baseweb="popover"],
             div[data-baseweb="popover"] *,
@@ -1872,7 +1905,7 @@ components.html(f"""
             li[role="option"] * {{
                 direction: rtl !important;
                 text-align: right !important;
-                font-family: 'Tajawal', sans-serif !important;
+                font-family: 'Cairo', sans-serif !important;
             }}
             li[role="option"] {{
                 display: flex !important;
@@ -1904,6 +1937,18 @@ components.html(f"""
                     ch.style.setProperty('direction', 'rtl', 'important');
                     ch.style.setProperty('text-align', 'right', 'important');
                 }});
+            }});
+            var radioLabels = pDoc.querySelectorAll('div[data-testid="stRadio"] label');
+            radioLabels.forEach(function(lbl) {{
+                var directDivs = Array.from(lbl.children).filter(function(c) {{ return c.tagName === 'DIV'; }});
+                if (directDivs.length >= 2) {{
+                    directDivs[0].style.setProperty('display', 'none', 'important');
+                    directDivs[directDivs.length - 1].style.setProperty('display', 'flex', 'important');
+                    directDivs[directDivs.length - 1].style.setProperty('visibility', 'visible', 'important');
+                    directDivs[directDivs.length - 1].style.setProperty('opacity', '1', 'important');
+                    directDivs[directDivs.length - 1].style.setProperty('width', '100%', 'important');
+                    directDivs[directDivs.length - 1].style.setProperty('justify-content', 'center', 'important');
+                }}
             }});
         }}
 
@@ -2161,9 +2206,9 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
         <meta charset="UTF-8">
         <title>ملف الإنجاز المهني - {safe_t_name}</title>
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap');
-            * {{ box-sizing: border-box; direction: rtl; }}
-            body {{ font-family: 'Tajawal', sans-serif; background-color: #cbd5e1; margin: 0; padding: 20px; direction: rtl; text-align: right; }}
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+            * {{ box-sizing: border-box; direction: rtl; font-family: 'Cairo', sans-serif !important; }}
+            body {{ font-family: 'Cairo', sans-serif !important; background-color: #cbd5e1; margin: 0; padding: 20px; direction: rtl; text-align: right; }}
             
             .page {{
                 background-color: white;
@@ -2493,7 +2538,7 @@ def render_footer(is_login=False):
     st.markdown(footer_html, unsafe_allow_html=True)
 
 # ==========================================
-# 9. صفحة تسجيل الدخول (مطابقة لهوية الفيديو وبدون اسم المعلم والمدرسة في البنر)
+# 9. صفحة تسجيل الدخول
 # ==========================================
 def login_page():
     login_hero = (
@@ -2584,7 +2629,6 @@ def main_app():
     )))
     signed_urls_map = get_signed_urls_batch(all_file_paths)
 
-    # الهيدر والبنر الاحترافي بهوية منصة زياد الذكية
     greeting, today_str = get_greeting_and_dates()
     safe_name = html.escape(str(user_info.get("full_name", "")))
     safe_school = html.escape(str(user_info.get("school_name", "")))
@@ -2626,7 +2670,6 @@ def main_app():
                 st.query_params.clear()
                 st.rerun()
 
-    # شريط التنقل الرئيسي (4 تبويبات متوازنة وواضحة بالكامل)
     if is_visitor:
         nav_map = {
             'home': "🏠 الرئيسية",
@@ -2655,7 +2698,6 @@ def main_app():
         st.session_state.current_page = selected_nav
         st.rerun()
 
-    # حساب إحصائيات البنود
     total_stds = len(stds)
     total_ev_count = len(evidences)
     stds_with_ev = 0
@@ -2962,7 +3004,7 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة (للزائر: PDF فقط لحفظ الحقوق | للمعلم: PDF + Word)
+    # 📄 3. صفحة التقارير والطباعة
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
@@ -2991,7 +3033,7 @@ def main_app():
             st.success("✅ تم تجهيز تقرير PDF! إذا لم تفتح نافذة الطباعة تلقائياً، اضغط على الزر الأخضر بالأسفل:")
             components.html(f"""
                 <div style="text-align: center; margin: 4px 0;">
-                    <button onclick="openPrintWindow()" style="width: 100%; height: 50px; background-color: #146c59; color: white; border: none; border-radius: 14px; font-size: 15.5px; font-weight: 800; cursor: pointer; font-family: 'Tajawal', sans-serif; box-shadow: 0 4px 10px rgba(20,108,89,0.2);">
+                    <button onclick="openPrintWindow()" style="width: 100%; height: 50px; background-color: #146c59; color: white; border: none; border-radius: 14px; font-size: 15.5px; font-weight: 800; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(20,108,89,0.2);">
                         🖨️ فتح نافذة الطباعة وحفظ PDF الآن
                     </button>
                 </div>
@@ -3043,7 +3085,6 @@ def main_app():
                 </script>
             """, height=62)
 
-        # تصدير الـ Word يظهر للمعلم فقط ويُخفى تماماً عن الزائر لحفظ الحقوق
         if not is_visitor:
             st.write("")
             if st.button("📄 تجهيز ملف Word قابل للتعديل (شامل الصور والمرفقات)", use_container_width=True):
