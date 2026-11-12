@@ -2553,8 +2553,8 @@ def login_page():
     st.markdown(login_hero, unsafe_allow_html=True)
 
     login_modes = {
-        'teacher': "🔒 دخول المعلم (تحكم كامل)",
-        'visitor': "👁️ دخول زائر (مشاهدة فقط)"
+        'teacher': "🔒 دخول المعلم ",
+        'visitor': "👁️ دخول الزائر "
     }
     mode_keys = list(login_modes.keys())
     selected_mode = st.radio(
