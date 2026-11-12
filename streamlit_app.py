@@ -322,6 +322,8 @@ if 'view_standard_id' not in st.session_state:
     st.session_state.view_standard_id = 0
 if 'filter_mode' not in st.session_state:
     st.session_state.filter_mode = 'all'
+if 'login_mode' not in st.session_state:
+    st.session_state.login_mode = 'teacher'
 if 'ai_variant' not in st.session_state:
     st.session_state.ai_variant = 0
 if 'custom_gemini_key' not in st.session_state:
@@ -1132,16 +1134,15 @@ if active_theme_key not in THEMES:
     active_theme_key = "emerald"
 th = THEMES[active_theme_key]
 
-ZIYAD_LOGO_SVG = '<svg width="46" height="46" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="16" fill="white" fill-opacity="0.15"/><rect x="2" y="2" width="60" height="60" rx="14" stroke="white" stroke-opacity="0.35" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
+ZIYAD_LOGO_SVG = '<svg width="52" height="52" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
-# 7. التصميم الشامل بهوية خط "منصة زياد الذكية" (Cairo & Tajawal) + إخفاء شريط التمرير
+# 7. التصميم الشامل بهوية "منصة زياد الذكية" (مطابق للفيديو المرفق)
 # ==========================================
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap');
 
-/* إخفاء أشرطة التمرير العمودية والأفقية نهائياً من كافة الحاويات */
 *::-webkit-scrollbar,
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
@@ -1187,10 +1188,9 @@ header {{visibility: hidden; height: 0 !important;}}
 footer {{visibility: hidden;}}
 .stSidebar {{display: none !important;}}
 
-/* إبقاء overflow: visible على block-container لمنع ظهور شريط التمرير الداخلي على اليسار */
 .block-container {{
-    padding: 0.5rem 0.65rem 1.8rem 0.65rem !important;
-    max-width: 740px !important;
+    padding: 0.7rem 0.75rem 2rem 0.75rem !important;
+    max-width: 760px !important;
     width: 100% !important;
     box-sizing: border-box !important;
     overflow: visible !important;
@@ -1198,7 +1198,7 @@ footer {{visibility: hidden;}}
     text-align: right !important;
 }}
 [data-testid="stVerticalBlock"] {{
-    gap: 0.48rem !important;
+    gap: 0.5rem !important;
     max-width: 100% !important;
     overflow: visible !important;
     direction: rtl !important;
@@ -1210,8 +1210,7 @@ div.element-container, [data-testid="stMarkdownContainer"] {{
     text-align: right !important;
 }}
 
-/* تعميم هوية خط منصة زياد الذكية (Cairo / Tajawal) على كافة العناصر */
-h1, h2, h3, h4, h5, h6, p, label, span, div, button, input, textarea, .stMarkdown,
+h1, h2, h3, h4, h5, h6, p, label, .stMarkdown,
 [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p, [data-testid="stMarkdownContainer"] p {{
     font-family: 'Cairo', 'Tajawal', sans-serif !important;
     color: #0f172a;
@@ -1224,7 +1223,6 @@ h1, h2, h3, h4, h5 {{
     letter-spacing: -0.2px !important;
 }}
 
-/* استثناء أيقونات النظام Material Icons */
 span[data-testid="stIconMaterial"], .material-icons, [class*="material-symbols"] {{
     font-family: 'Material Symbols Rounded', 'Material Icons' !important;
     direction: ltr !important;
@@ -1241,8 +1239,8 @@ div[data-testid="stTextInput"] input,
 div[data-testid="stTextArea"] textarea,
 div[data-testid="stDateInput"] input,
 input, textarea {{
-    background-color: #ffffff !important;
-    background: #ffffff !important;
+    background-color: #f8fafc !important;
+    background: #f8fafc !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
     caret-color: {th['primary']} !important;
@@ -1255,9 +1253,9 @@ input, textarea {{
 div[data-baseweb="input"],
 div[data-baseweb="textarea"],
 div[data-baseweb="select"] > div {{
-    border: 1.5px solid #cbd5e1 !important;
+    border: 1.5px solid #e2e8f0 !important;
     border-radius: 12px !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
 }}
 
 div[data-baseweb="select"] span,
@@ -1275,8 +1273,8 @@ div[data-baseweb="select"] svg {{
 }}
 
 input::placeholder, textarea::placeholder {{
-    color: #64748b !important;
-    -webkit-text-fill-color: #64748b !important;
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
     opacity: 1 !important;
     direction: rtl !important;
     text-align: right !important;
@@ -1322,9 +1320,9 @@ div[data-testid="stFileUploader"] section button {{
 [data-testid="stForm"] {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
-    border-radius: 16px !important;
-    padding: 16px !important;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.03) !important;
+    border-radius: 20px !important;
+    padding: 22px 20px !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04) !important;
     width: 100% !important;
     box-sizing: border-box !important;
     direction: rtl !important;
@@ -1400,13 +1398,13 @@ div[data-testid="stButton"] button:hover {{
     background-color: #d1ebe5 !important;
 }}
 div[data-testid="stButton"] button[kind="primary"], div[data-testid="stFormSubmitButton"] button, div[data-testid="stDownloadButton"] button[kind="primary"] {{
-    background: linear-gradient(135deg, {th['primary']}, {th['primary_light']}) !important;
+    background: linear-gradient(135deg, {th['primary_dark']}, {th['primary']}, {th['primary_light']}) !important;
     color: #ffffff !important;
     border: none !important;
-    border-radius: 14px !important;
+    border-radius: 13px !important;
     min-height: 50px !important;
     font-weight: 800 !important;
-    box-shadow: 0 4px 12px rgba(15, 82, 67, 0.2) !important;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.15) !important;
 }}
 div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSubmitButton"] button p, div[data-testid="stDownloadButton"] button[kind="primary"] p {{
     color: #ffffff !important;
@@ -1416,7 +1414,9 @@ div[data-testid="stButton"] button[kind="primary"] p, div[data-testid="stFormSub
     text-align: center !important;
 }}
 
-/* شريط التبويبات والفرز بنفس هوية منصة زياد الذكية (بدون دوائر الراديو ومع إطار ذهبي للتبويب النشط) */
+/* ========================================================= */
+/* شريط التبويبات الكبسولات (Pills) المطابق للفيديو تماماً بدون أي دوائر راديو */
+/* ========================================================= */
 div[data-testid="stRadio"] {{
     width: 100% !important;
     max-width: 100% !important;
@@ -1431,13 +1431,13 @@ div[data-testid="stRadio"] > div[role="radiogroup"] {{
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    gap: 6px !important;
+    gap: 8px !important;
     background: #ffffff !important;
     padding: 6px !important;
     border-radius: 16px !important;
     border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03) !important;
-    justify-content: space-between !important;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.03) !important;
+    justify-content: center !important;
     direction: rtl !important;
 }}
 div[data-testid="stRadio"] label,
@@ -1445,7 +1445,7 @@ div[data-testid="stRadio"] [data-baseweb="radio"] {{
     flex: 1 1 0% !important;
     min-width: 0 !important;
     margin: 0 !important;
-    padding: 8px 6px !important;
+    padding: 8px 10px !important;
     border-radius: 12px !important;
     background: transparent !important;
     border: 2px solid transparent !important;
@@ -1456,22 +1456,25 @@ div[data-testid="stRadio"] [data-baseweb="radio"] {{
     text-align: center !important;
     transition: all 0.18s ease !important;
 }}
-/* إخفاء قاطع لدائرة الراديو الجانبية */
-div[data-testid="stRadio"] input[type="radio"],
-div[data-testid="stRadio"] label > div:first-child,
-div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {{
+/* إخفاء قاطع لأي دائرة راديو في جميع إصدارات Streamlit */
+div[data-testid="stRadio"] label > div:not([data-testid="stMarkdownContainer"]),
+div[data-testid="stRadio"] [data-baseweb="radio"] > div:not([data-testid="stMarkdownContainer"]),
+div[data-testid="stRadio"] input[type="radio"] {{
     display: none !important;
     width: 0px !important;
     height: 0px !important;
+    margin: 0 !important;
+    padding: 0 !important;
     opacity: 0 !important;
+    visibility: hidden !important;
     position: absolute !important;
     pointer-events: none !important;
 }}
 div[data-testid="stRadio"] label p {{
     font-size: 13.5px !important;
     font-weight: 800 !important;
-    color: #475569 !important;
-    -webkit-text-fill-color: #475569 !important;
+    color: #64748b !important;
+    -webkit-text-fill-color: #64748b !important;
     margin: 0 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -1479,9 +1482,9 @@ div[data-testid="stRadio"] label p {{
     text-align: center !important;
 }}
 div[data-testid="stRadio"] label:has(input:checked) {{
-    background: {th['primary']} !important;
+    background: linear-gradient(135deg, {th['primary']}, {th['primary_light']}) !important;
     border: 2px solid #f59e0b !important;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.12) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
 }}
 div[data-testid="stRadio"] label:has(input:checked) p {{
     color: #ffffff !important;
@@ -1489,25 +1492,91 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     font-weight: 800 !important;
 }}
 
-/* البنر العلوي بنفس روح وهوية منصة زياد الذكية */
+/* ========================================================= */
+/* البنر الزجاجي ثلاثي الأبعاد المطابق لفيديو منصة زياد الذكية */
+/* ========================================================= */
 .hero-wrapper {{
-    background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 52%, {th['primary_light']} 100%);
-    color: white !important;
-    padding: 18px 20px;
-    border-radius: 22px;
-    margin-bottom: 6px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 52%, {th['primary_light']} 100%) !important;
+    color: #ffffff !important;
+    padding: 20px 24px;
+    border-radius: 24px;
+    margin-bottom: 8px;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), 0 12px 26px rgba(15, 23, 42, 0.16) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
     box-sizing: border-box;
     width: 100%;
     direction: rtl !important;
     text-align: right !important;
 }}
+
+/* تصميم بنر صفحة الدخول (مطابق للفيديو تماماً بدون اسم المعلم والمدرسة) */
+.login-banner-flex {{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 10px 6px;
+    direction: rtl !important;
+}}
+.login-Main-title {{
+    font-size: 32px !important;
+    font-weight: 900 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.4px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}}
+.login-portal-pill {{
+    background: rgba(15, 23, 42, 0.32) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    padding: 7px 18px;
+    border-radius: 99px;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.2);
+}}
+.login-card-heading {{
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    text-align: right !important;
+    margin: 0 0 12px 0 !important;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f5f9;
+}}
+
+/* شارات الفوتر السفلية في صفحة الدخول كما في الفيديو */
+.login-footer-badges {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+    direction: rtl !important;
+}}
+.login-f-pill {{
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 8px;
+    text-align: center !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    color: #334155 !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}}
+
+/* بنر الصفحة الرئيسية بعد الدخول */
 .hero-top {{
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid rgba(255,255,255,0.15);
+    border-bottom: 1px solid rgba(255,255,255,0.16);
     padding-bottom: 10px;
     margin-bottom: 12px;
     flex-wrap: wrap;
@@ -1515,15 +1584,16 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     direction: rtl !important;
 }}
 .brand-box {{ display: flex; align-items: center; gap: 12px; direction: rtl !important; }}
-.brand-title {{ font-size: 19px; font-weight: 900; color: #ffffff !important; margin: 0; text-align: right !important; letter-spacing: -0.3px; }}
-.brand-sub {{ font-size: 11.5px; font-weight: 700; color: #fde68a !important; margin: 2px 0 0 0; text-align: right !important; }}
+.brand-title {{ font-size: 20px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0; text-align: right !important; }}
+.brand-sub {{ font-size: 11.5px !important; font-weight: 700 !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; margin: 2px 0 0 0; text-align: right !important; }}
 .date-pill {{
     background: rgba(15, 23, 42, 0.35);
     padding: 5px 12px;
     border-radius: 99px;
-    font-size: 11.5px;
-    font-weight: 700;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
     border: 1px solid rgba(255,255,255,0.22);
     direction: rtl !important;
 }}
@@ -1535,24 +1605,26 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
     gap: 10px;
     direction: rtl !important;
 }}
-.welcome-line {{ font-size: 13px; color: #fde68a !important; font-weight: 700; margin-bottom: 2px; text-align: right !important; }}
-.teacher-name {{ font-size: 22px; font-weight: 900; color: #ffffff !important; margin: 0 0 8px 0; text-align: right !important; }}
+.welcome-line {{ font-size: 13px !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; font-weight: 700 !important; margin-bottom: 2px; text-align: right !important; }}
+.teacher-name {{ font-size: 22px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0 0 8px 0; text-align: right !important; }}
 .meta-badges {{ display: flex; flex-wrap: wrap; gap: 6px; direction: rtl !important; }}
 .meta-pill {{
     background: rgba(0,0,0,0.25);
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
     padding: 4px 10px;
     border-radius: 9px;
-    font-size: 11.5px;
-    font-weight: 700;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
 }}
 .year-badge {{
-    background: #fbbf24;
+    background: #fbbf24 !important;
     color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
     padding: 6px 14px;
     border-radius: 12px;
-    font-size: 13px;
-    font-weight: 800;
+    font-size: 13px !important;
+    font-weight: 800 !important;
 }}
 
 .kpi-grid {{
@@ -1693,22 +1765,22 @@ div[data-testid="stRadio"] label:has(input:checked) p {{
 }}
 
 .ziyad-footer {{
-    margin-top: 28px;
+    margin-top: 26px;
     padding: 16px 12px;
     background: #ffffff;
     border-top: 3px solid {th['primary']};
-    border-radius: 14px 14px 8px 8px;
+    border-radius: 16px;
     text-align: center !important;
     border: 1px solid #e2e8f0;
     width: 100%;
     box-sizing: border-box;
 }}
-.footer-brand {{ font-size: 14px; font-weight: 800; color: {th['primary']} !important; margin-bottom: 3px; text-align: center !important; }}
+.footer-brand {{ font-size: 13.5px; font-weight: 800; color: #334155 !important; margin-bottom: 4px; text-align: center !important; }}
 .footer-rights {{ font-size: 11.5px; font-weight: 600; color: #64748b !important; text-align: center !important; }}
 </style>
 """, unsafe_allow_html=True)
 
-# حقن خط Cairo & Tajawal في الصفحة الأم + إخفاء شريط التمرير ودوائر الراديو + فرض RTL للقوائم المنسدلة
+# حقن خط Cairo & Tajawal في الصفحة الأم + إخفاء دوائر الراديو نهائياً + فرض RTL للقوائم المنسدلة
 components.html(f"""
 <script>
 (function() {{
@@ -1717,7 +1789,6 @@ components.html(f"""
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
 
-        // 1. حقن خطوط منصة زياد الذكية (Cairo & Tajawal) مباشرة في head المتصفح
         var fontId = 'ziyad-google-fonts';
         if (!pDoc.getElementById(fontId)) {{
             var link = pDoc.createElement('link');
@@ -1727,7 +1798,6 @@ components.html(f"""
             pDoc.head.appendChild(link);
         }}
 
-        // 2. إخفاء أشرطة التمرير ودوائر الراديو وتوحيد الخط في الصفحة الأم
         var styleId = 'ziyad-global-portal-rtl';
         var existingStyle = pDoc.getElementById(styleId);
         if (!existingStyle) {{
@@ -1748,11 +1818,15 @@ components.html(f"""
             .block-container {{
                 overflow: visible !important;
             }}
-            div[data-testid="stRadio"] label > div:first-child,
-            div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {{
+            div[data-testid="stRadio"] label > div:not([data-testid="stMarkdownContainer"]),
+            div[data-testid="stRadio"] [data-baseweb="radio"] > div:not([data-testid="stMarkdownContainer"]),
+            div[data-testid="stRadio"] input[type="radio"] {{
                 display: none !important;
                 width: 0px !important;
                 height: 0px !important;
+                opacity: 0 !important;
+                visibility: hidden !important;
+                position: absolute !important;
             }}
             div[data-baseweb="popover"],
             div[data-baseweb="popover"] *,
@@ -1799,8 +1873,7 @@ components.html(f"""
                     ch.style.setProperty('text-align', 'right', 'important');
                 }});
             }});
-            // إخفاء دوائر الراديو برمجياً
-            var radioCircles = pDoc.querySelectorAll('div[data-testid="stRadio"] label > div:first-child');
+            var radioCircles = pDoc.querySelectorAll('div[data-testid="stRadio"] label > div:not([data-testid="stMarkdownContainer"])');
             radioCircles.forEach(function(rc) {{
                 rc.style.setProperty('display', 'none', 'important');
             }});
@@ -2368,40 +2441,69 @@ def build_pdf_report_html(user_info, active_year, stds, evidences, ev_by_std, si
     html_content += "</body></html>"
     return html_content
 
-def render_footer():
+def render_footer(is_login=False):
     year_now = datetime.date.today().year
     safe_name = html.escape(str(user_info.get("full_name", "")))
-    footer_html = (
-        f'<div class="ziyad-footer" dir="rtl">'
-        f'<div class="footer-brand">🎓 منصة زياد الذكية | بوابة التعليم الذكية {year_now}</div>'
-        f'<div class="footer-rights">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {safe_name}</div>'
-        f'</div>'
-    )
+    if is_login:
+        footer_html = (
+            f'<div style="margin-top:26px; text-align:center;" dir="rtl">'
+            f'<div class="footer-brand">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {year_now}</div>'
+            f'<div class="login-footer-badges">'
+            f'<div class="login-f-pill">🛡️ توثيق رسمي معتمد</div>'
+            f'<div class="login-f-pill">☁️ حفظ سحابي آمن</div>'
+            f'<div class="login-f-pill">🖨️ تقارير A4 ذكية</div>'
+            f'</div>'
+            f'</div>'
+        )
+    else:
+        footer_html = (
+            f'<div class="ziyad-footer" dir="rtl">'
+            f'<div class="footer-brand">🎓 منصة زياد الذكية | بوابة التعليم الذكية {year_now}</div>'
+            f'<div class="footer-rights">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {safe_name}</div>'
+            f'</div>'
+        )
     st.markdown(footer_html, unsafe_allow_html=True)
 
 # ==========================================
-# 9. صفحة تسجيل الدخول (معلم + زائر)
+# 9. صفحة تسجيل الدخول (مطابقة لهوية الفيديو وبدون اسم المعلم والمدرسة في البنر)
 # ==========================================
 def login_page():
-    safe_name = html.escape(str(user_info.get("full_name", "")))
-    safe_school = html.escape(str(user_info.get("school_name", "")))
+    # بنر الدخول الزجاجي ثلاثي الأبعاد (بدون اسم المعلم أو المدرسة وبنص أبيض ناصع)
     login_hero = (
-        f'<div class="hero-wrapper" dir="rtl" style="text-align:center;">'
-        f'<div style="display:flex; justify-content:center; margin-bottom:8px;">{ZIYAD_LOGO_SVG}</div>'
-        f'<div style="font-size:16px; color:#fbbf24 !important; font-weight:800; text-align:center;">منصة زياد الذكية • بوابة التعليم الذكية 2026</div>'
-        f'<div style="font-size:23px; font-weight:900; margin:5px 0; color:white !important; text-align:center;">ملف الإنجاز المهني الإلكتروني</div>'
-        f'<div style="font-size:13px; opacity:0.95; color:white !important; font-weight:700; text-align:center;">أ. {safe_name} • {safe_school}</div>'
+        f'<div class="hero-wrapper" dir="rtl">'
+        f'<div class="login-banner-flex">'
+        f'{ZIYAD_LOGO_SVG}'
+        f'<div class="login-Main-title">منصة زياد الذكية</div>'
+        f'<div class="login-portal-pill">ملف الإنجاز المهني الإلكتروني 2026</div>'
+        f'</div>'
         f'</div>'
     )
     st.markdown(login_hero, unsafe_allow_html=True)
-    
-    tab_teacher, tab_visitor = st.tabs(["🔒 دخول المعلم (تحكم كامل)", "👁️ دخول زائر (مشاهدة فقط)"])
-    
-    with tab_teacher:
+
+    # شريط كبسولات أنيق لاختيار بوابة الدخول (مع الإطار الذهبي للتبويب النشط كما في الفيديو)
+    login_modes = {
+        'teacher': "🔒 دخول المعلم (تحكم كامل)",
+        'visitor': "👁️ دخول زائر (مشاهدة فقط)"
+    }
+    mode_keys = list(login_modes.keys())
+    selected_mode = st.radio(
+        "login_mode_bar",
+        options=mode_keys,
+        format_func=lambda k: login_modes[k],
+        index=mode_keys.index(st.session_state.login_mode),
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+    if selected_mode != st.session_state.login_mode:
+        st.session_state.login_mode = selected_mode
+        st.rerun()
+
+    if st.session_state.login_mode == 'teacher':
         with st.form("login_form"):
-            email = st.text_input("البريد الإلكتروني")
-            password = st.text_input("كلمة المرور", type="password")
-            submit = st.form_submit_button("تسجيل الدخول للنظام", type="primary", use_container_width=True)
+            st.markdown('<div class="login-card-heading">تسجيل دخول المعلم</div>', unsafe_allow_html=True)
+            email = st.text_input("البريد الإلكتروني", placeholder="أدخل البريد الإلكتروني هنا...")
+            password = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
+            submit = st.form_submit_button("🚀 تسجيل الدخول للنظام", type="primary", use_container_width=True)
             if submit:
                 if email and password:
                     try:
@@ -2420,11 +2522,11 @@ def login_page():
                         st.error("البريد الإلكتروني أو كلمة المرور غير صحيحة.")
                 else:
                     st.warning("يرجى إدخال البريد الإلكتروني وكلمة المرور.")
-
-    with tab_visitor:
-        st.info("بوابة مخصصة لمدير المدرسة والمشرف التربوي للاطلاع على ملف الإنجاز بواسطة رمز المشاهدة الممنوح من المعلم.")
+    else:
         with st.form("visitor_form"):
-            v_code = st.text_input("أدخل رمز المشاهدة للزائر:", type="password")
+            st.markdown('<div class="login-card-heading">بوابة الزائر والمشرف التربوي</div>', unsafe_allow_html=True)
+            st.caption("بوابة مخصصة لمدير المدرسة والمشرف التربوي للاطلاع على ملف الإنجاز بواسطة رمز المشاهدة الممنوح من المعلم.")
+            v_code = st.text_input("رمز المشاهدة للزائر:", type="password", placeholder="أدخل رمز المشاهدة هنا...")
             v_submit = st.form_submit_button("👁️ استعراض ملف الإنجاز", type="primary", use_container_width=True)
             if v_submit:
                 saved_code = str(user_info.get("visitor_code", "1448")).strip()
@@ -2436,7 +2538,7 @@ def login_page():
                 else:
                     st.error("رمز المشاهدة غير صحيح.")
 
-    render_footer()
+    render_footer(is_login=True)
 
 # ==========================================
 # 10. التطبيق الرئيسي
@@ -2834,7 +2936,7 @@ def main_app():
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
     # ----------------------------------------
-    # 📄 3. صفحة التقارير والطباعة
+    # 📄 3. صفحة التقارير والطباعة (للزائر: PDF فقط لحفظ الحقوق | للمعلم: PDF + Word)
     # ----------------------------------------
     elif st.session_state.current_page == 'reports':
         st.markdown("#### 📄 تصدير وطباعة ملف الإنجاز")
@@ -2915,23 +3017,25 @@ def main_app():
                 </script>
             """, height=62)
 
-        st.write("")
-        if st.button("📄 تجهيز ملف Word قابل للتعديل (شامل الصور والمرفقات)", use_container_width=True):
-            with st.spinner("جاري تجهيز ملف الـ Word وتضمين صور الشواهد بداخله..."):
-                all_evidences = sort_evidences_chronologically(evidences)
-                st.session_state.ready_docx_bytes = generate_editable_docx(
-                    user_info, active_year, stds, all_evidences, signed_urls_map
-                )
+        # تصدير الـ Word يظهر للمعلم فقط ويُخفى تماماً عن الزائر لحفظ الحقوق
+        if not is_visitor:
+            st.write("")
+            if st.button("📄 تجهيز ملف Word قابل للتعديل (شامل الصور والمرفقات)", use_container_width=True):
+                with st.spinner("جاري تجهيز ملف الـ Word وتضمين صور الشواهد بداخله..."):
+                    all_evidences = sort_evidences_chronologically(evidences)
+                    st.session_state.ready_docx_bytes = generate_editable_docx(
+                        user_info, active_year, stds, all_evidences, signed_urls_map
+                    )
 
-        if st.session_state.ready_docx_bytes:
-            st.download_button(
-                label="⬇️ اضغط هنا لتحميل ملف الـ Word الجاهز (.docx)",
-                data=st.session_state.ready_docx_bytes,
-                file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                type="primary",
-                use_container_width=True
-            )
+            if st.session_state.ready_docx_bytes:
+                st.download_button(
+                    label="⬇️ اضغط هنا لتحميل ملف الـ Word الجاهز (.docx)",
+                    data=st.session_state.ready_docx_bytes,
+                    file_name=f"ملف_إنجاز_{user_info['full_name'].replace(' ', '_')}_{active_year['year_name']}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    type="primary",
+                    use_container_width=True
+                )
 
     # ----------------------------------------
     # ⚙️ 4. صفحة حسابي
@@ -3165,7 +3269,7 @@ def main_app():
                 st.session_state.is_visitor = False
                 st.rerun()
 
-    render_footer()
+    render_footer(is_login=False)
 
 # ==========================================
 # 11. نقطة تشغيل التطبيق (محمية ضد أي خطأ غير متوقع)
