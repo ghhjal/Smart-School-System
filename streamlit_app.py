@@ -20,7 +20,7 @@ import streamlit.components.v1 as components
 # 1. إعدادات الصفحة الأساسية
 # ==========================================
 st.set_page_config(
-    page_title="منصة زياد الذكية | ملف الإنجاز المهني",
+    page_title="ملف الإنجاز المهني الإلكتروني | منصة زياد الذكية",
     page_icon="🎓",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -1134,7 +1134,7 @@ if active_theme_key not in THEMES:
     active_theme_key = "emerald"
 th = THEMES[active_theme_key]
 
-ZIYAD_LOGO_SVG = '<svg width="52" height="52" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
+ZIYAD_LOGO_SVG = '<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
 # 7. التصميم الشامل وتوحيد خط Cairo وإخفاء دوائر الراديو وعلامات الروابط
@@ -1566,55 +1566,118 @@ div[data-testid="stRadio"] label:has(input:checked) span {{
 }}
 
 /* ========================================================= */
-/* البنر الزجاجي ثلاثي الأبعاد المطابق لفيديو منصة زياد الذكية */
+/* البنر الزجاجي الموحد للهوية البصرية (منصة زياد الذكية) */
 /* ========================================================= */
 .hero-wrapper {{
     background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 52%, {th['primary_light']} 100%) !important;
     color: #ffffff !important;
-    padding: 20px 24px;
+    padding: 26px 24px 22px 24px;
     border-radius: 24px;
-    margin-bottom: 10px;
-    box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), 0 12px 26px rgba(15, 23, 42, 0.16) !important;
-    border: 1px solid rgba(255,255,255,0.18) !important;
+    margin-bottom: 14px;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), 0 14px 30px rgba(15, 23, 42, 0.18) !important;
+    border: 1.5px solid rgba(255,255,255,0.22) !important;
     box-sizing: border-box;
     width: 100%;
+    position: relative;
+    overflow: hidden;
     direction: rtl !important;
-    text-align: right !important;
+    text-align: center !important;
     font-family: 'Cairo', sans-serif !important;
 }}
-
-/* تصميم بنر صفحة الدخول */
-.login-banner-flex {{
+.hero-wrapper::before {{
+    content: "";
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}}
+.hero-wrapper::after {{
+    content: "";
+    position: absolute;
+    bottom: -70px;
+    left: -50px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}}
+.unified-hero-stack {{
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 10px;
+    position: relative;
+    z-index: 2;
+    direction: rtl !important;
+    text-align: center !important;
+}}
+.unified-title-row {{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
     flex-wrap: wrap;
-    padding: 10px 6px;
     direction: rtl !important;
 }}
-.login-Main-title {{
+.unified-main-title {{
     font-family: 'Cairo', sans-serif !important;
     font-size: 30px !important;
     font-weight: 900 !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     margin: 0 !important;
-    line-height: 1.3 !important;
+    line-height: 1.25 !important;
     letter-spacing: 0px !important;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    text-shadow: 0 2px 10px rgba(0,0,0,0.22);
+    text-align: center !important;
 }}
-.login-portal-pill {{
+.unified-brand-row {{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    direction: rtl !important;
+}}
+.unified-brand-pill {{
     font-family: 'Cairo', sans-serif !important;
-    background: rgba(15, 23, 42, 0.32) !important;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    padding: 7px 18px;
-    border-radius: 99px;
-    font-size: 14px !important;
+    background: rgba(15, 23, 42, 0.34) !important;
+    color: #fde68a !important;
+    -webkit-text-fill-color: #fde68a !important;
+    padding: 5px 18px;
+    border-radius: 999px;
+    font-size: 15px !important;
     font-weight: 800 !important;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: inset 0 1px 2px rgba(255,255,255,0.2);
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.18);
+    text-decoration: none !important;
+}}
+.unified-year-chip {{
+    font-family: 'Cairo', sans-serif !important;
+    background: rgba(251, 191, 36, 0.22) !important;
+    color: #fef3c7 !important;
+    -webkit-text-fill-color: #fef3c7 !important;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12.5px !important;
+    font-weight: 800 !important;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+}}
+.unified-sub-desc {{
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+    -webkit-text-fill-color: rgba(255, 255, 255, 0.92) !important;
+    margin: 0 !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
 }}
 .login-card-heading {{
     font-family: 'Cairo', sans-serif !important;
@@ -1623,9 +1686,35 @@ div[data-testid="stRadio"] label:has(input:checked) span {{
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
     text-align: right !important;
-    margin: 0 0 12px 0 !important;
-    padding-bottom: 10px;
+    margin: 0 0 6px 0 !important;
+    padding-bottom: 8px;
     border-bottom: 1px solid #f1f5f9;
+}}
+.login-card-sub {{
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+    -webkit-text-fill-color: #64748b !important;
+    text-align: right !important;
+    margin: 0 0 14px 0 !important;
+    line-height: 1.5 !important;
+}}
+@media (max-width: 768px) {{
+    .hero-wrapper {{
+        padding: 20px 14px 18px 14px !important;
+        border-radius: 20px !important;
+    }}
+    .unified-main-title {{
+        font-size: 22px !important;
+    }}
+    .unified-brand-pill {{
+        font-size: 13.5px !important;
+        padding: 4px 14px !important;
+    }}
+    .unified-sub-desc {{
+        font-size: 12.5px !important;
+    }}
 }}
 
 /* أزرار التواصل والمنصات المباشرة (بدون إظهار الأرقام أو الإيميل أو الروابط) */
@@ -2642,8 +2731,8 @@ def render_footer(is_login=False):
     else:
         footer_html = (
             f'<div class="ziyad-footer" dir="rtl">'
-            f'<div class="footer-brand">🎓 منصة زياد الذكية | بوابة التعليم الذكية {year_now}</div>'
-            f'<div class="footer-rights" style="margin-bottom:10px;">جميع الحقوق محفوظة © {year_now}م - تصميم وتطوير: أ. {safe_name}</div>'
+            f'<div class="footer-brand">🎓 ملف الإنجاز المهني الإلكتروني | منصة زياد الذكية</div>'
+            f'<div class="footer-rights" style="margin-bottom:10px;">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {year_now}م - تصميم وتطوير: أ. {safe_name}</div>'
             f'{contact_cards_html}'
             f'</div>'
         )
@@ -2653,12 +2742,23 @@ def render_footer(is_login=False):
 # 9. صفحة تسجيل الدخول
 # ==========================================
 def login_page():
+    all_years_login = fetch_all_years()
+    act_y_login = [y for y in all_years_login if y.get("is_active")]
+    curr_y_str = act_y_login[0].get("year_name", "1448") if act_y_login else (all_years_login[0].get("year_name", "1448") if all_years_login else "1448")
+    safe_y_login = html.escape(str(curr_y_str))
+
     login_hero = (
         f'<div class="hero-wrapper" dir="rtl">'
-        f'<div class="login-banner-flex">'
+        f'<div class="unified-hero-stack">'
+        f'<div class="unified-title-row">'
         f'{ZIYAD_LOGO_SVG}'
-        f'<div class="login-Main-title">منصة زياد الذكية</div>'
-        f'<div class="login-portal-pill">ملف الإنجاز المهني الإلكتروني 2026</div>'
+        f'<h1 class="unified-main-title">ملف الإنجاز المهني الإلكتروني</h1>'
+        f'</div>'
+        f'<div class="unified-brand-row">'
+        f'<span class="unified-brand-pill">منصة زياد الذكية</span>'
+        f'<span class="unified-year-chip">📅 {safe_y_login}هـ</span>'
+        f'</div>'
+        f'<div class="unified-sub-desc">إنجازاتي المهنية وشواهدي</div>'
         f'</div>'
         f'</div>'
     )
@@ -2683,10 +2783,10 @@ def login_page():
 
     if st.session_state.login_mode == 'teacher':
         with st.form("login_form"):
-            st.markdown('<div class="login-card-heading">تسجيل دخول المعلم</div>', unsafe_allow_html=True)
+            st.markdown('<div class="login-card-heading">تسجيل دخول المعلم</div><div class="login-card-sub">أدخل البريد الإلكتروني وكلمة المرور لإدارة وتوثيق شواهد الأداء الوظيفي</div>', unsafe_allow_html=True)
             email = st.text_input("البريد الإلكتروني", placeholder="أدخل البريد الإلكتروني هنا...")
             password = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
-            submit = st.form_submit_button("🚀 تسجيل الدخول للنظام", type="primary", use_container_width=True)
+            submit = st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True)
             if submit:
                 if email and password:
                     try:
@@ -2752,8 +2852,8 @@ def main_app():
         f'<div class="hero-wrapper" dir="rtl">'
         f'<div class="hero-top" dir="rtl">'
         f'<div class="brand-box">{ZIYAD_LOGO_SVG}'
-        f'<div><div class="brand-title">منصة زياد الذكية</div>'
-        f'<div class="brand-sub">بوابة التعليم الذكية 2026 • ملف الإنجاز المهني</div></div></div>'
+        f'<div><div class="brand-title">ملف الإنجاز المهني الإلكتروني</div>'
+        f'<div class="brand-sub">منصة زياد الذكية • إنجازاتي المهنية وشواهدي</div></div></div>'
         f'<div class="date-pill">🗓️ {today_str}</div>'
         f'</div>'
         f'<div class="hero-body" dir="rtl">'
@@ -2766,7 +2866,7 @@ def main_app():
         f'<span class="meta-pill">👔 مدير المدرسة: {safe_prin}</span>'
         f'</div>'
         f'</div>'
-        f'<div class="year-badge">📁 ملف إنجاز عام {safe_year}هـ</div>'
+        f'<div class="year-badge">📁 عام {safe_year}هـ</div>'
         f'</div>'
         f'</div>'
     )
