@@ -2756,7 +2756,7 @@ def render_footer(is_login=False):
         f'<span class="contact-pill-title">🧠 منصة أنماط التعلم</span>'
         f'</a>'
         f'<a href="https://zi-edu.streamlit.app" target="_blank" class="contact-pill-card">'
-        f'<span class="contact-pill-title">🎓 بوابة إدارة ومتابعة الطلاب</span>'
+        f'<span class="contact-pill-title">🎓 منصة متابعة الطلاب</span>'
         f'</a>'
         f'</div>'
     )
