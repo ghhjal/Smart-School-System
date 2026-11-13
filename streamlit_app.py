@@ -2683,9 +2683,6 @@ if "visitor" in query_params and st.session_state.user is None:
 # ==========================================
 # 8. دوال التاريخ والترحيب والفوتر وإدارة وتعديل ونقل الشاهد
 # ==========================================
-def get_greeting_and_dates():
-    tz = datetime.timezone(datetime.timedelta(hours=3))
-    now = datetime.datetime.now(tz)
     today = now.date()
     
     days_ar = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
