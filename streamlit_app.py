@@ -2695,7 +2695,6 @@ if "visitor" in query_params and st.session_state.user is None:
     h_months = ["محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة", "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"]
     h_date = f"{h_obj.day} {h_months[h_obj.month - 1]} {h_obj.year}هـ"
     
-    return greeting, f"{day_name} • {h_date} • {g_date}"
 
 def render_attachments_html(files, signed_urls_map):
     if not files:
