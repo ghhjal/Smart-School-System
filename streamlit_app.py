@@ -361,6 +361,26 @@ def navigate_to(page_name, std_id=None):
         st.session_state.view_standard_id = std_id
     st.rerun()
 
+def render_grid_tabs(options_map, current_val, key_prefix):
+    keys = list(options_map.keys())
+    if current_val not in keys:
+        current_val = keys[0]
+    cols = st.columns(len(keys))
+    selected_val = current_val
+    for idx, k in enumerate(keys):
+        with cols[idx]:
+            if idx == 0:
+                st.markdown('<span class="ziyad-grid-tab-marker"></span>', unsafe_allow_html=True)
+            is_active = (k == current_val)
+            if st.button(
+                options_map[k],
+                key=f"gtab_{key_prefix}_{k}",
+                type="primary" if is_active else "secondary",
+                use_container_width=True
+            ):
+                selected_val = k
+    return selected_val
+
 def optimize_uploaded_image(up_file):
     raw_bytes = up_file.getvalue()
     mime_type = up_file.type or ""
@@ -1765,6 +1785,136 @@ div[data-testid="stRadio"] label:has(input:checked) span {{
     font-weight: 800 !important;
 }}
 
+
+/* ========================================================= */
+/* التبويبات الشبكية الموحدة (render_grid_tabs) */
+/* ========================================================= */
+div[data-testid="stElementContainer"]:has(.ziyad-grid-tab-marker),
+div.element-container:has(.ziyad-grid-tab-marker) {{
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) {{
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    width: 100% !important;
+    direction: rtl !important;
+    margin-top: 2px !important;
+    margin-bottom: 8px !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) > div[data-testid="stColumn"],
+div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) > div[data-testid="column"] {{
+    flex: 1 1 0% !important;
+    min-width: max-content !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid="stButton"] button:not([kind="primary"]) {{
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 4px 12px !important;
+    margin: 0 !important;
+    background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+    background-color: #E2E8F0 !important;
+    border: 1px solid #CBD5E1 !important;
+    border-bottom: 2px solid #94A3B8 !important;
+    border-radius: 10px !important;
+    color: #1E293B !important;
+    -webkit-text-fill-color: #1E293B !important;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 0.88rem !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid="stButton"] button:not([kind="primary"]) p,
+div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid="stButton"] button:not([kind="primary"]) * {{
+    color: #1E293B !important;
+    -webkit-text-fill-color: #1E293B !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 0.88rem !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid="stButton"] button:not([kind="primary"]):hover {{
+    background: linear-gradient(180deg, #F8FAFC 0%, {th['tint']} 100%) !important;
+    border-color: {th['primary_light']} !important;
+    border-bottom-color: {th['primary']} !important;
+    transform: translateY(-1px);
+}}
+
+div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid="stButton"] button[kind="primary"] {{
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 4px 12px !important;
+    margin: 0 !important;
+    background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%) !important;
+    background-color: {th['primary']} !important;
+    border: 1px solid {th['primary_dark']} !important;
+    border-bottom: 2px solid {th['primary_dark']} !important;
+    border-radius: 10px !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.22) !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 900 !important;
+    font-size: 0.88rem !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid="stButton"] button[kind="primary"] p,
+div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid="stButton"] button[kind="primary"] * {{
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 900 !important;
+    font-size: 0.88rem !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+}}
+
+@media (max-width: 768px) {{
+    div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) {{
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 5px 6px !important;
+        width: 100% !important;
+        direction: rtl !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) > div[data-testid="stColumn"],
+    div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) > div[data-testid="column"] {{
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: unset !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) > div[data-testid="stColumn"]:last-child:nth-child(odd),
+    div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) > div[data-testid="column"]:last-child:nth-child(odd) {{
+        grid-column: 1 / -1 !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid="stButton"] button {{
+        width: 100% !important;
+        min-width: 0 !important;
+        padding: 4px 8px !important;
+        font-size: 0.82rem !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid="stButton"] button p,
+    div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid="stButton"] button * {{
+        font-size: 0.82rem !important;
+    }}
+}}
+
 /* ========================================================= */
 /* البنر الزجاجي الموحد للهوية البصرية (منصة زياد الذكية) */
 /* ========================================================= */
@@ -2632,6 +2782,76 @@ components.html(f"""
                     a.style.setProperty('display', 'none', 'important');
                 }});
 
+                var gridMarkers = pDoc.querySelectorAll('.ziyad-grid-tab-marker');
+                gridMarkers.forEach(function(marker) {{
+                    var elCont = marker.closest('[data-testid="stElementContainer"], .element-container');
+                    if (elCont) {{
+                        elCont.style.setProperty('display', 'none', 'important');
+                    }}
+                    var hBlock = marker.closest('[data-testid="stHorizontalBlock"]');
+                    if (hBlock) {{
+                        hBlock.style.setProperty('gap', '5px 6px', 'important');
+                        hBlock.style.setProperty('width', '100%', 'important');
+                        hBlock.style.setProperty('direction', 'rtl', 'important');
+                        hBlock.style.setProperty('margin-bottom', '8px', 'important');
+                        if (isMobileView) {{
+                            hBlock.style.setProperty('display', 'grid', 'important');
+                            hBlock.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+                        }} else {{
+                            hBlock.style.setProperty('display', 'flex', 'important');
+                            hBlock.style.setProperty('flex-wrap', 'wrap', 'important');
+                        }}
+                        var cols = hBlock.querySelectorAll(':scope > [data-testid="stColumn"], :scope > [data-testid="column"]');
+                        cols.forEach(function(col, idx) {{
+                            if (isMobileView) {{
+                                col.style.setProperty('width', '100%', 'important');
+                                col.style.setProperty('min-width', '0', 'important');
+                                col.style.setProperty('flex', 'unset', 'important');
+                                if (idx === cols.length - 1 && cols.length % 2 === 1) {{
+                                    col.style.setProperty('grid-column', '1 / -1', 'important');
+                                }} else {{
+                                    col.style.removeProperty('grid-column');
+                                }}
+                            }} else {{
+                                col.style.setProperty('flex', '1 1 0%', 'important');
+                                col.style.removeProperty('grid-column');
+                            }}
+                        }});
+                        var gBtns = hBlock.querySelectorAll('button');
+                        gBtns.forEach(function(btn) {{
+                            scaleLeadingEmoji(btn);
+                            btn.style.setProperty('height', '38px', 'important');
+                            btn.style.setProperty('min-height', '38px', 'important');
+                            btn.style.setProperty('max-height', '38px', 'important');
+                            btn.style.setProperty('border-radius', '10px', 'important');
+                            btn.style.setProperty('padding', isMobileView ? '4px 8px' : '4px 12px', 'important');
+                            var isPri = btn.getAttribute('kind') === 'primary' || btn.getAttribute('data-testid') === 'baseButton-primary';
+                            if (isPri) {{
+                                btn.style.setProperty('background', 'linear-gradient(135deg, {th["primary_dark"]} 0%, {th["primary"]} 55%, {th["primary_light"]} 100%)', 'important');
+                                btn.style.setProperty('border', '1px solid {th["primary_dark"]}', 'important');
+                                btn.style.setProperty('border-bottom', '2px solid {th["primary_dark"]}', 'important');
+                                btn.style.setProperty('color', '#FFFFFF', 'important');
+                                btn.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                                btn.querySelectorAll('p, span, div').forEach(function(ch) {{
+                                    ch.style.setProperty('color', '#FFFFFF', 'important');
+                                    ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                                }});
+                            }} else {{
+                                btn.style.setProperty('background', 'linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%)', 'important');
+                                btn.style.setProperty('background-color', '#E2E8F0', 'important');
+                                btn.style.setProperty('border', '1px solid #CBD5E1', 'important');
+                                btn.style.setProperty('border-bottom', '2px solid #94A3B8', 'important');
+                                btn.style.setProperty('color', '#1E293B', 'important');
+                                btn.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
+                                btn.querySelectorAll('p, span, div').forEach(function(ch) {{
+                                    ch.style.setProperty('color', '#1E293B', 'important');
+                                    ch.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
+                                }});
+                            }}
+                        }});
+                    }}
+                }});
+
                 var radioLabels = pDoc.querySelectorAll('div[data-testid="stRadio"] label');
                 radioLabels.forEach(function(lbl) {{
                     scaleLeadingEmoji(lbl);
@@ -2683,7 +2903,11 @@ if "visitor" in query_params and st.session_state.user is None:
 # ==========================================
 # 8. دوال التاريخ والترحيب والفوتر وإدارة وتعديل ونقل الشاهد
 # ==========================================
+def get_greeting_and_dates():
+    tz = datetime.timezone(datetime.timedelta(hours=3))
+    now = datetime.datetime.now(tz)
     today = now.date()
+    greeting = "صباح الخير والتميز" if now.hour < 12 else "مساء الخير والعطاء"
     
     days_ar = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
     months_ar = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
@@ -2695,6 +2919,7 @@ if "visitor" in query_params and st.session_state.user is None:
     h_months = ["محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة", "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"]
     h_date = f"{h_obj.day} {h_months[h_obj.month - 1]} {h_obj.year}هـ"
     
+    return greeting, f"{day_name} • {h_date} • {g_date}"
 
 def render_attachments_html(files, signed_urls_map):
     if not files:
@@ -3287,15 +3512,7 @@ def login_page():
         'teacher': "🔒 دخول المعلم",
         'visitor': "👁️ دخول الزائر"
     }
-    mode_keys = list(login_modes.keys())
-    selected_mode = st.radio(
-        "login_mode_bar",
-        options=mode_keys,
-        format_func=lambda k: login_modes[k],
-        index=mode_keys.index(st.session_state.login_mode),
-        horizontal=True,
-        label_visibility="collapsed"
-    )
+    selected_mode = render_grid_tabs(login_modes, st.session_state.login_mode, "login_mode")
     if selected_mode != st.session_state.login_mode:
         st.session_state.login_mode = selected_mode
         st.rerun()
@@ -3417,14 +3634,7 @@ def main_app():
 
     nav_keys = list(nav_map.keys())
     curr_page = st.session_state.current_page if st.session_state.current_page in nav_keys else 'home'
-    selected_nav = st.radio(
-        "nav_bar",
-        options=nav_keys,
-        format_func=lambda k: nav_map[k],
-        index=nav_keys.index(curr_page),
-        horizontal=True,
-        label_visibility="collapsed"
-    )
+    selected_nav = render_grid_tabs(nav_map, curr_page, "main_nav")
     if selected_nav != st.session_state.current_page:
         st.session_state.current_page = selected_nav
         st.rerun()
@@ -3475,15 +3685,7 @@ def main_app():
             'empty': f"فارغة • {empty_stds}",
             'less3': f"أقل من 3 • {less_than_3}"
         }
-        f_keys = list(filter_map.keys())
-        sel_filter = st.radio(
-            "filter_bar",
-            options=f_keys,
-            format_func=lambda x: filter_map[x],
-            index=f_keys.index(st.session_state.filter_mode),
-            horizontal=True,
-            label_visibility="collapsed"
-        )
+        sel_filter = render_grid_tabs(filter_map, st.session_state.filter_mode, "home_filter")
         if sel_filter != st.session_state.filter_mode:
             st.session_state.filter_mode = sel_filter
             st.rerun()
@@ -3896,13 +4098,16 @@ def main_app():
                     st.rerun()
 
         with t2:
-            sub_section = st.radio(
-                "archive_backup_split",
-                options=["archive_sec", "backup_sec"],
-                format_func=lambda k: "📅 أرشفة الأعوام الدراسية" if k == "archive_sec" else "💾 التصدير والنسخ الاحتياطي",
-                horizontal=True,
-                label_visibility="collapsed"
-            )
+            if "archive_sub_tab" not in st.session_state:
+                st.session_state.archive_sub_tab = "archive_sec"
+            arch_map = {
+                "archive_sec": "📅 أرشفة الأعوام الدراسية",
+                "backup_sec": "💾 التصدير والنسخ الاحتياطي"
+            }
+            sub_section = render_grid_tabs(arch_map, st.session_state.archive_sub_tab, "arch_backup")
+            if sub_section != st.session_state.archive_sub_tab:
+                st.session_state.archive_sub_tab = sub_section
+                st.rerun()
 
             if sub_section == "archive_sec":
                 st.markdown('<div class="sub-heading">📅 أرشفة ملفات الإنجاز وإدارة الأعوام الدراسية</div>', unsafe_allow_html=True)
