@@ -1189,7 +1189,20 @@ body::-webkit-scrollbar,
     touch-action: pan-y !important;
 }}
 
-*:not([data-testid="stIconMaterial"]):not(.material-icons):not([class*="material-symbols"]):not(svg):not(path) {{
+h1, h2, h3, h4, h5, h6, p, label,
+[data-testid="stHeadingWithActionElements"],
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] p,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p,
+.hero-wrapper, .hero-wrapper *,
+.kpi-card, .kpi-card *,
+.std-card, .std-card *,
+.ev-box, .ev-box *,
+.idea-card, .idea-card *,
+.ziyad-footer, .ziyad-footer * {{
     font-family: 'Cairo', sans-serif !important;
 }}
 
@@ -1271,14 +1284,22 @@ h1, h2, h3, h4, h5 {{
     text-align: right !important;
 }}
 
-span[data-testid="stIconMaterial"], .material-icons, [class*="material-symbols"] {{
+span[data-testid="stIconMaterial"],
+[data-testid="stExpanderToggleIcon"],
+[data-testid="stExpander"] summary span[data-testid="stIconMaterial"],
+.material-icons,
+[class*="material-symbols"] {{
     font-family: 'Material Symbols Rounded', 'Material Icons' !important;
     direction: ltr !important;
+    font-feature-settings: 'liga' 1 !important;
+    -webkit-font-feature-settings: 'liga' 1 !important;
 }}
 
 div[data-baseweb="input"],
 div[data-baseweb="input"] > div,
 div[data-baseweb="base-input"],
+div[data-baseweb="input"] button,
+div[data-baseweb="base-input"] button,
 div[data-baseweb="textarea"],
 div[data-baseweb="textarea"] > div,
 div[data-baseweb="select"],
@@ -1286,6 +1307,7 @@ div[data-baseweb="select"] > div,
 div[data-testid="stTextInput"] input,
 div[data-testid="stTextArea"] textarea,
 div[data-testid="stDateInput"] input,
+div[data-testid="stNumberInput"] input,
 div[data-baseweb="select"] *,
 input, textarea {{
     background-color: #ffffff !important;
@@ -1296,31 +1318,31 @@ input, textarea {{
     caret-color: {th['primary']} !important;
     direction: rtl !important;
     text-align: right !important;
-    font-family: 'Cairo', sans-serif !important;
     font-weight: 700 !important;
     opacity: 1 !important;
+}}
+
+input, textarea, select,
+div[data-baseweb="select"] div,
+div[data-baseweb="select"] span:not([data-testid="stIconMaterial"]):not([class*="material"]) {{
+    font-family: 'Cairo', sans-serif !important;
 }}
 
 div[data-baseweb="input"],
 div[data-baseweb="textarea"],
 div[data-baseweb="select"] > div {{
-    border: 1.5px solid #e2e8f0 !important;
+    border: 1.5px solid #cbd5e1 !important;
     border-radius: 12px !important;
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
 }}
 
-div[data-baseweb="select"] span,
-div[data-baseweb="select"] div,
-div[data-baseweb="select"] svg {{
+div[data-baseweb="select"] svg,
+div[data-baseweb="input"] svg {{
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
     fill: #0f172a !important;
     background-color: transparent !important;
-    direction: rtl !important;
-    text-align: right !important;
-    white-space: normal !important;
-    line-height: 1.4 !important;
-    font-weight: 700 !important;
+    background: transparent !important;
 }}
 
 input::placeholder, textarea::placeholder {{
@@ -1382,7 +1404,7 @@ div[data-testid="stFileUploader"] section button {{
 
 [data-testid="stExpander"] {{
     background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1.5px solid #cbd5e1 !important;
     border-radius: 14px !important;
     margin-bottom: 10px !important;
     overflow: hidden !important;
@@ -1392,25 +1414,125 @@ div[data-testid="stFileUploader"] section button {{
 }}
 [data-testid="stExpander"] details,
 [data-testid="stExpander"] summary,
-[data-testid="stExpander"] summary p,
-[data-testid="stExpander"] summary span,
 [data-testid="stExpanderDetails"] {{
     background-color: #ffffff !important;
     color: {th['primary']} !important;
-    font-weight: 800 !important;
     direction: rtl !important;
     text-align: right !important;
 }}
-
-button[data-baseweb="tab"] {{
-    background-color: transparent !important;
-    color: #475569 !important;
-    font-weight: 800 !important;
-}}
-button[data-baseweb="tab"][aria-selected="true"] {{
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary [data-testid="stMarkdownContainer"] p {{
+    font-family: 'Cairo', sans-serif !important;
     color: {th['primary']} !important;
-    border-bottom-color: {th['primary']} !important;
+    -webkit-text-fill-color: {th['primary']} !important;
+    font-weight: 800 !important;
+    direction: rtl !important;
+    text-align: right !important;
+    margin: 0 !important;
 }}
+
+.stTabs [data-baseweb="tab-list"],
+.stTabs [role="tablist"],
+[data-testid="stTabs"] [role="tablist"] {{
+    gap: 8px !important;
+    background-color: transparent !important;
+    border-bottom: none !important;
+    padding: 4px 2px !important;
+    margin-bottom: 12px !important;
+    direction: rtl !important;
+}}
+.stTabs [data-baseweb="tab"],
+.stTabs [aria-selected="false"],
+.stTabs [role="tab"]:not([aria-selected="true"]),
+[data-testid="stTabs"] [aria-selected="false"],
+[data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
+button[data-baseweb="tab"]:not([aria-selected="true"]) {{
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 42px !important;
+    height: 42px !important;
+    margin: 0 !important;
+    padding: 6px 14px !important;
+    white-space: nowrap !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 0.92rem !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06) !important;
+    transition: all 0.2s ease !important;
+    opacity: 1 !important;
+}}
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span,
+.stTabs [data-baseweb="tab"] div,
+.stTabs [aria-selected="false"] p,
+.stTabs [aria-selected="false"] span,
+.stTabs [aria-selected="false"] div,
+.stTabs [aria-selected="false"] *,
+.stTabs [role="tab"]:not([aria-selected="true"]) *,
+[data-testid="stTabs"] [aria-selected="false"] *,
+[data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]) *,
+button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
+    font-family: 'Cairo', sans-serif !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    font-size: 0.92rem !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+    opacity: 1 !important;
+}}
+.stTabs [aria-selected="true"],
+.stTabs [role="tab"][aria-selected="true"],
+[data-testid="stTabs"] [aria-selected="true"],
+button[data-baseweb="tab"][aria-selected="true"] {{
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 42px !important;
+    height: 42px !important;
+    margin: 0 !important;
+    padding: 6px 14px !important;
+    white-space: nowrap !important;
+    background: linear-gradient(135deg, {th['primary_dark']}, {th['primary']}, {th['primary_light']}) !important;
+    border: 2px solid #f59e0b !important;
+    border-radius: 12px !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 900 !important;
+    font-size: 0.92rem !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    opacity: 1 !important;
+}}
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span,
+.stTabs [aria-selected="true"] div,
+.stTabs [aria-selected="true"] *,
+.stTabs [role="tab"][aria-selected="true"] *,
+[data-testid="stTabs"] [aria-selected="true"] *,
+button[data-baseweb="tab"][aria-selected="true"] * {{
+    font-family: 'Cairo', sans-serif !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-size: 0.92rem !important;
+    font-weight: 900 !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+    opacity: 1 !important;
+}}
+.stTabs [data-baseweb="tab-highlight"],
+.stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
 
 div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {{
     background-color: #e6f4f1 !important;
@@ -2005,7 +2127,7 @@ div[data-testid="stRadio"] label:has(input:checked) span {{
 </style>
 """, unsafe_allow_html=True)
 
-# حقن خط Cairo في الصفحة الأم + إزالة دوائر الراديو وعلامات الروابط نهائياً عبر الـ DOM + فرض RTL للقوائم المنسدلة
+# حقن خط Cairo في الصفحة الأم + إزالة دوائر الراديو وعلامات الروابط نهائياً عبر الـ DOM + فرض التباين الكامل للتبويبات والحقول
 components.html(f"""
 <script>
 (function() {{
@@ -2013,6 +2135,7 @@ components.html(f"""
         var pDoc = window.parent.document;
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
+        pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
 
         var fontId = 'ziyad-google-fonts';
         if (!pDoc.getElementById(fontId)) {{
@@ -2040,8 +2163,12 @@ components.html(f"""
                 scrollbar-width: none !important;
                 -ms-overflow-style: none !important;
             }}
-            *:not([data-testid="stIconMaterial"]):not(.material-icons):not([class*="material-symbols"]):not(svg):not(path) {{
-                font-family: 'Cairo', sans-serif !important;
+            span[data-testid="stIconMaterial"],
+            [data-testid="stExpanderToggleIcon"],
+            .material-icons,
+            [class*="material-symbols"] {{
+                font-family: 'Material Symbols Rounded', 'Material Icons' !important;
+                direction: ltr !important;
             }}
             [data-testid="stHeaderActionElements"],
             h1 a, h2 a, h3 a, h4 a, h5 a, h6 a, a.anchor-link {{
@@ -2072,6 +2199,56 @@ components.html(f"""
                 opacity: 1 !important;
                 visibility: visible !important;
                 position: static !important;
+            }}
+            .stTabs [aria-selected="false"],
+            .stTabs [role="tab"]:not([aria-selected="true"]),
+            [data-testid="stTabs"] [aria-selected="false"],
+            [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]),
+            button[data-baseweb="tab"]:not([aria-selected="true"]) {{
+                width: auto !important;
+                flex: 0 0 auto !important;
+                white-space: nowrap !important;
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                border: 1.5px solid #cbd5e1 !important;
+                border-radius: 12px !important;
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [aria-selected="false"] p,
+            .stTabs [aria-selected="false"] span,
+            .stTabs [aria-selected="false"] div,
+            .stTabs [aria-selected="false"] *,
+            .stTabs [role="tab"]:not([aria-selected="true"]) *,
+            [data-testid="stTabs"] [aria-selected="false"] *,
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {{
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+                white-space: nowrap !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [aria-selected="true"],
+            .stTabs [role="tab"][aria-selected="true"],
+            [data-testid="stTabs"] [aria-selected="true"],
+            .stTabs [data-baseweb="tab"][aria-selected="true"] {{
+                width: auto !important;
+                flex: 0 0 auto !important;
+                white-space: nowrap !important;
+                background: linear-gradient(135deg, {th['primary_dark']}, {th['primary']}, {th['primary_light']}) !important;
+                border: 2px solid #f59e0b !important;
+                border-radius: 12px !important;
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [aria-selected="true"] *,
+            [data-testid="stTabs"] [aria-selected="true"] * {{
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
+                white-space: nowrap !important;
+                opacity: 1 !important;
             }}
             div[data-baseweb="popover"],
             div[data-baseweb="popover"] *,
@@ -2105,83 +2282,123 @@ components.html(f"""
             }}
         `;
 
+        var isRunningRtl = false;
         function enforcePortalRTL() {{
-            pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
-            var nodes = pDoc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], ul[role="listbox"], li[role="option"]');
-            nodes.forEach(function(el) {{
-                el.setAttribute('dir', 'rtl');
-                el.style.setProperty('direction', 'rtl', 'important');
-                el.style.setProperty('text-align', 'right', 'important');
-                el.style.setProperty('background-color', '#ffffff', 'important');
-                el.style.setProperty('color', '#0f172a', 'important');
-                var children = el.querySelectorAll('div, span');
-                children.forEach(function(ch) {{
-                    ch.setAttribute('dir', 'rtl');
-                    ch.style.setProperty('direction', 'rtl', 'important');
-                    ch.style.setProperty('text-align', 'right', 'important');
-                    ch.style.setProperty('color', '#0f172a', 'important');
-                    ch.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+            if (isRunningRtl) return;
+            isRunningRtl = true;
+            try {{
+                if (pDoc.head.lastElementChild !== existingStyle) {{
+                    pDoc.head.appendChild(existingStyle);
+                }}
+                pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
+                var nodes = pDoc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], ul[role="listbox"], li[role="option"]');
+                nodes.forEach(function(el) {{
+                    el.setAttribute('dir', 'rtl');
+                    el.style.setProperty('direction', 'rtl', 'important');
+                    el.style.setProperty('text-align', 'right', 'important');
+                    el.style.setProperty('background-color', '#ffffff', 'important');
+                    el.style.setProperty('color', '#0f172a', 'important');
+                    var children = el.querySelectorAll('div, span');
+                    children.forEach(function(ch) {{
+                        ch.setAttribute('dir', 'rtl');
+                        ch.style.setProperty('direction', 'rtl', 'important');
+                        ch.style.setProperty('text-align', 'right', 'important');
+                        ch.style.setProperty('color', '#0f172a', 'important');
+                        ch.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                    }});
                 }});
-            }});
 
-            var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
-            inputBoxes.forEach(function(box) {{
-                box.style.setProperty('background-color', '#ffffff', 'important');
-                box.style.setProperty('background', '#ffffff', 'important');
-                box.style.setProperty('color', '#0f172a', 'important');
-                box.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
-                var innerEls = box.querySelectorAll('div, span, input, textarea');
-                innerEls.forEach(function(inn) {{
-                    inn.style.setProperty('color', '#0f172a', 'important');
-                    inn.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
-                    if (inn.tagName === 'INPUT' || inn.tagName === 'TEXTAREA') {{
-                        inn.style.setProperty('background-color', '#ffffff', 'important');
+                var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], .stTabs [aria-selected], [data-testid="stTabs"] [role="tab"], button[data-baseweb="tab"]');
+                tabs.forEach(function(tab) {{
+                    tab.style.setProperty('width', 'auto', 'important');
+                    tab.style.setProperty('flex', '0 0 auto', 'important');
+                    tab.style.setProperty('white-space', 'nowrap', 'important');
+                    tab.style.setProperty('padding', '6px 13px', 'important');
+                    var isSel = tab.getAttribute('aria-selected') === 'true';
+                    if (isSel) {{
+                        tab.style.setProperty('background', 'linear-gradient(135deg, {th["primary_dark"]}, {th["primary"]}, {th["primary_light"]})', 'important');
+                        tab.style.setProperty('border', '2px solid #f59e0b', 'important');
+                        tab.style.setProperty('border-radius', '12px', 'important');
+                        tab.style.setProperty('color', '#ffffff', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+                        tab.querySelectorAll('p, span, div').forEach(function(ch) {{
+                            ch.style.setProperty('color', '#ffffff', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+                        }});
                     }} else {{
-                        inn.style.setProperty('background-color', 'transparent', 'important');
+                        tab.style.setProperty('background-color', '#ffffff', 'important');
+                        tab.style.setProperty('background', '#ffffff', 'important');
+                        tab.style.setProperty('border', '1.5px solid #cbd5e1', 'important');
+                        tab.style.setProperty('border-radius', '12px', 'important');
+                        tab.style.setProperty('color', '#0f172a', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                        tab.querySelectorAll('p, span, div').forEach(function(ch) {{
+                            ch.style.setProperty('color', '#0f172a', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                        }});
                     }}
                 }});
-                var svgs = box.querySelectorAll('svg');
-                svgs.forEach(function(s) {{
-                    s.style.setProperty('fill', '#0f172a', 'important');
-                    s.style.setProperty('color', '#0f172a', 'important');
-                }});
-            }});
 
-            var anchors = pDoc.querySelectorAll('[data-testid="stHeaderActionElements"], h1 a, h2 a, h3 a, h4 a, h5 a, h6 a');
-            anchors.forEach(function(a) {{
-                a.style.setProperty('display', 'none', 'important');
-            }});
-
-            var radioLabels = pDoc.querySelectorAll('div[data-testid="stRadio"] label');
-            radioLabels.forEach(function(lbl) {{
-                Array.from(lbl.children).forEach(function(child) {{
-                    if (child.tagName === 'INPUT') {{
-                        child.style.setProperty('display', 'none', 'important');
-                    }} else if (child.tagName === 'DIV') {{
-                        if (child.querySelector('[data-testid="stMarkdownContainer"]') || (child.textContent && child.textContent.trim().length > 0)) {{
-                            child.style.setProperty('display', 'flex', 'important');
-                            child.style.setProperty('visibility', 'visible', 'important');
-                            child.style.setProperty('opacity', '1', 'important');
-                            child.style.setProperty('width', '100%', 'important');
-                            child.style.setProperty('justify-content', 'center', 'important');
-                        }} else {{
-                            child.style.setProperty('display', 'none', 'important');
-                            child.style.setProperty('width', '0px', 'important');
-                            child.style.setProperty('height', '0px', 'important');
+                var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"]');
+                inputBoxes.forEach(function(box) {{
+                    box.style.setProperty('background-color', '#ffffff', 'important');
+                    box.style.setProperty('background', '#ffffff', 'important');
+                    box.style.setProperty('color', '#0f172a', 'important');
+                    box.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                    box.querySelectorAll('div, input, textarea, button').forEach(function(inn) {{
+                        if (!inn.closest('[data-baseweb="tag"]')) {{
+                            inn.style.setProperty('background-color', '#ffffff', 'important');
+                            inn.style.setProperty('background', '#ffffff', 'important');
+                            inn.style.setProperty('color', '#0f172a', 'important');
+                            inn.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
                         }}
-                    }}
+                    }});
+                    box.querySelectorAll('svg').forEach(function(s) {{
+                        s.style.setProperty('fill', '#0f172a', 'important');
+                        s.style.setProperty('color', '#0f172a', 'important');
+                        s.style.setProperty('background', 'transparent', 'important');
+                    }});
                 }});
-            }});
+
+                var anchors = pDoc.querySelectorAll('[data-testid="stHeaderActionElements"], h1 a, h2 a, h3 a, h4 a, h5 a, h6 a');
+                anchors.forEach(function(a) {{
+                    a.style.setProperty('display', 'none', 'important');
+                }});
+
+                var radioLabels = pDoc.querySelectorAll('div[data-testid="stRadio"] label');
+                radioLabels.forEach(function(lbl) {{
+                    Array.from(lbl.children).forEach(function(child) {{
+                        if (child.tagName === 'INPUT') {{
+                            child.style.setProperty('display', 'none', 'important');
+                        }} else if (child.tagName === 'DIV') {{
+                            if (child.querySelector('[data-testid="stMarkdownContainer"]') || (child.textContent && child.textContent.trim().length > 0)) {{
+                                child.style.setProperty('display', 'flex', 'important');
+                                child.style.setProperty('visibility', 'visible', 'important');
+                                child.style.setProperty('opacity', '1', 'important');
+                                child.style.setProperty('width', '100%', 'important');
+                                child.style.setProperty('justify-content', 'center', 'important');
+                            }} else {{
+                                child.style.setProperty('display', 'none', 'important');
+                                child.style.setProperty('width', '0px', 'important');
+                                child.style.setProperty('height', '0px', 'important');
+                            }}
+                        }}
+                    }});
+                }});
+            }} finally {{
+                isRunningRtl = false;
+            }}
         }}
 
         enforcePortalRTL();
-        if (!window.parent.__ziyadRtlObserverAttached) {{
-            var obs = new MutationObserver(function() {{
-                enforcePortalRTL();
-            }});
-            obs.observe(pDoc.body, {{ childList: true, subtree: true }});
-            window.parent.__ziyadRtlObserverAttached = true;
+        if (window.parent.__ziyadRtlObserverObj) {{
+            try {{ window.parent.__ziyadRtlObserverObj.disconnect(); }} catch (e) {{}}
         }}
+        var obs = new MutationObserver(function() {{
+            enforcePortalRTL();
+        }});
+        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
+        window.parent.__ziyadRtlObserverObj = obs;
     }} catch (e) {{}}
 }})();
 </script>
@@ -2756,7 +2973,7 @@ def render_footer(is_login=False):
         f'<span class="contact-pill-title">🧠 منصة أنماط التعلم</span>'
         f'</a>'
         f'<a href="https://zi-edu.streamlit.app" target="_blank" class="contact-pill-card">'
-        f'<span class="contact-pill-title">🎓 منصة متابعة الطلاب</span>'
+        f'<span class="contact-pill-title">🎓 منصة زياد الذكية</span>'
         f'</a>'
         f'</div>'
     )
