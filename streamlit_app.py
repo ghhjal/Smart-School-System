@@ -2687,7 +2687,6 @@ def get_greeting_and_dates():
     tz = datetime.timezone(datetime.timedelta(hours=3))
     now = datetime.datetime.now(tz)
     today = now.date()
-    greeting = "صباح الخير والتميز" if now.hour < 12 else "مساء الخير والعطاء"
     
     days_ar = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
     months_ar = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
