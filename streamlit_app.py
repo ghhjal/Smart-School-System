@@ -1431,45 +1431,94 @@ div[data-testid="stFileUploader"] section button {{
     margin: 0 !important;
 }}
 
+.ziyad-btn-icon {{
+    font-size: 0.82em !important;
+    line-height: 1 !important;
+    display: inline-block !important;
+    margin-left: 4px !important;
+    vertical-align: -1px !important;
+}}
+
+[data-testid="stTabs"],
+.stTabs,
+div[data-baseweb="tabs"] {{
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+}}
+
+div[data-baseweb="tab-panel"],
+[data-testid="stTabs"] [role="tabpanel"] {{
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+}}
+
+[data-testid="stTabs"] [data-baseweb="tab-list"],
+[data-testid="stTabs"] [role="tablist"],
 .stTabs [data-baseweb="tab-list"],
 .stTabs [role="tablist"],
-[data-testid="stTabs"] [role="tablist"] {{
-    gap: 8px !important;
+div[data-baseweb="tab-list"] {{
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 5px 6px !important;
     background-color: transparent !important;
-    border-bottom: none !important;
-    padding: 4px 2px !important;
-    margin-bottom: 12px !important;
+    border: none !important;
+    padding: 2px 0px !important;
+    margin-bottom: 8px !important;
     direction: rtl !important;
+    width: 100% !important;
+    overflow: visible !important;
 }}
+
 .stTabs [data-baseweb="tab"],
 .stTabs [aria-selected="false"],
 .stTabs [role="tab"]:not([aria-selected="true"]),
 [data-testid="stTabs"] [aria-selected="false"],
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
 button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-    width: auto !important;
-    flex: 0 0 auto !important;
-    min-height: 42px !important;
-    height: 42px !important;
+    flex: 1 1 auto !important;
+    min-width: max-content !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
     margin: 0 !important;
-    padding: 6px 14px !important;
+    padding: 4px 12px !important;
     white-space: nowrap !important;
-    background-color: #ffffff !important;
-    background: #ffffff !important;
-    border-radius: 12px !important;
-    border: 1.5px solid #cbd5e1 !important;
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
+    background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+    background-color: #E2E8F0 !important;
+    border-radius: 10px !important;
+    border: 1px solid #CBD5E1 !important;
+    border-bottom: 2px solid #94A3B8 !important;
+    color: #1E293B !important;
+    -webkit-text-fill-color: #1E293B !important;
     font-family: 'Cairo', sans-serif !important;
     font-weight: 800 !important;
-    font-size: 0.92rem !important;
+    font-size: 0.88rem !important;
+    line-height: 1.25 !important;
     justify-content: center !important;
     align-items: center !important;
     text-align: center !important;
-    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06) !important;
-    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    transition: all 0.18s ease !important;
     opacity: 1 !important;
 }}
+
+.stTabs [aria-selected="false"]:hover,
+[data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]):hover,
+button[data-baseweb="tab"]:not([aria-selected="true"]):hover {{
+    background: linear-gradient(180deg, #F8FAFC 0%, {th['tint']} 100%) !important;
+    border-color: {th['primary_light']} !important;
+    border-bottom-color: {th['primary']} !important;
+    color: {th['primary']} !important;
+    transform: translateY(-1px);
+}}
+
 .stTabs [data-baseweb="tab"] p,
 .stTabs [data-baseweb="tab"] span,
 .stTabs [data-baseweb="tab"] div,
@@ -1482,39 +1531,46 @@ button[data-baseweb="tab"]:not([aria-selected="true"]) {{
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]) *,
 button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
     font-family: 'Cairo', sans-serif !important;
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-    font-size: 0.92rem !important;
+    color: #1E293B !important;
+    -webkit-text-fill-color: #1E293B !important;
+    font-size: 0.88rem !important;
     font-weight: 800 !important;
+    line-height: 1.25 !important;
     white-space: nowrap !important;
     margin: 0 !important;
     opacity: 1 !important;
 }}
+
 .stTabs [aria-selected="true"],
 .stTabs [role="tab"][aria-selected="true"],
 [data-testid="stTabs"] [aria-selected="true"],
 button[data-baseweb="tab"][aria-selected="true"] {{
-    width: auto !important;
-    flex: 0 0 auto !important;
-    min-height: 42px !important;
-    height: 42px !important;
+    flex: 1 1 auto !important;
+    min-width: max-content !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
     margin: 0 !important;
-    padding: 6px 14px !important;
+    padding: 4px 12px !important;
     white-space: nowrap !important;
-    background: linear-gradient(135deg, {th['primary_dark']}, {th['primary']}, {th['primary_light']}) !important;
-    border: 2px solid #f59e0b !important;
-    border-radius: 12px !important;
+    background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%) !important;
+    background-color: {th['primary']} !important;
+    border: 1px solid {th['primary_dark']} !important;
+    border-bottom: 2px solid {th['primary_dark']} !important;
+    border-radius: 10px !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.22) !important;
     font-family: 'Cairo', sans-serif !important;
     font-weight: 900 !important;
-    font-size: 0.92rem !important;
+    font-size: 0.88rem !important;
+    line-height: 1.25 !important;
     justify-content: center !important;
     align-items: center !important;
     text-align: center !important;
     opacity: 1 !important;
 }}
+
 .stTabs [aria-selected="true"] p,
 .stTabs [aria-selected="true"] span,
 .stTabs [aria-selected="true"] div,
@@ -1525,14 +1581,25 @@ button[data-baseweb="tab"][aria-selected="true"] * {{
     font-family: 'Cairo', sans-serif !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
-    font-size: 0.92rem !important;
+    font-size: 0.88rem !important;
     font-weight: 900 !important;
+    line-height: 1.25 !important;
     white-space: nowrap !important;
     margin: 0 !important;
     opacity: 1 !important;
 }}
+
+[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+[data-testid="stTabs"] [data-baseweb="tab-border"],
 .stTabs [data-baseweb="tab-highlight"],
-.stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
+.stTabs [data-baseweb="tab-border"],
+div[data-baseweb="tab-highlight"],
+div[data-baseweb="tab-border"] {{
+    display: none !important;
+    height: 0 !important;
+    opacity: 0 !important;
+    background: transparent !important;
+}}
 
 div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {{
     background-color: #e6f4f1 !important;
@@ -1601,30 +1668,34 @@ div[data-testid="stRadio"] [data-testid="stWidgetLabel"] {{
 div[data-testid="stRadio"] > div[role="radiogroup"] {{
     display: flex !important;
     flex-direction: row !important;
-    flex-wrap: nowrap !important;
+    flex-wrap: wrap !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    gap: 8px !important;
-    background: #ffffff !important;
-    padding: 6px !important;
-    border-radius: 16px !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.03) !important;
+    gap: 5px 6px !important;
+    background: transparent !important;
+    padding: 2px 0px !important;
+    border: none !important;
+    box-shadow: none !important;
     justify-content: stretch !important;
     align-items: stretch !important;
     direction: rtl !important;
 }}
 div[data-testid="stRadio"] > div[role="radiogroup"] > label,
 div[data-testid="stRadio"] label[data-baseweb="radio"] {{
-    flex: 1 1 0% !important;
-    min-width: 0 !important;
-    min-height: 42px !important;
+    flex: 1 1 auto !important;
+    min-width: max-content !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
     margin: 0 !important;
-    padding: 8px 10px !important;
-    border-radius: 12px !important;
-    background: #f8fafc !important;
-    border: 1.5px solid #e2e8f0 !important;
+    padding: 4px 12px !important;
+    border-radius: 10px !important;
+    background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+    background-color: #E2E8F0 !important;
+    border: 1px solid #CBD5E1 !important;
+    border-bottom: 2px solid #94A3B8 !important;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
     cursor: pointer !important;
     display: flex !important;
     align-items: center !important;
@@ -1634,8 +1705,10 @@ div[data-testid="stRadio"] label[data-baseweb="radio"] {{
 }}
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover,
 div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {{
-    background: {th['tint']} !important;
-    border-color: {th['primary']} !important;
+    background: linear-gradient(180deg, #F8FAFC 0%, {th['tint']} 100%) !important;
+    border-color: {th['primary_light']} !important;
+    border-bottom-color: {th['primary']} !important;
+    transform: translateY(-1px);
 }}
 div[data-testid="stRadio"] label > div:not(:has([data-testid="stMarkdownContainer"])),
 div[data-testid="stRadio"] input[type="radio"] {{
@@ -1667,21 +1740,23 @@ div[data-testid="stRadio"] label [data-testid="stMarkdownContainer"] {{
 div[data-testid="stRadio"] label p,
 div[data-testid="stRadio"] label span {{
     font-family: 'Cairo', sans-serif !important;
-    font-size: 14px !important;
+    font-size: 0.88rem !important;
     font-weight: 800 !important;
-    color: #334155 !important;
-    -webkit-text-fill-color: #334155 !important;
+    color: #1E293B !important;
+    -webkit-text-fill-color: #1E293B !important;
     margin: 0 !important;
     padding: 0 !important;
-    line-height: 1.4 !important;
+    line-height: 1.25 !important;
     white-space: nowrap !important;
     text-align: center !important;
 }}
 div[data-testid="stRadio"] label:has(input:checked),
 div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {{
-    background: linear-gradient(135deg, {th['primary_dark']}, {th['primary']}, {th['primary_light']}) !important;
-    border: 2px solid #f59e0b !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+    background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%) !important;
+    background-color: {th['primary']} !important;
+    border: 1px solid {th['primary_dark']} !important;
+    border-bottom: 2px solid {th['primary_dark']} !important;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.22) !important;
 }}
 div[data-testid="stRadio"] label:has(input:checked) p,
 div[data-testid="stRadio"] label:has(input:checked) span {{
@@ -1835,18 +1910,70 @@ div[data-testid="stRadio"] label:has(input:checked) span {{
 }}
 @media (max-width: 768px) {{
     .hero-wrapper {{
-        padding: 20px 14px 18px 14px !important;
-        border-radius: 20px !important;
+        padding: 16px 12px 14px 12px !important;
+        border-radius: 18px !important;
+    }}
+    .floating-cap-logo {{
+        width: 38px !important;
+        height: 38px !important;
     }}
     .unified-main-title {{
-        font-size: 22px !important;
+        font-size: 20px !important;
     }}
     .unified-brand-pill {{
-        font-size: 13.5px !important;
-        padding: 4px 14px !important;
+        font-size: 12.5px !important;
+        padding: 3px 12px !important;
     }}
     .unified-sub-desc {{
-        font-size: 12.5px !important;
+        font-size: 11.5px !important;
+    }}
+    [data-testid="stTabs"] [data-baseweb="tab-list"],
+    [data-testid="stTabs"] [role="tablist"],
+    .stTabs [data-baseweb="tab-list"],
+    .stTabs [role="tablist"],
+    div[data-baseweb="tab-list"],
+    div[data-testid="stRadio"] > div[role="radiogroup"] {{
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 5px 6px !important;
+        width: 100% !important;
+        overflow: visible !important;
+        margin-bottom: 8px !important;
+        padding: 2px 0 !important;
+    }}
+    [data-testid="stTabs"] [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+    [data-testid="stTabs"] [role="tablist"] > [role="tab"]:last-child:nth-child(odd),
+    .stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+    div[data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+    div[data-testid="stRadio"] > div[role="radiogroup"] > label:last-child:nth-child(odd) {{
+        grid-column: 1 / -1 !important;
+    }}
+    [data-testid="stTabs"] [role="tab"],
+    [data-testid="stTabs"] [aria-selected="false"],
+    [data-testid="stTabs"] [aria-selected="true"],
+    button[data-baseweb="tab"],
+    .stTabs [data-baseweb="tab"],
+    div[data-testid="stRadio"] > div[role="radiogroup"] > label,
+    div[data-testid="stRadio"] label[data-baseweb="radio"] {{
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
+        font-size: 0.82rem !important;
+        line-height: 1.25 !important;
+        padding: 4px 8px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }}
+    [data-testid="stTabs"] [role="tab"] *,
+    button[data-baseweb="tab"] *,
+    div[data-testid="stRadio"] label p,
+    div[data-testid="stRadio"] label span {{
+        font-size: 0.82rem !important;
+        line-height: 1.25 !important;
+        white-space: nowrap !important;
     }}
 }}
 
@@ -2200,21 +2327,51 @@ components.html(f"""
                 visibility: visible !important;
                 position: static !important;
             }}
+            .ziyad-btn-icon {{
+                font-size: 0.82em !important;
+                line-height: 1 !important;
+                display: inline-block !important;
+                margin-left: 4px !important;
+                vertical-align: -1px !important;
+            }}
+            [data-testid="stTabs"] [data-baseweb="tab-list"],
+            [data-testid="stTabs"] [role="tablist"],
+            .stTabs [data-baseweb="tab-list"],
+            div[data-baseweb="tab-list"] {{
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 5px 6px !important;
+                width: 100% !important;
+                overflow: visible !important;
+                background: transparent !important;
+                border: none !important;
+                padding: 2px 0 !important;
+                margin-bottom: 8px !important;
+                direction: rtl !important;
+            }}
             .stTabs [aria-selected="false"],
             .stTabs [role="tab"]:not([aria-selected="true"]),
             [data-testid="stTabs"] [aria-selected="false"],
             [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
             .stTabs [data-baseweb="tab"]:not([aria-selected="true"]),
             button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-                width: auto !important;
-                flex: 0 0 auto !important;
+                height: 38px !important;
+                min-height: 38px !important;
+                max-height: 38px !important;
+                padding: 4px 12px !important;
+                margin: 0 !important;
+                flex: 1 1 auto !important;
+                min-width: max-content !important;
                 white-space: nowrap !important;
-                background-color: #ffffff !important;
-                background: #ffffff !important;
-                border: 1.5px solid #cbd5e1 !important;
-                border-radius: 12px !important;
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
+                background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+                background-color: #E2E8F0 !important;
+                border: 1px solid #CBD5E1 !important;
+                border-bottom: 2px solid #94A3B8 !important;
+                border-radius: 10px !important;
+                color: #1E293B !important;
+                -webkit-text-fill-color: #1E293B !important;
+                box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+                line-height: 1.25 !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="false"] p,
@@ -2223,32 +2380,92 @@ components.html(f"""
             .stTabs [aria-selected="false"] *,
             .stTabs [role="tab"]:not([aria-selected="true"]) *,
             [data-testid="stTabs"] [aria-selected="false"] *,
-            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {{
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) *,
+            button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
+                color: #1E293B !important;
+                -webkit-text-fill-color: #1E293B !important;
                 white-space: nowrap !important;
+                line-height: 1.25 !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="true"],
             .stTabs [role="tab"][aria-selected="true"],
             [data-testid="stTabs"] [aria-selected="true"],
-            .stTabs [data-baseweb="tab"][aria-selected="true"] {{
-                width: auto !important;
-                flex: 0 0 auto !important;
+            .stTabs [data-baseweb="tab"][aria-selected="true"],
+            button[data-baseweb="tab"][aria-selected="true"] {{
+                height: 38px !important;
+                min-height: 38px !important;
+                max-height: 38px !important;
+                padding: 4px 12px !important;
+                margin: 0 !important;
+                flex: 1 1 auto !important;
+                min-width: max-content !important;
                 white-space: nowrap !important;
-                background: linear-gradient(135deg, {th['primary_dark']}, {th['primary']}, {th['primary_light']}) !important;
-                border: 2px solid #f59e0b !important;
-                border-radius: 12px !important;
+                background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%) !important;
+                background-color: {th['primary']} !important;
+                border: 1px solid {th['primary_dark']} !important;
+                border-bottom: 2px solid {th['primary_dark']} !important;
+                border-radius: 10px !important;
                 color: #ffffff !important;
                 -webkit-text-fill-color: #ffffff !important;
+                box-shadow: 0 3px 8px rgba(15, 23, 42, 0.22) !important;
+                line-height: 1.25 !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="true"] *,
-            [data-testid="stTabs"] [aria-selected="true"] * {{
+            [data-testid="stTabs"] [aria-selected="true"] *,
+            button[data-baseweb="tab"][aria-selected="true"] * {{
                 color: #ffffff !important;
                 -webkit-text-fill-color: #ffffff !important;
                 white-space: nowrap !important;
+                line-height: 1.25 !important;
                 opacity: 1 !important;
+            }}
+            div[data-baseweb="tab-highlight"],
+            div[data-baseweb="tab-border"],
+            [data-baseweb="tab-highlight"],
+            [data-baseweb="tab-border"] {{
+                display: none !important;
+                height: 0 !important;
+                opacity: 0 !important;
+                background: transparent !important;
+            }}
+            @media (max-width: 768px) {{
+                [data-testid="stTabs"] [data-baseweb="tab-list"],
+                [data-testid="stTabs"] [role="tablist"],
+                .stTabs [data-baseweb="tab-list"],
+                div[data-baseweb="tab-list"],
+                div[data-testid="stRadio"] > div[role="radiogroup"] {{
+                    display: grid !important;
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                    gap: 5px 6px !important;
+                    width: 100% !important;
+                    overflow: visible !important;
+                    margin-bottom: 8px !important;
+                }}
+                [data-testid="stTabs"] [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+                [data-testid="stTabs"] [role="tablist"] > [role="tab"]:last-child:nth-child(odd),
+                div[data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+                div[data-testid="stRadio"] > div[role="radiogroup"] > label:last-child:nth-child(odd) {{
+                    grid-column: 1 / -1 !important;
+                }}
+                [data-testid="stTabs"] [role="tab"],
+                button[data-baseweb="tab"],
+                .stTabs [data-baseweb="tab"],
+                div[data-testid="stRadio"] > div[role="radiogroup"] > label,
+                div[data-testid="stRadio"] label[data-baseweb="radio"] {{
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    height: 38px !important;
+                    min-height: 38px !important;
+                    max-height: 38px !important;
+                    padding: 4px 8px !important;
+                    font-size: 0.82rem !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    line-height: 1.25 !important;
+                }}
             }}
             div[data-baseweb="popover"],
             div[data-baseweb="popover"] *,
@@ -2308,33 +2525,83 @@ components.html(f"""
                     }});
                 }});
 
+                function scaleLeadingEmoji(el) {{
+                    if (!el || el.querySelector('.ziyad-btn-icon')) return;
+                    var p = el.querySelector('p') || el;
+                    if (p && p.childNodes && p.childNodes.length > 0 && p.childNodes[0].nodeType === 3) {{
+                        var txt = (p.childNodes[0].nodeValue || '').trimStart();
+                        var spaceIdx = txt.indexOf(' ');
+                        if (spaceIdx > 0 && spaceIdx <= 6) {{
+                            var firstToken = txt.slice(0, spaceIdx);
+                            if (firstToken.charCodeAt(0) > 2000) {{
+                                var span = pDoc.createElement('span');
+                                span.className = 'ziyad-btn-icon';
+                                span.textContent = firstToken;
+                                p.childNodes[0].nodeValue = txt.slice(spaceIdx);
+                                p.insertBefore(span, p.childNodes[0]);
+                            }}
+                        }}
+                    }}
+                }}
+
+                var isMobileView = window.parent.innerWidth <= 768;
+                var tabLists = pDoc.querySelectorAll('[data-testid="stTabs"] [data-baseweb="tab-list"], [data-testid="stTabs"] [role="tablist"], .stTabs [data-baseweb="tab-list"], div[data-baseweb="tab-list"], div[data-testid="stRadio"] > div[role="radiogroup"]');
+                tabLists.forEach(function(tl) {{
+                    tl.style.setProperty('gap', '5px 6px', 'important');
+                    tl.style.setProperty('width', '100%', 'important');
+                    tl.style.setProperty('overflow', 'visible', 'important');
+                    tl.style.setProperty('direction', 'rtl', 'important');
+                    tl.style.setProperty('padding', '2px 0', 'important');
+                    tl.style.setProperty('margin-bottom', '8px', 'important');
+                    if (isMobileView) {{
+                        tl.style.setProperty('display', 'grid', 'important');
+                        tl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+                    }} else {{
+                        tl.style.setProperty('display', 'flex', 'important');
+                        tl.style.setProperty('flex-wrap', 'wrap', 'important');
+                    }}
+                }});
+
                 var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], .stTabs [aria-selected], [data-testid="stTabs"] [role="tab"], button[data-baseweb="tab"]');
                 tabs.forEach(function(tab) {{
-                    tab.style.setProperty('width', 'auto', 'important');
-                    tab.style.setProperty('flex', '0 0 auto', 'important');
+                    scaleLeadingEmoji(tab);
+                    tab.style.setProperty('height', '38px', 'important');
+                    tab.style.setProperty('min-height', '38px', 'important');
+                    tab.style.setProperty('max-height', '38px', 'important');
+                    tab.style.setProperty('padding', isMobileView ? '4px 8px' : '4px 12px', 'important');
                     tab.style.setProperty('white-space', 'nowrap', 'important');
-                    tab.style.setProperty('padding', '6px 13px', 'important');
+                    tab.style.setProperty('min-width', isMobileView ? '0' : 'max-content', 'important');
+                    tab.style.setProperty('width', isMobileView ? '100%' : 'auto', 'important');
+                    tab.style.setProperty('line-height', '1.25', 'important');
+                    tab.style.setProperty('border-radius', '10px', 'important');
                     var isSel = tab.getAttribute('aria-selected') === 'true';
                     if (isSel) {{
-                        tab.style.setProperty('background', 'linear-gradient(135deg, {th["primary_dark"]}, {th["primary"]}, {th["primary_light"]})', 'important');
-                        tab.style.setProperty('border', '2px solid #f59e0b', 'important');
-                        tab.style.setProperty('border-radius', '12px', 'important');
+                        tab.style.setProperty('background', 'linear-gradient(135deg, {th["primary_dark"]} 0%, {th["primary"]} 55%, {th["primary_light"]} 100%)', 'important');
+                        tab.style.setProperty('background-color', '{th["primary"]}', 'important');
+                        tab.style.setProperty('border', '1px solid {th["primary_dark"]}', 'important');
+                        tab.style.setProperty('border-bottom', '2px solid {th["primary_dark"]}', 'important');
+                        tab.style.setProperty('box-shadow', '0 3px 8px rgba(15, 23, 42, 0.22)', 'important');
                         tab.style.setProperty('color', '#ffffff', 'important');
                         tab.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
                             ch.style.setProperty('color', '#ffffff', 'important');
                             ch.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+                            ch.style.setProperty('white-space', 'nowrap', 'important');
+                            ch.style.setProperty('line-height', '1.25', 'important');
                         }});
                     }} else {{
-                        tab.style.setProperty('background-color', '#ffffff', 'important');
-                        tab.style.setProperty('background', '#ffffff', 'important');
-                        tab.style.setProperty('border', '1.5px solid #cbd5e1', 'important');
-                        tab.style.setProperty('border-radius', '12px', 'important');
-                        tab.style.setProperty('color', '#0f172a', 'important');
-                        tab.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                        tab.style.setProperty('background', 'linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%)', 'important');
+                        tab.style.setProperty('background-color', '#E2E8F0', 'important');
+                        tab.style.setProperty('border', '1px solid #CBD5E1', 'important');
+                        tab.style.setProperty('border-bottom', '2px solid #94A3B8', 'important');
+                        tab.style.setProperty('box-shadow', '0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9)', 'important');
+                        tab.style.setProperty('color', '#1E293B', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
-                            ch.style.setProperty('color', '#0f172a', 'important');
-                            ch.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                            ch.style.setProperty('color', '#1E293B', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
+                            ch.style.setProperty('white-space', 'nowrap', 'important');
+                            ch.style.setProperty('line-height', '1.25', 'important');
                         }});
                     }}
                 }});
@@ -2367,6 +2634,7 @@ components.html(f"""
 
                 var radioLabels = pDoc.querySelectorAll('div[data-testid="stRadio"] label');
                 radioLabels.forEach(function(lbl) {{
+                    scaleLeadingEmoji(lbl);
                     Array.from(lbl.children).forEach(function(child) {{
                         if (child.tagName === 'INPUT') {{
                             child.style.setProperty('display', 'none', 'important');
