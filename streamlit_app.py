@@ -2185,32 +2185,42 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
     color: {th['primary']} !important;
 }}
 
-/* بنر الصفحة الرئيسية بعد الدخول (مدمج وأنيق) */
+/* بنر الصفحة الرئيسية بعد الدخول (مدمج وأنيق ومتوسط) */
 .hero-top {{
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
+    text-align: center !important;
     border-bottom: 1px solid rgba(255,255,255,0.16);
     padding-bottom: 8px;
     margin-bottom: 8px;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     direction: rtl !important;
 }}
-.brand-box {{ display: flex; align-items: center; gap: 10px; direction: rtl !important; }}
-.brand-title {{ font-family: 'Cairo', sans-serif !important; font-size: 19px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0; line-height: 1.2 !important; text-align: right !important; letter-spacing: 0px !important; }}
-.brand-sub {{ font-family: 'Cairo', sans-serif !important; font-size: 11.5px !important; font-weight: 700 !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; margin: 2px 0 0 0; text-align: right !important; }}
+.brand-box {{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    direction: rtl !important;
+    text-align: center !important;
+}}
+.brand-title {{ font-family: 'Cairo', sans-serif !important; font-size: 20px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0; line-height: 1.2 !important; text-align: center !important; letter-spacing: 0px !important; }}
+.brand-sub {{ font-family: 'Cairo', sans-serif !important; font-size: 11.5px !important; font-weight: 700 !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; margin: 2px 0 0 0; text-align: center !important; }}
 .hero-top-meta {{
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    gap: 8px;
     flex-wrap: wrap;
     direction: rtl !important;
+    text-align: center !important;
 }}
 .date-pill {{
     font-family: 'Cairo', sans-serif !important;
     background: rgba(15, 23, 42, 0.35);
-    padding: 4px 10px;
+    padding: 4px 12px;
     border-radius: 99px;
     font-size: 11px !important;
     font-weight: 700 !important;
@@ -2221,14 +2231,15 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
 }}
 .hero-body {{
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 8px 14px;
     direction: rtl !important;
+    text-align: center !important;
 }}
-.teacher-name {{ font-family: 'Cairo', sans-serif !important; font-size: 18.5px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0; line-height: 1.25 !important; text-align: right !important; letter-spacing: 0px !important; }}
-.meta-badges {{ display: flex; flex-wrap: wrap; gap: 6px; align-items: center; direction: rtl !important; }}
+.teacher-name {{ font-family: 'Cairo', sans-serif !important; font-size: 18.5px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0; line-height: 1.25 !important; text-align: center !important; letter-spacing: 0px !important; }}
+.meta-badges {{ display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; direction: rtl !important; }}
 .meta-pill {{
     font-family: 'Cairo', sans-serif !important;
     background: rgba(0,0,0,0.25);
