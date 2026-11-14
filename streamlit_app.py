@@ -1154,7 +1154,7 @@ if active_theme_key not in THEMES:
     active_theme_key = "emerald"
 th = THEMES[active_theme_key]
 
-ZIYAD_LOGO_SVG = '<svg class="floating-cap-logo" width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
+ZIYAD_LOGO_SVG = '<svg class="floating-cap-logo" width="42" height="42" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
 # 7. التصميم الشامل وتوحيد خط Cairo وإخفاء دوائر الراديو وعلامات الروابط
@@ -1921,10 +1921,10 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
 .hero-wrapper {{
     background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 52%, {th['primary_light']} 100%) !important;
     color: #ffffff !important;
-    padding: 26px 24px 22px 24px;
-    border-radius: 24px;
-    margin-bottom: 14px;
-    box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), 0 14px 30px rgba(15, 23, 42, 0.18) !important;
+    padding: 14px 18px 12px 18px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), 0 10px 22px rgba(15, 23, 42, 0.15) !important;
     border: 1.5px solid rgba(255,255,255,0.22) !important;
     box-sizing: border-box;
     width: 100%;
@@ -2060,8 +2060,8 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
 }}
 @media (max-width: 768px) {{
     .hero-wrapper {{
-        padding: 16px 12px 14px 12px !important;
-        border-radius: 18px !important;
+        padding: 11px 12px 10px 12px !important;
+        border-radius: 16px !important;
     }}
     .floating-cap-logo {{
         width: 38px !important;
@@ -2185,27 +2185,34 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
     color: {th['primary']} !important;
 }}
 
-/* بنر الصفحة الرئيسية بعد الدخول */
+/* بنر الصفحة الرئيسية بعد الدخول (مدمج وأنيق) */
 .hero-top {{
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255,255,255,0.16);
-    padding-bottom: 10px;
-    margin-bottom: 12px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
     flex-wrap: wrap;
     gap: 8px;
     direction: rtl !important;
 }}
-.brand-box {{ display: flex; align-items: center; gap: 12px; direction: rtl !important; }}
-.brand-title {{ font-family: 'Cairo', sans-serif !important; font-size: 21px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0; text-align: right !important; letter-spacing: 0px !important; }}
-.brand-sub {{ font-family: 'Cairo', sans-serif !important; font-size: 12px !important; font-weight: 700 !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; margin: 2px 0 0 0; text-align: right !important; }}
+.brand-box {{ display: flex; align-items: center; gap: 10px; direction: rtl !important; }}
+.brand-title {{ font-family: 'Cairo', sans-serif !important; font-size: 19px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0; line-height: 1.2 !important; text-align: right !important; letter-spacing: 0px !important; }}
+.brand-sub {{ font-family: 'Cairo', sans-serif !important; font-size: 11.5px !important; font-weight: 700 !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; margin: 2px 0 0 0; text-align: right !important; }}
+.hero-top-meta {{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    direction: rtl !important;
+}}
 .date-pill {{
     font-family: 'Cairo', sans-serif !important;
     background: rgba(15, 23, 42, 0.35);
-    padding: 5px 12px;
+    padding: 4px 10px;
     border-radius: 99px;
-    font-size: 11.5px !important;
+    font-size: 11px !important;
     font-weight: 700 !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
@@ -2215,22 +2222,21 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
 .hero-body {{
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
     direction: rtl !important;
 }}
-.welcome-line {{ font-family: 'Cairo', sans-serif !important; font-size: 13px !important; color: #fde68a !important; -webkit-text-fill-color: #fde68a !important; font-weight: 700 !important; margin-bottom: 2px; text-align: right !important; }}
-.teacher-name {{ font-family: 'Cairo', sans-serif !important; font-size: 22px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0 0 8px 0; text-align: right !important; letter-spacing: 0px !important; }}
-.meta-badges {{ display: flex; flex-wrap: wrap; gap: 6px; direction: rtl !important; }}
+.teacher-name {{ font-family: 'Cairo', sans-serif !important; font-size: 18.5px !important; font-weight: 900 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0; line-height: 1.25 !important; text-align: right !important; letter-spacing: 0px !important; }}
+.meta-badges {{ display: flex; flex-wrap: wrap; gap: 6px; align-items: center; direction: rtl !important; }}
 .meta-pill {{
     font-family: 'Cairo', sans-serif !important;
     background: rgba(0,0,0,0.25);
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
-    padding: 4px 10px;
-    border-radius: 9px;
-    font-size: 11.5px !important;
+    padding: 3px 9px;
+    border-radius: 8px;
+    font-size: 11px !important;
     font-weight: 700 !important;
 }}
 .year-badge {{
@@ -2238,10 +2244,11 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
     background: #fbbf24 !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
-    padding: 6px 14px;
-    border-radius: 12px;
-    font-size: 13px !important;
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 12px !important;
     font-weight: 800 !important;
+    white-space: nowrap !important;
 }}
 
 .kpi-grid {{
@@ -3590,19 +3597,18 @@ def main_app():
         f'<div class="brand-box">{ZIYAD_LOGO_SVG}'
         f'<div><div class="brand-title">ملف الإنجاز المهني الإلكتروني</div>'
         f'<div class="brand-sub">منصة زياد الذكية • إنجازاتي المهنية وشواهدي</div></div></div>'
-        f'<div class="date-pill">🗓️ {today_str}</div>'
+        f'<div class="hero-top-meta">'
+        f'<span class="year-badge">📁 عام {safe_year}هـ</span>'
+        f'<span class="date-pill">🗓️ {today_str}</span>'
+        f'</div>'
         f'</div>'
         f'<div class="hero-body" dir="rtl">'
-        f'<div>'
-        f'<div class="welcome-line">✨ {greeting}</div>'
         f'<div class="teacher-name">أ. {safe_name}</div>'
         f'<div class="meta-badges">'
         f'<span class="meta-pill">🏫 {safe_school}</span>'
         f'<span class="meta-pill">📚 {safe_spec}</span>'
         f'<span class="meta-pill">👔 مدير المدرسة: {safe_prin}</span>'
         f'</div>'
-        f'</div>'
-        f'<div class="year-badge">📁 عام {safe_year}هـ</div>'
         f'</div>'
         f'</div>'
     )
