@@ -2800,14 +2800,30 @@ components.html(f"""
                     a.style.setProperty('display', 'none', 'important');
                 }});
 
+                pDoc.querySelectorAll('[data-ziyad-hidden-marker="1"]').forEach(function(el) {{
+                    if (!el.querySelector('.ziyad-grid-tab-marker')) {{
+                        el.removeAttribute('data-ziyad-hidden-marker');
+                        el.style.removeProperty('display');
+                    }}
+                }});
+                pDoc.querySelectorAll('[data-ziyad-grid-block="1"]').forEach(function(hb) {{
+                    if (!hb.querySelector('.ziyad-grid-tab-marker')) {{
+                        hb.removeAttribute('data-ziyad-grid-block');
+                        hb.style.removeProperty('display');
+                        hb.style.removeProperty('grid-template-columns');
+                        hb.style.removeProperty('gap');
+                    }}
+                }});
                 var gridMarkers = pDoc.querySelectorAll('.ziyad-grid-tab-marker');
                 gridMarkers.forEach(function(marker) {{
                     var elCont = marker.closest('[data-testid="stElementContainer"], .element-container');
                     if (elCont) {{
+                        elCont.setAttribute('data-ziyad-hidden-marker', '1');
                         elCont.style.setProperty('display', 'none', 'important');
                     }}
                     var hBlock = marker.closest('[data-testid="stHorizontalBlock"]');
                     if (hBlock) {{
+                        hBlock.setAttribute('data-ziyad-grid-block', '1');
                         hBlock.style.setProperty('gap', '5px 6px', 'important');
                         hBlock.style.setProperty('width', '100%', 'important');
                         hBlock.style.setProperty('direction', 'rtl', 'important');
@@ -3626,20 +3642,12 @@ def main_app():
     st.markdown(hero_html, unsafe_allow_html=True)
 
     if is_visitor:
-        col_v1, col_v2 = st.columns([4, 1])
-        with col_v1:
-            st.markdown('<div class="visitor-banner" dir="rtl">👁️ تتصفح الملف بوضع الزائر (مشاهدة فقط)</div>', unsafe_allow_html=True)
-        with col_v2:
-            if st.button("🚪 خروج", use_container_width=True):
-                st.session_state.is_visitor = False
-                st.query_params.clear()
-                st.rerun()
-
-    if is_visitor:
+        st.markdown('<div class="visitor-banner" dir="rtl">👁️ تتصفح الملف بوضع الزائر (مشاهدة فقط)</div>', unsafe_allow_html=True)
         nav_map = {
             'home': "🏠 الرئيسية",
             'standard_view': "📋 البنود",
-            'reports': "📄 التقرير"
+            'reports': "📄 التقرير",
+            'logout': "🚪 خروج"
         }
     else:
         nav_map = {
@@ -3652,7 +3660,12 @@ def main_app():
     nav_keys = list(nav_map.keys())
     curr_page = st.session_state.current_page if st.session_state.current_page in nav_keys else 'home'
     selected_nav = render_grid_tabs(nav_map, curr_page, "main_nav")
-    if selected_nav != st.session_state.current_page:
+    if selected_nav == 'logout':
+        st.session_state.is_visitor = False
+        st.session_state.current_page = 'home'
+        st.query_params.clear()
+        st.rerun()
+    elif selected_nav != st.session_state.current_page:
         st.session_state.current_page = selected_nav
         st.rerun()
 
