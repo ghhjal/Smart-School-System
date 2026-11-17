@@ -23,7 +23,12 @@ st.set_page_config(
     page_title="ملف الإنجاز المهني الإلكتروني | منصة زياد الذكية",
     page_icon="🎓",
     layout="centered",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
+    menu_items={
+        "Get Help": None,
+        "Report a bug": None,
+        "About": None,
+    },
 )
 
 # ==========================================
@@ -302,7 +307,7 @@ def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", vari
 # ==========================================
 # 5. الاتصال الآمن بقاعدة البيانات، ضغط الصور، وحساب المساحة السحابية السريع
 # ==========================================
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def init_connection():
     url = st.secrets["supabase"]["url"]
     key = st.secrets["supabase"]["key"]
@@ -1226,10 +1231,97 @@ h1, h2, h3, h4, h5, h6, p, label,
     font-family: 'Cairo', sans-serif !important;
 }}
 
-header {{visibility: hidden; height: 0 !important;}}
-#MainMenu {{visibility: hidden;}}
-footer {{visibility: hidden;}}
-.stSidebar {{display: none !important;}}
+/* إخفاء شامل لجميع أدوات وعلامات Streamlit الإدارية والمطور والتذييل والشارات العائمة */
+header,
+header[data-testid="stHeader"],
+[data-testid="stHeader"],
+[data-testid="stToolbar"],
+[data-testid="stToolbarActions"],
+[data-testid="stToolbarActionButton"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+.stDeployButton,
+[data-testid="stDeployButton"],
+[data-testid="stAppDeployButton"],
+#MainMenu,
+[data-testid="MainMenu"],
+footer,
+[data-testid="stFooter"],
+[data-testid="stBottom"],
+[data-testid="stBottomBlockContainer"],
+[data-testid="manage-app-button"],
+[data-testid="appCreatorAvatar"],
+[data-testid="InputInstructions"],
+[data-testid="stElementToolbar"],
+[data-testid="StyledFullScreenButton"],
+button[title="View fullscreen"],
+section[data-testid="stSidebar"],
+[data-testid="stSidebar"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarNav"],
+.stSidebar,
+.viewerBadge_container__1QSob,
+.viewerBadge_link__1S137,
+.viewerBadge_text__1JaDK,
+.styles_viewerBadge__1yB5_,
+[class*="viewerBadge"],
+[class*="_viewerBadge"],
+[id*="viewerBadge"],
+[class*="StatusWidget"],
+[class*="stToolbar"],
+[class*="profileContainer"],
+[class*="_profileContainer"],
+[class*="profilePreview"],
+[class*="_profilePreview"],
+[class*="profileImage"],
+[class*="_profileImage"],
+[class*="_terminalButton"],
+[class*="terminalButton"],
+[class*="_link_gzau3"],
+[class*="_container_gzau3"],
+a[href*="streamlit.io"],
+a[href*="share.streamlit.io"],
+img[src*="avatars.githubusercontent.com"] {{
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0px !important;
+    height: 0px !important;
+    min-width: 0px !important;
+    min-height: 0px !important;
+    max-width: 0px !important;
+    max-height: 0px !important;
+    margin: 0px !important;
+    padding: 0px !important;
+    border: none !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    position: fixed !important;
+    top: 0px !important;
+    left: 0px !important;
+    z-index: -9999 !important;
+}}
+div[data-testid="stElementContainer"]:has(iframe[height="0"]),
+div.element-container:has(iframe[height="0"]),
+div[data-testid="stCustomComponentV1"]:has(iframe[height="0"]),
+iframe[height="0"] {{
+    position: fixed !important;
+    top: 0px !important;
+    left: 0px !important;
+    width: 0px !important;
+    height: 0px !important;
+    min-height: 0px !important;
+    max-height: 0px !important;
+    margin: 0px !important;
+    padding: 0px !important;
+    border: none !important;
+    overflow: hidden !important;
+    line-height: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
+}}
 
 /* إخفاء أيقونات الروابط (Anchor Links) التي تظهر بجانب العناوين تماماً */
 [data-testid="stHeaderActionElements"],
@@ -1249,8 +1341,8 @@ a.anchor-link {{
     pointer-events: none !important;
 }}
 
-.block-container {{
-    padding: 0.7rem 0.75rem 2rem 0.75rem !important;
+.block-container, [data-testid="stMainBlockContainer"] {{
+    padding: 0.55rem 0.75rem 0.35rem 0.75rem !important;
     max-width: 760px !important;
     width: 100% !important;
     box-sizing: border-box !important;
@@ -2428,6 +2520,87 @@ components.html(f"""
 (function() {{
     try {{
         var pDoc = window.parent.document;
+        var topDoc = null;
+        try {{
+            if (window.top && window.top.document) {{
+                topDoc = window.top.document;
+            }}
+        }} catch (e) {{}}
+
+        var chromeHideRules = `
+            header,
+            header[data-testid="stHeader"],
+            [data-testid="stHeader"],
+            [data-testid="stToolbar"],
+            [data-testid="stToolbarActions"],
+            [data-testid="stToolbarActionButton"],
+            [data-testid="stDecoration"],
+            [data-testid="stStatusWidget"],
+            .stDeployButton,
+            [data-testid="stDeployButton"],
+            [data-testid="stAppDeployButton"],
+            #MainMenu,
+            [data-testid="MainMenu"],
+            footer,
+            [data-testid="stFooter"],
+            [data-testid="stBottom"],
+            [data-testid="stBottomBlockContainer"],
+            [data-testid="manage-app-button"],
+            [data-testid="appCreatorAvatar"],
+            [data-testid="stHeaderActionElements"],
+            [data-testid="InputInstructions"],
+            [data-testid="stElementToolbar"],
+            [data-testid="StyledFullScreenButton"],
+            button[title="View fullscreen"],
+            section[data-testid="stSidebar"],
+            [data-testid="stSidebar"],
+            [data-testid="collapsedControl"],
+            [data-testid="stSidebarCollapsedControl"],
+            [data-testid="stSidebarNav"],
+            .stSidebar,
+            .viewerBadge_container__1QSob,
+            .viewerBadge_link__1S137,
+            .viewerBadge_text__1JaDK,
+            .styles_viewerBadge__1yB5_,
+            [class*="viewerBadge"],
+            [class*="_viewerBadge"],
+            [id*="viewerBadge"],
+            [class*="StatusWidget"],
+            [class*="stToolbar"],
+            [class*="profileContainer"],
+            [class*="_profileContainer"],
+            [class*="profilePreview"],
+            [class*="_profilePreview"],
+            [class*="profileImage"],
+            [class*="_profileImage"],
+            [class*="_terminalButton"],
+            [class*="terminalButton"],
+            [class*="_link_gzau3"],
+            [class*="_container_gzau3"],
+            a[href*="streamlit.io"],
+            a[href*="share.streamlit.io"],
+            img[src*="avatars.githubusercontent.com"] {{
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                width: 0px !important;
+                height: 0px !important;
+                min-width: 0px !important;
+                min-height: 0px !important;
+                max-width: 0px !important;
+                max-height: 0px !important;
+                margin: 0px !important;
+                padding: 0px !important;
+                border: none !important;
+                pointer-events: none !important;
+                overflow: hidden !important;
+                position: fixed !important;
+                top: 0px !important;
+                left: 0px !important;
+                z-index: -9999 !important;
+            }}
+        `;
+
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
         pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
@@ -2448,7 +2621,31 @@ components.html(f"""
             existingStyle.id = styleId;
             pDoc.head.appendChild(existingStyle);
         }}
-        existingStyle.innerHTML = `
+        existingStyle.innerHTML = chromeHideRules + `
+            div[data-testid="stElementContainer"]:has(iframe[height="0"]),
+            div.element-container:has(iframe[height="0"]),
+            div[data-testid="stCustomComponentV1"]:has(iframe[height="0"]),
+            iframe[height="0"] {{
+                position: fixed !important;
+                top: 0px !important;
+                left: 0px !important;
+                width: 0px !important;
+                height: 0px !important;
+                min-height: 0px !important;
+                max-height: 0px !important;
+                margin: 0px !important;
+                padding: 0px !important;
+                border: none !important;
+                overflow: hidden !important;
+                line-height: 0 !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                z-index: -9999 !important;
+            }}
+            .block-container, [data-testid="stMainBlockContainer"] {{
+                padding-bottom: 4px !important;
+                margin-bottom: 0px !important;
+            }}
             *::-webkit-scrollbar {{
                 display: none !important;
                 width: 0px !important;
@@ -2667,6 +2864,56 @@ components.html(f"""
             }}
         `;
 
+        if (topDoc && topDoc !== pDoc && topDoc.head) {{
+            var topStyleId = 'ziyad-portfolio-top-cloud-hide';
+            var topStyle = topDoc.getElementById(topStyleId);
+            if (!topStyle) {{
+                topStyle = topDoc.createElement('style');
+                topStyle.id = topStyleId;
+                topDoc.head.appendChild(topStyle);
+            }}
+            topStyle.innerHTML = chromeHideRules;
+        }}
+
+        function hideElementCompletely(el) {{
+            if (!el || !el.style) return;
+            el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+            el.style.setProperty('opacity', '0', 'important');
+            el.style.setProperty('width', '0px', 'important');
+            el.style.setProperty('height', '0px', 'important');
+            el.style.setProperty('min-width', '0px', 'important');
+            el.style.setProperty('min-height', '0px', 'important');
+            el.style.setProperty('max-width', '0px', 'important');
+            el.style.setProperty('max-height', '0px', 'important');
+            el.style.setProperty('margin', '0px', 'important');
+            el.style.setProperty('padding', '0px', 'important');
+            el.style.setProperty('border', 'none', 'important');
+            el.style.setProperty('pointer-events', 'none', 'important');
+            el.style.setProperty('position', 'fixed', 'important');
+            el.style.setProperty('top', '0px', 'important');
+            el.style.setProperty('left', '0px', 'important');
+            el.style.setProperty('z-index', '-9999', 'important');
+        }}
+
+        function cleanDocumentChrome(doc) {{
+            if (!doc || !doc.body) return;
+            var sel = 'header[data-testid="stHeader"], [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stToolbarActions"], [data-testid="stDecoration"], [data-testid="stStatusWidget"], .stDeployButton, [data-testid="stDeployButton"], [data-testid="stAppDeployButton"], #MainMenu, footer, [data-testid="stFooter"], [data-testid="stBottom"], [data-testid="stBottomBlockContainer"], [data-testid="manage-app-button"], [data-testid="appCreatorAvatar"], [data-testid="InputInstructions"], [data-testid="stHeaderActionElements"], [data-testid="stElementToolbar"], [data-testid="StyledFullScreenButton"], [class*="viewerBadge"], [class*="_viewerBadge"], [id*="viewerBadge"], [class*="profileContainer"], [class*="_profileContainer"], [class*="profilePreview"], [class*="_profilePreview"], [class*="profileImage"], [class*="_profileImage"], [class*="_terminalButton"], [class*="terminalButton"], [class*="_link_gzau3"], [class*="_container_gzau3"], a[href*="streamlit.io"], a[href*="share.streamlit.io"], img[src*="avatars.githubusercontent.com"]';
+            doc.querySelectorAll(sel).forEach(hideElementCompletely);
+            doc.querySelectorAll('*').forEach(function(node) {{
+                if (node.shadowRoot) {{
+                    var shStyle = node.shadowRoot.getElementById('ziyad-shadow-hide');
+                    if (!shStyle) {{
+                        shStyle = doc.createElement('style');
+                        shStyle.id = 'ziyad-shadow-hide';
+                        shStyle.innerHTML = chromeHideRules;
+                        node.shadowRoot.appendChild(shStyle);
+                    }}
+                    node.shadowRoot.querySelectorAll(sel).forEach(hideElementCompletely);
+                }}
+            }});
+        }}
+
         var isRunningRtl = false;
         function enforcePortalRTL() {{
             if (isRunningRtl) return;
@@ -2674,6 +2921,29 @@ components.html(f"""
             try {{
                 if (pDoc.head.lastElementChild !== existingStyle) {{
                     pDoc.head.appendChild(existingStyle);
+                }}
+                cleanDocumentChrome(pDoc);
+                if (topDoc && topDoc !== pDoc) {{
+                    cleanDocumentChrome(topDoc);
+                    var appFrame = window.parent.frameElement;
+                    if (appFrame && topDoc.body && topDoc.body.contains(appFrame)) {{
+                        topDoc.body.querySelectorAll('*').forEach(function(el) {{
+                            if (el !== appFrame && !el.contains(appFrame) && !appFrame.contains(el)) {{
+                                hideElementCompletely(el);
+                            }}
+                        }});
+                    }}
+                }}
+                if (window.frameElement) {{
+                    hideElementCompletely(window.frameElement);
+                    var feParent = window.frameElement.closest('[data-testid="stElementContainer"], .element-container');
+                    if (feParent) {{
+                        hideElementCompletely(feParent);
+                    }}
+                    var feCustom = window.frameElement.closest('[data-testid="stCustomComponentV1"], .stCustomComponentV1');
+                    if (feCustom) {{
+                        hideElementCompletely(feCustom);
+                    }}
                 }}
                 pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
                 var nodes = pDoc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], ul[role="listbox"], li[role="option"]');
@@ -2921,6 +3191,17 @@ components.html(f"""
         }});
         obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
         window.parent.__ziyadRtlObserverObj = obs;
+
+        if (topDoc && topDoc !== pDoc && topDoc.body) {{
+            if (window.top.__ziyadPortfolioTopCloudObserverObj) {{
+                try {{ window.top.__ziyadPortfolioTopCloudObserverObj.disconnect(); }} catch (e) {{}}
+            }}
+            var topObs = new MutationObserver(function() {{
+                enforcePortalRTL();
+            }});
+            topObs.observe(topDoc.body, {{ childList: true, subtree: true }});
+            window.top.__ziyadPortfolioTopCloudObserverObj = topObs;
+        }}
     }} catch (e) {{}}
 }})();
 </script>
