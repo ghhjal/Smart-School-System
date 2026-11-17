@@ -35,14 +35,45 @@ st.set_page_config(
 # 2. منظومة المظاهر (Themes) المتعددة
 # ==========================================
 THEMES = {
-    "emerald": {
-        "name": "🟢 الأخضر الوزاري الفاخر",
-        "primary": "#0f5243",
-        "primary_light": "#146c59",
-        "primary_dark": "#09352b",
-        "bg": "#f4f6f5",
+    "amethyst": {
+        "name": "👑 البنفسجي الملكي الفاخر (هوية ملف الإنجاز)",
+        "primary": "#4c1d95",
+        "primary_light": "#6d28d9",
+        "primary_dark": "#1e1038",
+        "bg": "#f6f5fb",
+        "accent": "#f59e0b",
+        "tint": "#ede9fe",
+        "pattern": "url(\"data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.08' stroke-width='1.5'%3E%3Cpath d='M24 4L44 24L24 44L4 24Z'/%3E%3Ccircle cx='24' cy='24' r='6'/%3E%3C/g%3E%3C/svg%3E\")"
+    },
+    "burgundy": {
+        "name": "🍷 العنابي الملكي الرسمي (فخامة التوثيق)",
+        "primary": "#7f1d3a",
+        "primary_light": "#9f1239",
+        "primary_dark": "#3b0718",
+        "bg": "#faf5f7",
         "accent": "#d97706",
-        "tint": "#e6f2ef"
+        "tint": "#ffe4e6",
+        "pattern": "url(\"data:image/svg+xml,%3Csvg width='44' height='44' viewBox='0 0 44 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='1.5'%3E%3Ccircle cx='22' cy='22' r='16'/%3E%3Cpath d='M22 0L44 22L22 44L0 22Z'/%3E%3C/g%3E%3C/svg%3E\")"
+    },
+    "imperial": {
+        "name": "🏛️ الكحلي الذهبي التنفيذي",
+        "primary": "#1e293b",
+        "primary_light": "#334155",
+        "primary_dark": "#090d16",
+        "bg": "#f4f6f9",
+        "accent": "#f59e0b",
+        "tint": "#fef3c7",
+        "pattern": "url(\"data:image/svg+xml,%3Csvg width='56' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23fbbf24' stroke-opacity='0.09' stroke-width='1.8'/%3E%3C/svg%3E\")"
+    },
+    "bronze": {
+        "name": "🟤 الذهبي الكلاسيكي الفاخر",
+        "primary": "#78350f",
+        "primary_light": "#92400e",
+        "primary_dark": "#451a03",
+        "bg": "#faf6f0",
+        "accent": "#d97706",
+        "tint": "#fef3c7",
+        "pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l20 20-20 20L0 20z' fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E\")"
     },
     "royal": {
         "name": "🔵 أزرق منصة زياد الذكية",
@@ -51,25 +82,28 @@ THEMES = {
         "primary_dark": "#0f172a",
         "bg": "#f4f7fb",
         "accent": "#f59e0b",
-        "tint": "#dbeafe"
+        "tint": "#dbeafe",
+        "pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Ccircle cx='20' cy='20' r='3'/%3E%3C/g%3E%3C/svg%3E\")"
     },
-    "bronze": {
-        "name": "🟤 الذهبي الكلاسيكي الفاخر",
-        "primary": "#78350f",
-        "primary_light": "#92400e",
-        "primary_dark": "#451a03",
-        "bg": "#faf6f0",
-        "accent": "#b45309",
-        "tint": "#fef3c7"
+    "emerald_ministry": {
+        "name": "🟢 الأخضر الوزاري الفاخر",
+        "primary": "#0f5243",
+        "primary_light": "#146c59",
+        "primary_dark": "#09352b",
+        "bg": "#f4f6f5",
+        "accent": "#d97706",
+        "tint": "#e6f2ef",
+        "pattern": "url(\"data:image/svg+xml,%3Csvg width='44' height='44' viewBox='0 0 44 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='1.5'%3E%3Cpath d='M22 0L44 22L22 44L0 22Z'/%3E%3C/g%3E%3C/svg%3E\")"
     },
     "slate": {
         "name": "⚫ الرمادي العصري الرسمي",
-        "primary": "#1e293b",
-        "primary_light": "#334155",
+        "primary": "#334155",
+        "primary_light": "#475569",
         "primary_dark": "#0f172a",
         "bg": "#f1f5f9",
         "accent": "#f59e0b",
-        "tint": "#e2e8f0"
+        "tint": "#e2e8f0",
+        "pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='20' cy='20' r='3'/%3E%3C/g%3E%3C/svg%3E\")"
     }
 }
 
@@ -599,7 +633,7 @@ def get_user_profile():
         "education_stage": "ابتدائي / متوسط",
         "city": "المدينة المنورة",
         "principal_name": "عبدالمجيد الحربي",
-        "theme": "emerald",
+        "theme": "amethyst",
         "visitor_code": "1448",
         "allow_visitor": True
     }
@@ -1154,9 +1188,9 @@ def generate_attachments_zip(user_info, active_year, all_years, stds, all_subs, 
     return buf.getvalue()
 
 user_info = get_user_profile()
-active_theme_key = user_info.get("theme", "emerald")
-if active_theme_key not in THEMES:
-    active_theme_key = "emerald"
+active_theme_key = user_info.get("theme", "amethyst")
+if active_theme_key == "emerald" or active_theme_key not in THEMES:
+    active_theme_key = "amethyst"
 th = THEMES[active_theme_key]
 
 ZIYAD_LOGO_SVG = '<svg class="floating-cap-logo" width="42" height="42" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
@@ -1668,7 +1702,7 @@ button[data-baseweb="tab"][aria-selected="true"] {{
     background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%) !important;
     background-color: {th['primary']} !important;
     border: 1px solid {th['primary_dark']} !important;
-    border-bottom: 2px solid {th['primary_dark']} !important;
+    border-bottom: 2.5px solid {th['accent']} !important;
     border-radius: 10px !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
@@ -1867,7 +1901,7 @@ div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {{
     background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%) !important;
     background-color: {th['primary']} !important;
     border: 1px solid {th['primary_dark']} !important;
-    border-bottom: 2px solid {th['primary_dark']} !important;
+    border-bottom: 2.5px solid {th['accent']} !important;
     box-shadow: 0 3px 8px rgba(15, 23, 42, 0.22) !important;
 }}
 div[data-testid="stRadio"] label:has(input:checked) p,
@@ -1954,7 +1988,7 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
     background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%) !important;
     background-color: {th['primary']} !important;
     border: 1px solid {th['primary_dark']} !important;
-    border-bottom: 2px solid {th['primary_dark']} !important;
+    border-bottom: 2.5px solid {th['accent']} !important;
     border-radius: 10px !important;
     color: #FFFFFF !important;
     -webkit-text-fill-color: #FFFFFF !important;
@@ -2012,12 +2046,13 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
 /* ========================================================= */
 .hero-wrapper {{
     background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 52%, {th['primary_light']} 100%) !important;
+    background-image: {th['pattern']}, linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 52%, {th['primary_light']} 100%) !important;
     color: #ffffff !important;
-    padding: 14px 18px 12px 18px;
-    border-radius: 20px;
-    margin-bottom: 10px;
-    box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), 0 10px 22px rgba(15, 23, 42, 0.15) !important;
-    border: 1.5px solid rgba(255,255,255,0.22) !important;
+    padding: 16px 20px 14px 20px;
+    border-radius: 22px;
+    margin-bottom: 12px;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.32), 0 12px 26px rgba(15, 23, 42, 0.2) !important;
+    border: 1.5px solid rgba(255,255,255,0.24) !important;
     box-sizing: border-box;
     width: 100%;
     position: relative;
@@ -2769,7 +2804,7 @@ components.html(f"""
                 background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 55%, {th['primary_light']} 100%) !important;
                 background-color: {th['primary']} !important;
                 border: 1px solid {th['primary_dark']} !important;
-                border-bottom: 2px solid {th['primary_dark']} !important;
+                border-bottom: 2.5px solid {th['accent']} !important;
                 border-radius: 10px !important;
                 color: #ffffff !important;
                 -webkit-text-fill-color: #ffffff !important;
@@ -3017,7 +3052,7 @@ components.html(f"""
                         tab.style.setProperty('background', 'linear-gradient(135deg, {th["primary_dark"]} 0%, {th["primary"]} 55%, {th["primary_light"]} 100%)', 'important');
                         tab.style.setProperty('background-color', '{th["primary"]}', 'important');
                         tab.style.setProperty('border', '1px solid {th["primary_dark"]}', 'important');
-                        tab.style.setProperty('border-bottom', '2px solid {th["primary_dark"]}', 'important');
+                        tab.style.setProperty('border-bottom', '2.5px solid {th["accent"]}', 'important');
                         tab.style.setProperty('box-shadow', '0 3px 8px rgba(15, 23, 42, 0.22)', 'important');
                         tab.style.setProperty('color', '#ffffff', 'important');
                         tab.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
@@ -3133,7 +3168,7 @@ components.html(f"""
                             if (isPri) {{
                                 btn.style.setProperty('background', 'linear-gradient(135deg, {th["primary_dark"]} 0%, {th["primary"]} 55%, {th["primary_light"]} 100%)', 'important');
                                 btn.style.setProperty('border', '1px solid {th["primary_dark"]}', 'important');
-                                btn.style.setProperty('border-bottom', '2px solid {th["primary_dark"]}', 'important');
+                                btn.style.setProperty('border-bottom', '2.5px solid {th["accent"]}', 'important');
                                 btn.style.setProperty('color', '#FFFFFF', 'important');
                                 btn.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
                                 btn.querySelectorAll('p, span, div').forEach(function(ch) {{
