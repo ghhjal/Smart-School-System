@@ -22,7 +22,7 @@ import streamlit.components.v1 as components
 st.set_page_config(
     page_title="ملف الإنجاز المهني الإلكتروني | منصة زياد الذكية",
     page_icon="🎓",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed",
     menu_items={
         "Get Help": None,
@@ -95,7 +95,7 @@ THEMES = {
         "tint": "#e6f2ef",
         "pattern": "url(\"data:image/svg+xml,%3Csvg width='44' height='44' viewBox='0 0 44 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='1.5'%3E%3Cpath d='M22 0L44 22L22 44L0 22Z'/%3E%3C/g%3E%3C/svg%3E\")"
     },
-    "slate": {
+    "slate_modern": {
         "name": "⚫ الرمادي العصري الرسمي",
         "primary": "#334155",
         "primary_light": "#475569",
@@ -1189,11 +1189,11 @@ def generate_attachments_zip(user_info, active_year, all_years, stds, all_subs, 
 
 user_info = get_user_profile()
 active_theme_key = user_info.get("theme", "amethyst")
-if active_theme_key == "emerald" or active_theme_key not in THEMES:
+if active_theme_key in ("emerald", "slate") or active_theme_key not in THEMES:
     active_theme_key = "amethyst"
 th = THEMES[active_theme_key]
 
-ZIYAD_LOGO_SVG = '<svg class="floating-cap-logo" width="42" height="42" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
+ZIYAD_LOGO_SVG = '<svg class="floating-cap-logo" width="54" height="54" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 
 # ==========================================
 # 7. التصميم الشامل وتوحيد خط Cairo وإخفاء دوائر الراديو وعلامات الروابط
@@ -1376,9 +1376,11 @@ a.anchor-link {{
 }}
 
 .block-container, [data-testid="stMainBlockContainer"] {{
-    padding: 0.55rem 0.75rem 0.35rem 0.75rem !important;
-    max-width: 760px !important;
+    padding: 0.6rem 1rem 0.4rem 1rem !important;
+    max-width: 1040px !important;
     width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
     box-sizing: border-box !important;
     overflow: visible !important;
     direction: rtl !important;
@@ -2048,10 +2050,10 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
     background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 52%, {th['primary_light']} 100%) !important;
     background-image: {th['pattern']}, linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 52%, {th['primary_light']} 100%) !important;
     color: #ffffff !important;
-    padding: 16px 20px 14px 20px;
-    border-radius: 22px;
-    margin-bottom: 12px;
-    box-shadow: inset 0 2px 4px rgba(255,255,255,0.32), 0 12px 26px rgba(15, 23, 42, 0.2) !important;
+    padding: 26px 24px 22px 24px;
+    border-radius: 24px;
+    margin-bottom: 16px;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), 0 12px 28px rgba(15, 23, 42, 0.22) !important;
     border: 1.5px solid rgba(255,255,255,0.24) !important;
     box-sizing: border-box;
     width: 100%;
@@ -2678,6 +2680,8 @@ components.html(f"""
                 z-index: -9999 !important;
             }}
             .block-container, [data-testid="stMainBlockContainer"] {{
+                max-width: 1040px !important;
+                width: 100% !important;
                 padding-bottom: 4px !important;
                 margin-bottom: 0px !important;
             }}
@@ -3852,7 +3856,7 @@ def login_page():
         f'<span class="unified-brand-pill">منصة زياد الذكية</span>'
         f'<span class="unified-year-chip">📅 {safe_y_login}هـ</span>'
         f'</div>'
-        f'<div class="unified-sub-desc">إنجازاتي المهنية وشواهدي</div>'
+        f'<div class="unified-sub-desc">توثيق شواهد الأداء الوظيفي • المعايير المهنية • التقارير المعتمدة</div>'
         f'</div>'
         f'</div>'
     )
@@ -3936,21 +3940,24 @@ def main_app():
 
     hero_html = (
         f'<div class="hero-wrapper" dir="rtl">'
-        f'<div class="hero-top" dir="rtl">'
-        f'<div class="brand-box">{ZIYAD_LOGO_SVG}'
-        f'<div><div class="brand-title">ملف الإنجاز المهني الإلكتروني</div>'
-        f'<div class="brand-sub">منصة زياد الذكية • إنجازاتي المهنية وشواهدي</div></div></div>'
-        f'<div class="hero-top-meta">'
-        f'<span class="year-badge">📁 عام {safe_year}هـ</span>'
-        f'<span class="date-pill">🗓️ {today_str}</span>'
+        f'<div class="unified-hero-stack">'
+        f'<div class="unified-title-row">'
+        f'{ZIYAD_LOGO_SVG}'
+        f'<h1 class="unified-main-title">ملف الإنجاز المهني الإلكتروني</h1>'
         f'</div>'
+        f'<div class="unified-brand-row">'
+        f'<span class="unified-brand-pill">منصة زياد الذكية</span>'
+        f'<span class="unified-year-chip">📅 عام {safe_year}هـ</span>'
         f'</div>'
-        f'<div class="hero-body" dir="rtl">'
-        f'<div class="teacher-name">أ. {safe_name}</div>'
+        f'<div class="unified-sub-desc">توثيق شواهد الأداء الوظيفي • المعايير المهنية • التقارير المعتمدة</div>'
+        f'<div class="hero-body" dir="rtl" style="margin-top: 6px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.16); width: 100%;">'
+        f'<div class="teacher-name">👤 أ. {safe_name}</div>'
         f'<div class="meta-badges">'
         f'<span class="meta-pill">🏫 {safe_school}</span>'
         f'<span class="meta-pill">📚 {safe_spec}</span>'
         f'<span class="meta-pill">👔 مدير المدرسة: {safe_prin}</span>'
+        f'<span class="date-pill">🗓️ {today_str}</span>'
+        f'</div>'
         f'</div>'
         f'</div>'
         f'</div>'
