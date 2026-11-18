@@ -3433,7 +3433,6 @@ def render_standard_guide(guide):
         '<div class="standard-guide" lang="ar" dir="rtl">' + "".join(sections) + "</div>",
         unsafe_allow_html=True,
     )
-    st.caption("من نموذج أمثلة تحقق العناصر والشواهد لعبدالرحمن الشهري.")
 
 
 def render_attachments_html(files, signed_urls_map):
