@@ -2596,39 +2596,109 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
 }}
 
 .kpi-grid {{
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; direction: rtl !important;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; width: 100%; box-sizing: border-box; direction: rtl !important;
 }}
 .kpi-card {{
-    background: #ffffff; border-radius: 16px; padding: 12px 6px; text-align: center !important;
-    border: 1px solid #e2e8f0; box-shadow: 0 3px 8px rgba(0,0,0,0.03);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+    border-radius: 16px; padding: 14px 8px; text-align: center !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-bottom: 4px solid {th['primary']} !important;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08), inset 0 2px 0 #ffffff !important;
+    transition: all 0.2s ease !important;
+    position: relative;
 }}
-.kpi-val {{ font-family: 'Cairo', sans-serif !important; font-size: 21px; font-weight: 900; color: {th['primary']} !important; text-align: center !important; }}
-.kpi-lbl {{ font-family: 'Cairo', sans-serif !important; font-size: 11.5px; color: #475569 !important; margin-top: 2px; font-weight: 700; text-align: center !important; }}
+.kpi-card:hover {{
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12), inset 0 2px 0 #ffffff !important;
+}}
+.kpi-card-danger {{
+    border-bottom: 4px solid #dc2626 !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fff5f5 100%) !important;
+}}
+.kpi-val {{ font-family: 'Cairo', sans-serif !important; font-size: 23px; font-weight: 900; color: {th['primary']} !important; text-align: center !important; text-shadow: 0 1px 2px rgba(15, 23, 42, 0.06); }}
+.kpi-lbl {{ font-family: 'Cairo', sans-serif !important; font-size: 12px; color: #334155 !important; margin-top: 3px; font-weight: 800; text-align: center !important; }}
 
 .progress-card {{
-    background: #ffffff; padding: 12px 16px; border-radius: 15px; 
-    margin-bottom: 6px; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box; direction: rtl !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    padding: 13px 16px; border-radius: 16px; 
+    margin-bottom: 10px; border: 1.5px solid #cbd5e1;
+    border-bottom: 3px solid #94a3b8;
+    box-shadow: 0 5px 12px rgba(15, 23, 42, 0.06), inset 0 1px 0 #ffffff;
+    width: 100%; box-sizing: border-box; direction: rtl !important;
 }}
 .progress-bar-bg {{
-    background: #e2e8f0; height: 9px; border-radius: 5px; width: 100%; overflow: hidden; margin-top: 6px; direction: rtl !important;
+    background: #e2e8f0; height: 10px; border-radius: 6px; width: 100%; overflow: hidden; margin-top: 7px; direction: rtl !important;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
 }}
 .progress-bar-fill {{
     background: linear-gradient(90deg, {th['primary']}, {th['primary_light']});
-    height: 100%; border-radius: 5px;
+    height: 100%; border-radius: 6px;
+}}
+
+.guide-search-header {{
+    background: linear-gradient(135deg, {th['primary_dark']} 0%, {th['primary']} 60%, {th['primary_light']} 100%);
+    border: 1.5px solid {th['primary_dark']};
+    border-bottom: 2.5px solid {th['accent']};
+    border-radius: 12px;
+    padding: 8px 14px;
+    margin-top: 4px;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+    direction: rtl !important;
+}}
+.guide-search-title {{
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}}
+.guide-search-badge {{
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fde68a !important;
+    -webkit-text-fill-color: #fde68a !important;
+    border: 1px solid rgba(253, 230, 138, 0.45);
+    padding: 2px 10px;
+    border-radius: 99px;
+}}
+div[data-testid="stElementContainer"]:has(.guide-search-header) + div[data-testid="stElementContainer"] div[data-baseweb="input"],
+div.element-container:has(.guide-search-header) + div.element-container div[data-baseweb="input"] {{
+    background: {th['tint']} !important;
+    border: 2px solid {th['primary']} !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06), inset 0 1px 2px rgba(255, 255, 255, 0.8) !important;
 }}
 
 .std-card {{
-    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;
-    padding: 13px 15px; margin-bottom: 6px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1.5px solid #cbd5e1;
+    border-right: 5px solid {th['primary']};
+    border-bottom: 3.5px solid #94a3b8;
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-top: 4px !important;
+    margin-bottom: 10px !important;
     display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.02); width: 100%; box-sizing: border-box;
+    box-shadow: 0 5px 12px rgba(15, 23, 42, 0.07), inset 0 1px 0 #ffffff;
+    width: 100%; box-sizing: border-box;
     direction: rtl !important; text-align: right !important;
     cursor: pointer !important; transition: all 0.18s ease !important;
 }}
 .std-card:hover {{
     border-color: {th['primary_light']} !important;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
-    transform: translateY(-1px);
+    border-right-color: {th['accent']} !important;
+    border-bottom-color: {th['primary']} !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12), inset 0 1px 0 #ffffff !important;
+    transform: translateY(-2px);
 }}
 div[data-testid="stElementContainer"]:has(.std-card-click-marker) + div[data-testid="stElementContainer"],
 div.element-container:has(.std-card-click-marker) + div.element-container {{
@@ -3340,6 +3410,21 @@ components.html(f"""
 
                 var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"]');
                 inputBoxes.forEach(function(box) {{
+                    var elCont = box.closest('[data-testid="stElementContainer"], .element-container');
+                    var isGuideSearch = elCont && elCont.previousElementSibling && elCont.previousElementSibling.querySelector('.guide-search-header');
+                    if (isGuideSearch) {{
+                        box.style.setProperty('background-color', '{th["tint"]}', 'important');
+                        box.style.setProperty('background', '{th["tint"]}', 'important');
+                        box.style.setProperty('border', '2px solid {th["primary"]}', 'important');
+                        box.style.setProperty('border-radius', '12px', 'important');
+                        box.querySelectorAll('div, input').forEach(function(inn) {{
+                            inn.style.setProperty('background-color', 'transparent', 'important');
+                            inn.style.setProperty('background', 'transparent', 'important');
+                            inn.style.setProperty('color', '{th["primary_dark"]}', 'important');
+                            inn.style.setProperty('-webkit-text-fill-color', '{th["primary_dark"]}', 'important');
+                        }});
+                        return;
+                    }}
                     box.style.setProperty('background-color', '#ffffff', 'important');
                     box.style.setProperty('background', '#ffffff', 'important');
                     box.style.setProperty('color', '#0f172a', 'important');
@@ -3570,8 +3655,15 @@ def find_guide_examples(query, standards):
 
 
 def render_guide_search(standards, location):
-    query = st.text_input("أين أضيف هذا الشاهد؟", placeholder="ابحث باسم الشاهد، مثل خطة توزيع المنهج",
-                          key=f"guide_query_{location}")
+    st.markdown(
+        '<div class="guide-search-header" dir="rtl">'
+        '<span class="guide-search-title">🧭 أين أضيف هذا الشاهد؟</span>'
+        '<span class="guide-search-badge">البحث الذكي في الدليل</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    query = st.text_input("أين أضيف هذا الشاهد؟", placeholder="🔍 ابحث باسم الشاهد، مثل: خطة توزيع المنهج، سجل المناوبة...",
+                          key=f"guide_query_{location}", label_visibility="collapsed")
     if not query.strip():
         return
     matches = find_guide_examples(query, standards)
@@ -4370,7 +4462,7 @@ def main_app():
             f'<div class="kpi-card"><div class="kpi-val">{total_ev_count}</div><div class="kpi-lbl">إجمالي الشواهد</div></div>'
             f'<div class="kpi-card"><div class="kpi-val">{stds_with_ev}/{total_stds}</div><div class="kpi-lbl">البنود المغطاة</div></div>'
             f'<div class="kpi-card"><div class="kpi-val">{stds_reached_target}</div><div class="kpi-lbl">حققت المستهدف</div></div>'
-            f'<div class="kpi-card"><div class="kpi-val" style="color:#dc2626 !important;">{empty_stds}</div><div class="kpi-lbl">بنود فارغة</div></div>'
+            f'<div class="kpi-card kpi-card-danger"><div class="kpi-val" style="color:#dc2626 !important;">{empty_stds}</div><div class="kpi-lbl">بنود فارغة</div></div>'
             f'</div>'
             f'<div class="progress-card" dir="rtl">'
             f'<div style="display:flex; justify-content:space-between; font-weight:800; font-size:13.5px; color:#1e293b;">'
