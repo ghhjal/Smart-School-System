@@ -182,6 +182,115 @@ DEFAULT_SUB_ITEMS = {
     ]
 }
 
+# أمثلة النموذج المرفق مرتبة برقم معيار الأداء الوظيفي.
+STANDARD_EVIDENCE_GUIDE = {
+    1: {
+        "practices": [
+            "التقيد بالدوام الرسمي",
+            "تأدية الحصص وفق الجدول",
+            "المشاركة في الإشراف والمناوبة",
+            "إعداد ومتابعة الدروس والواجبات",
+        ],
+        "evidence": [
+            "سجل الدوام الرسمي",
+            "سجل المناوبة والإشراف",
+            "سجل الانتظار",
+            "خطة توزيع المنهج",
+        ],
+    },
+    2: {
+        "practices": [
+            "المشاركة في مجتمعات التعلم المهنية",
+            "تبادل الزيارات",
+            "الدروس التطبيقية",
+            "حضور الدورات والورش التدريبية",
+        ],
+        "evidence": [
+            "سجل مجتمعات التعلم",
+            "سجل تبادل الزيارات",
+            "تقرير درس تطبيقي",
+            "شهادات حضور",
+        ],
+    },
+    3: {
+        "practices": [
+            "التواصل مع أولياء الأمور",
+            "تزويدهم بمستويات الطلاب",
+            "إيصال الملاحظات",
+            "المشاركة في الجمعية العمومية",
+        ],
+        "evidence": [
+            "صور من الجمعية العمومية",
+            "تقرير اجتماع مع ولي الأمر",
+            "نسخة من الخطة الأسبوعية",
+        ],
+    },
+    4: {
+        "practices": ["استخدام استراتيجيات متنوعة", "مراعاة الفروق الفردية"],
+        "evidence": ["تقرير عن تطبيق استراتيجية", "ملف إنجاز المعلم"],
+    },
+    5: {
+        "practices": [
+            "معالجة الفاقد التعليمي",
+            "خطط علاجية للطلاب الضعاف",
+            "خطط إثرائية للمتميزين",
+            "تكريم الطلاب المتميزين",
+        ],
+        "evidence": ["نتائج الاختبارات القبلية والبعدية", "كشف متابعة الطلاب"],
+    },
+    6: {
+        "practices": [
+            "توزيع المنهج وإعداد الدروس",
+            "إعداد الواجبات والاختبارات",
+            "تنفيذ الدروس",
+        ],
+        "evidence": [
+            "خطة توزيع المنهج",
+            "نماذج من إعداد الدروس",
+            "نماذج من الواجبات والاختبارات",
+        ],
+    },
+    7: {
+        "practices": ["دمج التقنية في التعليم", "التنويع في الوسائل التعليمية"],
+        "evidence": ["صور من الوسائل التعليمية", "تقرير عن برنامج تقني"],
+    },
+    8: {
+        "practices": [
+            "مراعاة حاجات الطلاب",
+            "التهيئة النفسية",
+            "التحفيز المادي والمعنوي",
+            "توفير متطلبات الدرس",
+        ],
+        "evidence": ["تقرير تصنيف الطلاب حسب أنماط التعلم", "نماذج من التحفيز المادي والمعنوي"],
+    },
+    9: {
+        "practices": ["ضبط سلوك الطلاب", "شد انتباههم", "متابعة الحضور والغياب"],
+        "evidence": ["كشف المتابعة", "تطبيق إدارة الصف"],
+    },
+    10: {
+        "practices": [
+            "تحليل نتائج الاختبارات",
+            "تصنيف الطلاب حسب النتائج",
+            "معالجة الفاقد التعليمي",
+            "تحديد نقاط القوة والضعف",
+        ],
+        "evidence": ["تقرير تحليل نتائج الطلاب", "سجل معالجة الفاقد التعليمي"],
+    },
+    11: {
+        "practices": [
+            "تطبيق اختبارات ورقية وإلكترونية",
+            "المشاريع الطلابية",
+            "المهام الأدائية",
+            "ملفات إنجاز الطلاب",
+        ],
+        "evidence": [
+            "نماذج من الاختبارات",
+            "ملفات إنجاز الطلاب",
+            "نماذج من المهام الأدائية والمشاريع",
+        ],
+    },
+}
+
 # ==========================================
 # 4. محرك الصياغة المزدوج (Gemini 2.5 Flash + محرك القوالب التربوية الذكي)
 # ==========================================
@@ -2521,6 +2630,44 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
     color: #1d4ed8 !important; font-weight: 800; font-size: 12px; text-decoration: none;
 }}
 
+.standard-guide {{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 12px;
+    align-items: stretch;
+    font-family: 'Cairo', sans-serif;
+}}
+.standard-guide section {{
+    min-width: 0;
+    padding: 14px 16px;
+    border: 1px solid #dbe2ea;
+    border-radius: 12px;
+    background: #fff;
+}}
+.standard-guide .guide-evidence {{
+    border-inline-start: 3px solid {th['primary']};
+    background: {th['tint']};
+}}
+.standard-guide h4 {{
+    margin: 0 0 8px;
+    padding: 0;
+    font-size: 1rem;
+    color: {th['primary_dark']};
+}}
+.standard-guide ul {{
+    list-style: disc outside;
+    margin: 0;
+    padding: 0;
+    padding-inline-start: 1.25rem;
+}}
+.standard-guide li {{
+    margin: 0;
+    padding: 2px 0;
+    line-height: 1.8;
+    font-size: 0.9375rem;
+    color: #1e293b;
+}}
+.standard-guide li::marker {{ color: {th['primary']}; }}
 .idea-card {{
     font-family: 'Cairo', sans-serif !important;
     background: #ffffff; border: 1px solid #e2e8f0; padding: 9px 12px;
@@ -3274,6 +3421,20 @@ def get_greeting_and_dates():
     h_date = f"{h_obj.day} {h_months[h_obj.month - 1]} {h_obj.year}هـ"
     
     return greeting, f"{day_name} • {h_date} • {g_date}"
+
+def render_standard_guide(guide):
+    sections = []
+    for field, heading in (("practices", "أمثلة على تحقق العنصر"), ("evidence", "الشواهد")):
+        items = "".join(f"<li>{html.escape(item)}</li>" for item in guide[field])
+        sections.append(
+            f'<section class="guide-{field}"><h4>{heading}</h4><ul>{items}</ul></section>'
+        )
+    st.markdown(
+        '<div class="standard-guide" lang="ar" dir="rtl">' + "".join(sections) + "</div>",
+        unsafe_allow_html=True,
+    )
+    st.caption("من نموذج أمثلة تحقق العناصر والشواهد لعبدالرحمن الشهري.")
+
 
 def render_attachments_html(files, signed_urls_map):
     if not files:
@@ -4172,6 +4333,11 @@ def main_app():
             sub_options = db_subs if db_subs else DEFAULT_SUB_ITEMS.get(std_id, [])
 
             with st.expander("💡 استعراض أمثلة الشواهد المستهدفة لهذا البند", expanded=False):
+                guide = STANDARD_EVIDENCE_GUIDE.get(std_id)
+                if guide:
+                    render_standard_guide(guide)
+                    if sub_options:
+                        st.markdown("**اقتراحات البرنامج لهذا البند**")
                 for idea in sub_options:
                     safe_idea = html.escape(str(idea))
                     st.markdown(f'<div class="idea-card" dir="rtl"><span>💡 {safe_idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
