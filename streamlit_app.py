@@ -1,7 +1,9 @@
 import streamlit as st
 from supabase import create_client
 import time
-import uuid
+import hashlib
+import threading
+import unicodedata
 import json
 import re
 import html
@@ -352,100 +354,68 @@ PEDAGOGICAL_CONTEXT = {
     }
 }
 
-def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", variant=0):
-    clean_notes = raw_notes.strip()
+def reported_impact(notes):
+    for part in re.split(r"[\n؛;!؟]+|\.(?!\d)", notes):
+        part = part.strip(" •-")
+        label = re.match(r"^(?:الأثر(?: المتحقق)?|النتيجة|النتائج)\s*[:：]\s*(.+)", part)
+        if label:
+            return label.group(1).strip()
+        if re.match(r"^(?:ارتفع|انخفض|تحسّن|تحسن|ازداد|تراجع|بلغت النسبة|أظهرت النتائج|أسفر ذلك عن|لم يتحسن|لم يتغير)\S*\s", part):
+            return part
+    return ""
+
+
+def generate_smart_evidence_text(std_id, std_title, ev_title, raw_notes="", variant=0, teacher_impact=""):
+    notes = raw_notes.strip()
+    impact = teacher_impact.strip() or reported_impact(notes)
     ctx = PEDAGOGICAL_CONTEXT.get(std_id, PEDAGOGICAL_CONTEXT[4])
-    
-    gemini_key = st.secrets.get("gemini_api_key", "") or st.session_state.get("custom_gemini_key", "")
-    if gemini_key:
-        try:
-            prompt_text = (
-                f"أنت خبير تربوي في وزارة التعليم السعودية. قم بصياغة توثيق احترافي لشاهد أداء وظيفي للمعلم.\n"
-                f"المعيار: {std_id}. {std_title}\n"
-                f"عنوان الشاهد: {ev_title}\n"
-                f"الكلمات المفتاحية أو النقاط المدخلة من المعلم: {clean_notes if clean_notes else 'تنفيذ الشاهد وفق الخطة المعتمدة'}\n\n"
-                f"أرجع النتيجة بصيغة JSON فقط يحتوي على المفاتيح التالية باللغة العربية الفصحى:\n"
-                f'{{"description": "فقرة وصفية رسمية من 3 إلى 4 أسطر تدمج النقاط المدخلة وتربطها بالمعيار وأثرها على المتعلمين", '
-                f'"goal": "هدف تربوي مركز في سطر واحد", '
-                f'"target_group": "الفئة المستهدفة بدقة", '
-                f'"implementation": "آلية التنفيذ الميداني في سطر واحد", '
-                f'"impact": "الأثر التربوي المتحقق في سطر واحد"}}'
-            )
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
-            payload = json.dumps({
-                "contents": [{"parts": [{"text": prompt_text}]}],
-                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.7}
-            }).encode("utf-8")
-            req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                res_data = json.loads(resp.read().decode("utf-8"))
-                raw_json = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                parsed = json.loads(raw_json)
-                if parsed.get("description"):
-                    return {
-                        "description": parsed.get("description", ""),
-                        "goal": parsed.get("goal", f"تحقيق مستهدفات معيار ({std_title}) عبر ({ev_title})."),
-                        "target_group": parsed.get("target_group", ctx["target"]),
-                        "implementation": parsed.get("implementation", clean_notes or ev_title),
-                        "impact": parsed.get("impact", ctx["outcomes"][0]),
-                        "engine": "gemini-2.5-flash"
-                    }
-        except Exception:
-            pass
-
-    is_already_long = len(clean_notes) > 160 and ("مؤشرات" in clean_notes or "مستهدفات" in clean_notes or "انطلاقاً" in clean_notes)
-    if is_already_long:
-        seed_notes = st.session_state.get(f"last_raw_notes_{std_id}", "")
-    else:
-        seed_notes = clean_notes
-        st.session_state[f"last_raw_notes_{std_id}"] = seed_notes
-
-    verb = ctx["verbs"][variant % len(ctx["verbs"])]
-    outcome = ctx["outcomes"][variant % len(ctx["outcomes"])]
-    outcome_alt = ctx["outcomes"][(variant + 1) % len(ctx["outcomes"])]
-    target_group = ctx["target"]
-
-    if seed_notes:
-        focus_phrase = f"مع التركيز التطبيقي على ({seed_notes})"
-        impl_detail = f"تطبيق ({ev_title}) ميدانياً من خلال ({seed_notes}) وتوثيق الشواهد المرتبطة به."
-    else:
-        focus_phrase = "وفق الأسس التربوية الحديثة والخطة الفصلية المعتمدة"
-        impl_detail = f"الإعداد المنهجي والتنفيذ الميداني لـ ({ev_title}) ومتابعة أثره بشكل دوري."
-
-    style_templates = [
-        (
-            f"انطلاقاً من مستهدفات معيار «{std_title}»، تم {verb} «{ev_title}» {focus_phrase}، "
-            f"حيث جرى تهيئة المتطلبات اللازمة وتنفيذ الإجراءات بصورة منظمة تضمن جودة التطبيق. "
-            f"وقد أسهمت هذه الممارسة بفاعلية في {outcome}، وانعكس أثرها إيجاباً على {target_group}."
-        ),
-        (
-            f"تحقيقاً لمؤشرات الأداء المهني في بند «{std_title}»، قمت بـ{verb} «{ev_title}» {focus_phrase}. "
-            f"وقد تضمن العمل التخطيط المسبق والتنفيذ المرحلي والتقويم المستمر للمخرجات، "
-            f"مما أثمر عن {outcome_alt}، ورفع مستوى التفاعل والإنجاز لدى {target_group}."
-        ),
-        (
-            f"في إطار تجويد الممارسات التعليمية والتربوية ضمن عنصر «{std_title}»، تم {verb} «{ev_title}» {focus_phrase}. "
-            f"وقد أظهرت نتائج المتابعة والتوثيق فاعلية هذا الإجراء في {outcome}، "
-            f"بما يلبي الاحتياجات الفعلية لـ{target_group} ويحقق غايات التميز المدرسي."
-        ),
-        (
-            f"توثيقاً للممارسات المهنية الداعمة لمعيار «{std_title}»، جرى العمل على {verb} «{ev_title}» {focus_phrase}، "
-            f"وفق منهجية تكاملية تراعي الدقة والجودة في الأداء. "
-            f"وقد نتج عن ذلك {outcome_alt}، وتحقيق أثر تربوي مستدام لدى {target_group}."
-        )
-    ]
-
-    chosen_description = style_templates[variant % len(style_templates)]
-    goal_text = f"تحقيق مؤشرات معيار ({std_title}) والارتقاء بجودة الأداء عبر ({ev_title})."
-
-    return {
-        "description": chosen_description,
-        "goal": goal_text,
-        "target_group": target_group,
-        "implementation": impl_detail,
-        "impact": outcome,
-        "engine": "smart-template"
+    templates = (
+        f"يتناول هذا الشاهد «{ev_title}» ضمن بند «{std_title}».",
+        f"يندرج «{ev_title}» ضمن شواهد بند «{std_title}».",
+        f"موضوع الشاهد «{ev_title}»، ويرتبط ببند «{std_title}».",
+    )
+    fallback = {
+        "description": templates[variant % len(templates)] + (f"\n{notes}" if notes else ""),
+        "goal": ctx["outcomes"][variant % len(ctx["outcomes"])],
+        "target_group": ctx["target"],
+        "implementation": notes,
+        "impact": impact,
+        "engine": "smart-template",
     }
+    gemini_key = st.secrets.get("gemini_api_key", "") or st.session_state.get("custom_gemini_key", "")
+    if not gemini_key or not notes:
+        return fallback
+    prompt = (
+        "صغ مسودة توثيق موجزة بالعربية. استخدم حصراً الوقائع الواردة في ملاحظات المعلم. "
+        "اجعل الوصف عن النشاط فقط. يُذكر الأثر في حقله المستقل. لا تستنتج نتائج أو أرقاماً أو تنفيذ خطوات. "
+        "اترك الأثر لحقل المعلم. أعد كائن JSON بمفاتيح description وgoal وtarget_group وimplementation.\n"
+        f"المعيار: {std_title}\nعنوان الشاهد: {ev_title}\nملاحظات المعلم: {notes}"
+    )
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
+    payload = {"contents": [{"parts": [{"text": prompt}]}],
+               "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2}}
+    try:
+        req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=8) as response:
+            data = json.loads(response.read())
+        draft = json.loads(data["candidates"][0]["content"]["parts"][0]["text"])
+        if not isinstance(draft.get("description"), str) or not draft["description"].strip():
+            return fallback
+        result = fallback.copy()
+        for field in ("description", "goal", "target_group", "implementation"):
+            if isinstance(draft.get(field), str) and draft[field].strip():
+                text = draft[field].strip()
+                if field in ("description", "implementation"):
+                    claims = re.split(r"[؛.!؟\n]+", text)
+                    if any(re.search(r"أثر|أسهم|أثمر|أظهر|انعكس|تحس[ّ]?ن|ارتف[اع]|انخف[ضا]|نتج عن|[0-9٠-٩]", claim)
+                           and claim.strip() not in notes for claim in claims):
+                        continue
+                result[field] = text
+        result["engine"] = "gemini-2.5-flash"
+        return result
+    except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError):
+        return fallback
+
 
 # ==========================================
 # 5. الاتصال الآمن بقاعدة البيانات، ضغط الصور، وحساب المساحة السحابية السريع
@@ -505,6 +475,8 @@ def clear_app_cache():
 
 def navigate_to(page_name, std_id=None):
     st.session_state.current_page = page_name
+    if std_id != st.session_state.get("guide_expanded_standard"):
+        st.session_state.pop("guide_expanded_standard", None)
     if std_id is not None:
         st.session_state.view_standard_id = std_id
     st.rerun()
@@ -557,6 +529,120 @@ def optimize_uploaded_image(up_file):
         return out_buf.getvalue(), "image/jpeg", "jpg"
     except Exception:
         return raw_bytes, mime_type, ext
+
+def prepare_attachments(files, link=""):
+    items = {}
+    for file in files or []:
+        checksum = hashlib.sha256(file.name.encode("utf-8") + b"\0")
+        checksum.update(file.getvalue())
+        digest = checksum.hexdigest()
+        data, mime, ext = optimize_uploaded_image(file)
+        key = f"{digest}.{ext.lower()}"
+        items.setdefault(key, {"key": key, "name": file.name, "mime": mime, "data": data})
+    if link.strip():
+        items[link.strip()] = {"key": link.strip(), "name": "الرابط الخارجي", "mime": "external/link", "data": None}
+    return list(items.values())
+
+
+def attachment_url(evidence_id, item):
+    return item["key"] if item["mime"] == "external/link" else f"{evidence_id}/{item['key']}"
+
+
+def missing_date_column(error):
+    message = str(error).lower()
+    return "execution_date" in message and any(part in message for part in (
+        "pgrst204", "42703", "schema cache", "does not exist", "could not find",
+    ))
+
+
+def save_upload_record(job):
+    if job["evidence_id"] is not None:
+        return
+    data = job["payload"]
+    # The same creation timestamp lets a retry recover a committed insert whose reply was lost.
+    if job["insert_attempted"]:
+        rows = (supabase.table("evidences").select("id").eq("year_id", data["year_id"])
+                .eq("standard_id", data["standard_id"]).eq("created_at", data["created_at"]).limit(1).execute().data)
+        if rows:
+            job["evidence_id"] = rows[0]["id"]
+            return
+    job["insert_attempted"] = True
+    try:
+        result = supabase.table("evidences").insert(data).execute()
+    except Exception as error:
+        if not missing_date_column(error):
+            raise
+        data.pop("execution_date", None)
+        result = supabase.table("evidences").insert(data).execute()
+    job["evidence_id"] = result.data[0]["id"]
+
+
+@st.cache_resource(show_spinner=False)
+def attachment_locks():
+    # Serialize retries for a given record in this app process.
+    return [threading.Lock() for _ in range(32)]
+
+
+def save_attachments(evidence_id, items):
+    with attachment_locks()[hash(str(evidence_id)) % 32]:
+        rows = (supabase.table("evidence_files").select("file_url")
+                .eq("evidence_id", evidence_id).execute().data or [])
+        registered = {row["file_url"] for row in rows}
+        for item in items:
+            path = attachment_url(evidence_id, item)
+            if path not in registered:
+                if item["mime"] != "external/link":
+                    try:
+                        supabase.storage.from_("private-achievements").upload(
+                            path=path, file=item["data"], file_options={"content-type": item["mime"]}
+                        )
+                    except Exception as error:
+                        # The object may exist even if the previous upload response was lost.
+                        message = str(error).lower()
+                        if "duplicate" not in message and "already exists" not in message and "alreadyexists" not in message:
+                            raise
+                supabase.table("evidence_files").insert({
+                    "evidence_id": evidence_id, "file_url": path, "file_type": item["mime"]
+                }).execute()
+                registered.add(path)
+            item["done"] = True
+
+
+def attempt_evidence_upload(job_key, std_id):
+    job = st.session_state[job_key]
+    try:
+        with st.spinner("جارٍ حفظ الشاهد ومرفقاته…"):
+            save_upload_record(job)
+            save_attachments(job["evidence_id"], job["items"])
+    except Exception:
+        clear_app_cache()
+        st.rerun()
+        return
+    del st.session_state[job_key]
+    st.session_state[f"clear_draft_flag_{std_id}"] = True
+    st.session_state[f"upload_success_{std_id}"] = "تم حفظ الشاهد وجميع مرفقاته."
+    clear_app_cache()
+    st.rerun()
+
+
+def render_upload_progress(job_key, std_id):
+    job = st.session_state[job_key]
+    st.markdown("**استكمال حفظ الشاهد**")
+    st.text(job["payload"]["title"])
+    if job["evidence_id"] is None:
+        st.warning("تعذّر تأكيد حفظ الشاهد. عند إعادة المحاولة سيتحقق البرنامج أولًا من السجل السابق.")
+    else:
+        st.warning("تم حفظ سجل الشاهد. يمكنك استكمال المرفقات المتبقية.")
+    for item in job["items"]:
+        status = "تم حفظه" if item.get("done") else "بانتظار التأكيد"
+        st.text(f"{item['name']} — {status}")
+    if st.button("استكمال الحفظ", key=f"retry_{job_key}", type="primary"):
+        attempt_evidence_upload(job_key, std_id)
+    if st.button("العودة إلى نموذج الإضافة", key=f"leave_{job_key}",
+                 help="يمكن استكمال مرفقات الشاهد المحفوظ لاحقًا من إدارة الشاهد."):
+        del st.session_state[job_key]
+        st.rerun()
+
 
 @st.cache_data(ttl=600, show_spinner=False)
 def fetch_storage_usage_stats():
@@ -715,22 +801,31 @@ def run_ai_draft_callback(std_id, std_title, sub_options):
 
     chosen_idea = st.session_state.get(idea_key, sub_options[0] if sub_options else "")
     typed_title = st.session_state.get(title_key, "").strip()
-    ev_title = typed_title if typed_title else chosen_idea
+    ev_title = typed_title or (chosen_idea if chosen_idea != CUSTOM_EVIDENCE_TITLE else std_title)
     current_notes = st.session_state.get(desc_key, "")
+    previous = st.session_state.get(f"last_ai_draft_{std_id}", {})
+    if current_notes == previous.get("description"):
+        current_notes = previous["notes"]
+    manual_impact = st.session_state.get(impact_key, "")
+    if manual_impact == previous.get("impact"):
+        manual_impact = ""
 
     ai_res = generate_smart_evidence_text(
         std_id=std_id,
         std_title=std_title,
         ev_title=ev_title,
         raw_notes=current_notes,
-        variant=st.session_state.ai_variant
+        variant=st.session_state.ai_variant,
+        teacher_impact=manual_impact,
     )
     st.session_state.ai_variant += 1
     st.session_state[desc_key] = ai_res["description"]
-    st.session_state[goal_key] = ai_res["goal"]
-    st.session_state[target_key] = ai_res["target_group"]
-    st.session_state[impl_key] = ai_res["implementation"]
+    for key, field in ((goal_key, "goal"), (target_key, "target_group"), (impl_key, "implementation")):
+        value = st.session_state.get(key, "")
+        if not value.strip() or value == previous.get(field):
+            st.session_state[key] = ai_res[field]
     st.session_state[impact_key] = ai_res["impact"]
+    st.session_state[f"last_ai_draft_{std_id}"] = {**ai_res, "notes": current_notes, "impact": "" if manual_impact else ai_res["impact"]}
     st.session_state[f"ai_status_{std_id}"] = ai_res["engine"]
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -3422,6 +3517,73 @@ def get_greeting_and_dates():
     
     return greeting, f"{day_name} • {h_date} • {g_date}"
 
+CUSTOM_EVIDENCE_TITLE = "أخرى (كتابة عنوان مخصص)"
+
+
+def normalize_guide_text(value):
+    value = unicodedata.normalize("NFKC", value).casefold()
+    value = "".join(ch for ch in value if not unicodedata.combining(ch))
+    value = value.translate(str.maketrans("أإآٱى", "ااااي")).replace("ـ", "")
+    return " ".join(re.findall(r"[^\W_]+", value))
+
+
+def find_guide_examples(query, standards):
+    words = normalize_guide_text(query)
+    if not words:
+        return []
+    matches = []
+    for standard in standards:
+        guide = STANDARD_EVIDENCE_GUIDE.get(standard["id"], {})
+        examples = dict.fromkeys(guide.get("evidence", []) + guide.get("practices", []))
+        for example in examples:
+            text = normalize_guide_text(example)
+            if all(word in text for word in words.split()):
+                rank = 0 if text == words else 1 if words in text else 2
+                matches.append((rank, standard["id"], example, standard["title"]))
+    matches.sort(key=lambda row: (row[0], row[1]))
+    return [(sid, example, title) for _, sid, example, title in matches]
+
+
+def render_guide_search(standards, location):
+    query = st.text_input("أين أضيف هذا الشاهد؟", placeholder="ابحث باسم الشاهد، مثل خطة توزيع المنهج",
+                          key=f"guide_query_{location}")
+    if not query.strip():
+        return
+    matches = find_guide_examples(query, standards)
+    if not matches:
+        st.caption("لم نجد مثالًا مطابقًا. جرّب كلمة من اسم الشاهد.")
+        return
+    choice = None
+    if len(matches) <= 3:
+        for index, row in enumerate(matches):
+            sid, example, title = row
+            if st.button(f"{example}  ·  البند {sid} — {title}", key=f"guide_hit_{location}_{index}"):
+                choice = row
+    else:
+        selected = st.selectbox(
+            f"الأمثلة المطابقة ({len(matches)})", matches,
+            format_func=lambda row: f"{row[1]}  ·  البند {row[0]} — {row[2]}",
+            key=f"guide_match_{location}",
+        )
+        if st.button("عرض البند", key=f"open_guide_match_{location}"):
+            choice = selected
+    if choice is not None:
+        st.session_state["open_guide_example"] = choice[:2]
+        st.session_state["guide_expanded_standard"] = choice[0]
+        navigate_to("standard_view", choice[0])
+
+
+def use_example_title(std_id, sub_options):
+    example = st.session_state[f"guide_example_{std_id}"]
+    st.session_state[f"idea_sel_{std_id}"] = example if example in sub_options else CUSTOM_EVIDENCE_TITLE
+    st.session_state[f"title_in_{std_id}"] = example
+
+
+def sync_suggested_title(std_id):
+    choice = st.session_state[f"idea_sel_{std_id}"]
+    st.session_state[f"title_in_{std_id}"] = "" if choice == CUSTOM_EVIDENCE_TITLE else choice
+
+
 def render_standard_guide(guide):
     sections = []
     for field, heading in (("practices", "أمثلة على تحقق العنصر"), ("evidence", "الشواهد")):
@@ -3541,7 +3703,7 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                     upload_mode = st.selectbox(
                         "عند رفع ملفات جديدة:",
                         [
-                            "➕ إضافتها للصور الحالية",
+                            "➕ إضافة المرفقات أو استكمال رفعها",
                             "🔄 استبدال الصور السابقة"
                         ],
                         key=f"{key_prefix}mode_{ev['id']}"
@@ -3550,6 +3712,18 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                 new_ext_link = st.text_input("🔗 أو رابط خارجي (امسحه لحذفه أو عدله):", value=current_ext_link, placeholder="https://")
                 
                 if st.form_submit_button("حفظ كافة التعديلات 💾", type="primary", use_container_width=True):
+                    edited_link = new_ext_link.strip()
+                    updated_items = prepare_attachments(new_files, edited_link if edited_link != current_ext_link else "")
+                    try:
+                        if updated_items:
+                            save_attachments(ev["id"], updated_items)
+                    except Exception:
+                        clear_app_cache()
+                        st.warning("توقّف رفع المرفقات. أعد حفظ التعديلات لاستكمال الملفات المتبقية.")
+                        for item in updated_items:
+                            st.text(f"{'✓' if item.get('done') else '○'}  {item['name']}")
+                        return
+
                     update_payload = {
                         "standard_id": new_std_id,
                         "title": new_t,
@@ -3558,33 +3732,23 @@ def render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix=""):
                     }
                     try:
                         supabase.table("evidences").update(update_payload).eq("id", ev['id']).execute()
-                    except Exception:
+                    except Exception as error:
+                        if not missing_date_column(error):
+                            raise
                         update_payload.pop("execution_date", None)
                         supabase.table("evidences").update(update_payload).eq("id", ev['id']).execute()
-                        
-                    if new_files:
-                        if upload_mode.startswith("🔄"):
-                            old_storage_paths = [f['file_url'] for f in storage_files]
-                            if old_storage_paths:
-                                try:
-                                    supabase.storage.from_("private-achievements").remove(old_storage_paths)
-                                except Exception:
-                                    pass
-                            for f in storage_files:
-                                supabase.table("evidence_files").delete().eq("id", f['id']).execute()
-                                
-                        for nf in new_files:
-                            opt_bytes, opt_mime, opt_ext = optimize_uploaded_image(nf)
-                            path = f"{ev['id']}/{uuid.uuid4()}.{opt_ext}"
-                            supabase.storage.from_("private-achievements").upload(path=path, file=opt_bytes, file_options={"content-type": opt_mime})
-                            supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": path, "file_type": opt_mime}).execute()
 
-                    if new_ext_link.strip() != current_ext_link:
-                        for f in files:
-                            if f.get('file_type') == 'external/link' or f.get('file_url', '').startswith('http'):
-                                supabase.table("evidence_files").delete().eq("id", f['id']).execute()
-                        if new_ext_link.strip():
-                            supabase.table("evidence_files").insert({"evidence_id": ev['id'], "file_url": new_ext_link.strip(), "file_type": "external/link"}).execute()
+                    if new_files and upload_mode.startswith("🔄"):
+                        keep = {attachment_url(ev["id"], item) for item in updated_items}
+                        for old_file in storage_files:
+                            if old_file["file_url"] not in keep:
+                                supabase.storage.from_("private-achievements").remove([old_file["file_url"]])
+                                supabase.table("evidence_files").delete().eq("id", old_file["id"]).execute()
+                    if edited_link != current_ext_link:
+                        for old_file in files:
+                            url = old_file["file_url"]
+                            if url in existing_links and url != edited_link:
+                                supabase.table("evidence_files").delete().eq("id", old_file["id"]).execute()
 
                     clear_app_cache()
                     if new_std_id != current_ev_std_id:
@@ -4169,7 +4333,7 @@ def main_app():
         if c >= s.get('target_evidences', 3):
             stds_reached_target += 1
 
-    less_than_3 = sum(1 for s in stds if ev_by_std[s['id']] < s.get('target_evidences', 3))
+    below_target = sum(1 for s in stds if ev_by_std[s['id']] < s.get('target_evidences', 3))
     pct = int((stds_with_ev / total_stds) * 100) if total_stds else 0
 
     # ----------------------------------------
@@ -4193,10 +4357,11 @@ def main_app():
         )
         st.markdown(kpi_html, unsafe_allow_html=True)
 
+        render_guide_search(stds, "home")
         filter_map = {
             'all': f"الكل • {total_stds}",
             'empty': f"فارغة • {empty_stds}",
-            'less3': f"أقل من 3 • {less_than_3}"
+            'less3': f"دون المستهدف • {below_target}"
         }
         sel_filter = render_grid_tabs(filter_map, st.session_state.filter_mode, "home_filter")
         if sel_filter != st.session_state.filter_mode:
@@ -4249,7 +4414,8 @@ def main_app():
     # 📋 2. صفحة البنود والشواهد
     # ----------------------------------------
     elif st.session_state.current_page == 'standard_view':
-        st.markdown('<div class="section-heading">📋 استعراض وإدارة بنود الأداء والشواهد</div>', unsafe_allow_html=True)
+        heading = "📋 استعراض بنود الأداء والشواهد" if is_visitor else "📋 استعراض وإدارة بنود الأداء والشواهد"
+        st.markdown(f'<div class="section-heading">{heading}</div>', unsafe_allow_html=True)
         
         options_map = {0: "🔍 عرض ملخص جميع البنود والشواهد المرفوعة"}
         for s in stds:
@@ -4260,17 +4426,19 @@ def main_app():
             current_std_id = 0
             
         selected_option = st.selectbox(
-            "اختر البند للتنقل السريع أو إضافة شاهد:",
+            "اختر البند لعرض شواهده:" if is_visitor else "اختر البند للتنقل السريع أو إضافة شاهد:",
             options=list(options_map.keys()),
             format_func=lambda x: options_map[x],
             index=list(options_map.keys()).index(current_std_id)
         )
         
         if selected_option != st.session_state.view_standard_id:
+            st.session_state.pop("guide_expanded_standard", None)
             st.session_state.view_standard_id = selected_option
             st.rerun()
 
         if selected_option == 0:
+            render_guide_search(stds, "overview")
             for s in stds:
                 s_evs = sort_evidences_chronologically([e for e in evidences if e['standard_id'] == s['id']])
                 with st.expander(f"{'✅' if len(s_evs)>0 else '⚪'} البند {s['id']}: {s['title']} — ({len(s_evs)} شواهد)", expanded=(len(s_evs) > 0)):
@@ -4295,7 +4463,8 @@ def main_app():
                             st.markdown(ev_card, unsafe_allow_html=True)
                             if not is_visitor:
                                 render_evidence_edit_and_delete(ev, signed_urls_map, stds, key_prefix="all_")
-                    if st.button(f"➕ إضافة شاهد جديد للبند {s['id']}", key=f"jump_std_{s['id']}", type="primary", use_container_width=True):
+                    label = f"عرض شواهد البند {s['id']}" if is_visitor else f"➕ إضافة شاهد جديد للبند {s['id']}"
+                    if st.button(label, key=f"jump_std_{s['id']}", type="primary", use_container_width=True):
                         navigate_to('standard_view', s['id'])
 
         else:
@@ -4305,7 +4474,8 @@ def main_app():
 
             st.markdown(f'<div class="sub-heading">📂 الشواهد المرفوعة في البند {std_id}: {std_data["title"]} ({len(std_evidences)})</div>', unsafe_allow_html=True)
             if not std_evidences:
-                st.info("لا توجد شواهد مرفوعة في هذا البند حتى الآن. يمكنك إضافة شاهد جديد من النموذج بالأسفل.")
+                message = "لا توجد شواهد مرفوعة في هذا البند حتى الآن."
+                st.info(message if is_visitor else message + " يمكنك إضافة شاهد جديد من النموذج بالأسفل.")
             else:
                 for order_idx, ev in enumerate(std_evidences, 1):
                     files = ev.get("evidence_files", [])
@@ -4331,17 +4501,35 @@ def main_app():
             db_subs = [item['title'] for item in all_subs if item.get('standard_id') == std_id]
             sub_options = db_subs if db_subs else DEFAULT_SUB_ITEMS.get(std_id, [])
 
-            with st.expander("💡 استعراض أمثلة الشواهد المستهدفة لهذا البند", expanded=False):
+            selected_match = st.session_state.get("open_guide_example")
+            from_search = bool(selected_match and selected_match[0] == std_id)
+            user_id = getattr(st.session_state.user, "id", None)
+            job_key = f"pending_upload_{user_id}_{active_year.get('id')}_{std_id}"
+            with st.expander("💡 استعراض أمثلة الشواهد المستهدفة لهذا البند", expanded=(st.session_state.get("guide_expanded_standard") == std_id)):
                 guide = STANDARD_EVIDENCE_GUIDE.get(std_id)
                 if guide:
                     render_standard_guide(guide)
+                    if not is_visitor and job_key not in st.session_state:
+                        examples = list(dict.fromkeys(guide["evidence"] + guide["practices"]))
+                        picker = f"guide_example_{std_id}"
+                        if from_search:
+                            st.session_state[picker] = selected_match[1]
+                        st.selectbox("مثال لاستخدامه كعنوان", examples, key=picker)
+                        st.button("استخدام كعنوان", key=f"use_example_{std_id}",
+                                  on_click=use_example_title, args=(std_id, sub_options))
                     if sub_options:
                         st.markdown("**اقتراحات البرنامج لهذا البند**")
                 for idea in sub_options:
                     safe_idea = html.escape(str(idea))
                     st.markdown(f'<div class="idea-card" dir="rtl"><span>💡 {safe_idea}</span><span style="color:{th["primary"]} !important; font-weight:bold;">✔</span></div>', unsafe_allow_html=True)
 
-            if not is_visitor:
+            if from_search:
+                del st.session_state["open_guide_example"]
+            if not is_visitor and job_key in st.session_state:
+                render_upload_progress(job_key, std_id)
+            elif not is_visitor:
+                if success := st.session_state.pop(f"upload_success_{std_id}", None):
+                    st.success(success)
                 st.markdown('<div class="sub-heading">➕ إضافة شاهد جديد لهذا البند</div>', unsafe_allow_html=True)
                 
                 desc_key = f"draft_desc_{std_id}"
@@ -4352,8 +4540,10 @@ def main_app():
                 clear_flag_key = f"clear_draft_flag_{std_id}"
 
                 if st.session_state.get(clear_flag_key, False):
-                    for k in [desc_key, goal_key, target_key, impl_key, impact_key]:
-                        st.session_state[k] = ""
+                    for k in (desc_key, goal_key, target_key, impl_key, impact_key, f"idea_sel_{std_id}",
+                              f"title_in_{std_id}", f"link_in_{std_id}", f"last_ai_draft_{std_id}"):
+                        st.session_state.pop(k, None)
+                    st.session_state[f"upload_version_{std_id}"] = st.session_state.get(f"upload_version_{std_id}", 0) + 1
                     st.session_state[clear_flag_key] = False
 
                 for k in [desc_key, goal_key, target_key, impl_key, impact_key]:
@@ -4362,11 +4552,13 @@ def main_app():
 
                 chosen_idea = st.selectbox(
                     "اختر البند الفرعي المقترح:",
-                    sub_options + ["أخرى (كتابة عنوان مخصص)"],
-                    key=f"idea_sel_{std_id}"
+                    sub_options + [CUSTOM_EVIDENCE_TITLE],
+                    key=f"idea_sel_{std_id}", on_change=sync_suggested_title, args=(std_id,)
                 )
-                default_title_val = "" if chosen_idea == "أخرى (كتابة عنوان مخصص)" else chosen_idea
-                final_title = st.text_input("عنوان الشاهد", value=default_title_val, key=f"title_in_{std_id}")
+                title_key = f"title_in_{std_id}"
+                if title_key not in st.session_state:
+                    st.session_state[title_key] = "" if chosen_idea == CUSTOM_EVIDENCE_TITLE else chosen_idea
+                final_title = st.text_input("عنوان الشاهد", key=title_key)
 
                 st.text_area(
                     "وصف مختصر (اختياري)",
@@ -4392,7 +4584,11 @@ def main_app():
                         st.text_input("الأثر المتحقق:", key=impact_key, placeholder="مثال: ارتفاع نسبة التفاعل...")
 
                 exec_date_input = st.date_input("📅 تاريخ التنفيذ (حسب توزيع المنهج):", value=datetime.date.today(), key=f"date_in_{std_id}")
-                uploaded_files = st.file_uploader("📎 المرفقات (صور أو ملف PDF):", type=["pdf", "jpg", "jpeg", "png"], accept_multiple_files=True, key=f"files_in_{std_id}")
+                upload_version = st.session_state.get(f"upload_version_{std_id}", 0)
+                uploaded_files = st.file_uploader(
+                    "📎 المرفقات (صور أو ملف PDF):", type=["pdf", "jpg", "jpeg", "png"],
+                    accept_multiple_files=True, key=f"files_in_{std_id}_{upload_version}",
+                )
                 ext_link_input = st.text_input("🔗 أو رابط (يوتيوب، مدرستي، درايف... - اختياري):", placeholder="https://", key=f"link_in_{std_id}")
 
                 if st.button("حفظ الشاهد ورفع المرفقات 💾", type="primary", use_container_width=True, key=f"save_ev_btn_{std_id}"):
@@ -4414,43 +4610,17 @@ def main_app():
                             full_desc_parts.append("\n".join(extra_details))
                         combined_description = "\n\n".join(full_desc_parts)
 
-                        with st.spinner("جاري ضغط الصور وحفظ الشاهد والمرفقات..."):
-                            insert_payload = {
-                                "standard_id": std_id,
-                                "year_id": active_year['id'],
-                                "title": final_title.strip(),
-                                "description": combined_description,
-                                "execution_date": str(exec_date_input)
-                            }
-                            try:
-                                ev_data = supabase.table("evidences").insert(insert_payload).execute()
-                            except Exception:
-                                insert_payload.pop("execution_date", None)
-                                ev_data = supabase.table("evidences").insert(insert_payload).execute()
-                                
-                            new_id = ev_data.data[0]['id']
-                            if uploaded_files:
-                                for up_file in uploaded_files:
-                                    opt_bytes, opt_mime, opt_ext = optimize_uploaded_image(up_file)
-                                    path = f"{new_id}/{uuid.uuid4()}.{opt_ext}"
-                                    supabase.storage.from_("private-achievements").upload(
-                                        path=path, file=opt_bytes, file_options={"content-type": opt_mime}
-                                    )
-                                    supabase.table("evidence_files").insert({
-                                        "evidence_id": new_id, "file_url": path, "file_type": opt_mime
-                                    }).execute()
-                            if ext_link_input.strip():
-                                supabase.table("evidence_files").insert({
-                                    "evidence_id": new_id,
-                                    "file_url": ext_link_input.strip(),
-                                    "file_type": "external/link"
-                                }).execute()
-                                
-                            st.session_state[clear_flag_key] = True
-                            clear_app_cache()
-                            st.success("تم حفظ الشاهد بنجاح!")
-                            time.sleep(0.4)
-                            st.rerun()
+                        st.session_state[job_key] = {
+                            "payload": {
+                                "standard_id": std_id, "year_id": active_year["id"],
+                                "title": final_title.strip(), "description": combined_description,
+                                "execution_date": str(exec_date_input),
+                                "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                            },
+                            "evidence_id": None, "insert_attempted": False,
+                            "items": prepare_attachments(uploaded_files, ext_link_input),
+                        }
+                        attempt_evidence_upload(job_key, std_id)
                     else:
                         st.warning("يرجى التأكد من كتابة عنوان الشاهد وإرفاق ملف واحد على الأقل أو وضع رابط خارجي.")
 
