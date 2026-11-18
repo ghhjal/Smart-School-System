@@ -2619,10 +2619,42 @@ div[data-testid="stHorizontalBlock"]:has(.ziyad-grid-tab-marker) div[data-testid
 
 .std-card {{
     background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;
-    padding: 13px 15px; margin-bottom: 2px;
+    padding: 13px 15px; margin-bottom: 8px;
     display: flex; justify-content: space-between; align-items: center;
     box-shadow: 0 2px 6px rgba(0,0,0,0.02); width: 100%; box-sizing: border-box;
     direction: rtl !important; text-align: right !important;
+    cursor: pointer !important; transition: all 0.18s ease !important;
+}}
+.std-card:hover {{
+    border-color: {th['primary_light']} !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
+}}
+div[data-testid="stElementContainer"]:has(.std-card-click-marker),
+div.element-container:has(.std-card-click-marker) {{
+    position: relative !important;
+    margin-bottom: -74px !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+}}
+div[data-testid="stElementContainer"]:has(.std-card-click-marker) + div[data-testid="stElementContainer"],
+div.element-container:has(.std-card-click-marker) + div.element-container {{
+    position: relative !important;
+    z-index: 2 !important;
+    margin-bottom: 6px !important;
+}}
+div[data-testid="stElementContainer"]:has(.std-card-click-marker) + div[data-testid="stElementContainer"] div[data-testid="stButton"] button,
+div.element-container:has(.std-card-click-marker) + div.element-container div[data-testid="stButton"] button {{
+    height: 68px !important;
+    min-height: 68px !important;
+    max-height: 68px !important;
+    width: 100% !important;
+    opacity: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer !important;
 }}
 .std-num {{
     font-family: 'Cairo', sans-serif !important;
@@ -3349,6 +3381,27 @@ components.html(f"""
                 var anchors = pDoc.querySelectorAll('[data-testid="stHeaderActionElements"], h1 a, h2 a, h3 a, h4 a, h5 a, h6 a');
                 anchors.forEach(function(a) {{
                     a.style.setProperty('display', 'none', 'important');
+                }});
+
+                pDoc.querySelectorAll('.std-card-click-marker').forEach(function(card) {{
+                    var cardCont = card.closest('[data-testid="stElementContainer"], .element-container');
+                    if (cardCont && cardCont.nextElementSibling) {{
+                        var btnCont = cardCont.nextElementSibling;
+                        var btn = btnCont.querySelector('button');
+                        if (btn) {{
+                            var h = card.offsetHeight || 68;
+                            cardCont.style.setProperty('margin-bottom', (-h - 8) + 'px', 'important');
+                            cardCont.style.setProperty('pointer-events', 'none', 'important');
+                            btnCont.style.setProperty('position', 'relative', 'important');
+                            btnCont.style.setProperty('z-index', '2', 'important');
+                            btnCont.style.setProperty('margin-bottom', '6px', 'important');
+                            btn.style.setProperty('height', h + 'px', 'important');
+                            btn.style.setProperty('min-height', h + 'px', 'important');
+                            btn.style.setProperty('max-height', h + 'px', 'important');
+                            btn.style.setProperty('opacity', '0', 'important');
+                            btn.style.setProperty('cursor', 'pointer', 'important');
+                        }}
+                    }}
                 }});
 
                 pDoc.querySelectorAll('[data-ziyad-hidden-marker="1"]').forEach(function(el) {{
@@ -4395,7 +4448,7 @@ def main_app():
 
             safe_std_t = html.escape(str(std["title"]))
             card_html = (
-                f'<div class="std-card" dir="rtl">'
+                f'<div class="std-card std-card-click-marker" dir="rtl">'
                 f'<div style="display:flex; align-items:center;">'
                 f'<div class="{num_cls}">{s_id}</div>'
                 f'<div><div class="std-title">{s_id}. {safe_std_t}</div>'
@@ -4405,9 +4458,7 @@ def main_app():
                 f'</div>'
             )
             st.markdown(card_html, unsafe_allow_html=True)
-            
-            btn_label = f"➕ إضافة أو استعراض شواهد البند {s_id}" if not is_visitor else f"👁️ استعراض شواهد البند {s_id}"
-            if st.button(btn_label, key=f"open_std_{s_id}", type="primary", use_container_width=True):
+            if st.button(f"{s_id}. {std['title']}", key=f"open_std_{s_id}", use_container_width=True):
                 navigate_to('standard_view', s_id)
 
     # ----------------------------------------
